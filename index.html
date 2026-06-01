@@ -727,12 +727,16 @@ function indicatorNodes(pa,baseId){
   out.push({id:baseId+"-atr",dir:pa.atrHot?"中立":"中立"});
   return out;
 }
-function renderSwarm(){
+function renderSwarm(){try{_renderSwarm();}catch(err){const svg=document.getElementById("swarmSvg");if(svg)svg.innerHTML=`<text x="180" y="210" class="node-sub" style="font-size:10px" fill="#ff4d6d">描画エラー: ${(""+err.message).slice(0,40)}</text>`;}}
+function _renderSwarm(){
   const svg=document.getElementById("swarmSvg");if(!svg)return;
   const W=360,H=440;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
   if(!starfield)starfield=genStars(W,H);
   let nodes=[],links=[];
   const C={LONG:{x:W*0.76,y:H*0.45},SHORT:{x:W*0.24,y:H*0.45},"中立":{x:W*0.5,y:H*0.52}};
+  // データがまだ無ければ明示(真っ暗を防ぐ)
+  const haveData=SYMBOLS.some(o=>store[o.s]?.pa);
+  if(swarmMode==="all"&&!haveData){svg.innerHTML=`<rect x="0" y="0" width="${W}" height="${H}" fill="transparent"/><text x="180" y="210" class="node-sub" style="font-size:11px">銀河を生成中… データ取得待ち</text>`;return;}
 
   if(swarmMode==="all"){
     const hubGroups={LONG:[],SHORT:[],"中立":[]};
