@@ -6,13 +6,22 @@
 <title>PA TERMINAL · Live Price Action (JPY)</title>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 :root{
-  --bg:#050608; --panel:#0a0d11; --panel2:#0d1116; --row:#0b0f14;
-  --border:#15202c; --border2:#1f3243; --borderAcc:#2a4a66;
-  --bull:#26d9a3; --bull-dim:#0a3d2c; --bear:#ff4060; --bear-dim:#3d0a16;
-  --gold:#f0b840; --gold-dim:#3a2c0a; --blue:#4098ff;
-  --txt:#7c97a8; --txt-br:#d4e4ee; --txt-dim:#33485a; --txt-mid:#52708a;
+  /* --- 背景: 深宇宙の黒、わずかに青み --- */
+  --bg:#070a0f; --panel:#0d1219; --panel2:#11171f; --row:#0e141b;
+  --border:#1c2836; --border2:#28394d; --borderAcc:#34526e;
+  /* --- アクセント: 鮮やか --- */
+  --bull:#2ee6a6; --bull-soft:#1aa87a; --bull-dim:#0d4030; --bull-glow:#2ee6a6;
+  --bear:#ff4d6d; --bear-soft:#cc3a54; --bear-dim:#401320; --bear-glow:#ff4d6d;
+  --gold:#ffc94d; --gold-soft:#cc9f3a; --gold-dim:#403214; --gold-glow:#ffc94d;
+  --blue:#4da6ff; --violet:#8c7dff;
+  /* --- テキスト: 見やすさ最優先で明るめに再設計 --- */
+  --txt:#aabccc;        /* 本文(従来より明るく) */
+  --txt-br:#eaf2f8;     /* 強調・見出し */
+  --txt-dim:#6a8295;    /* 補助(紺に沈まない明度に引き上げ) */
+  --txt-mid:#8ba3b8;    /* 中間 */
+  --txt-faint:#52677a;  /* 最も淡い(それでも読める下限) */
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
@@ -21,35 +30,45 @@ body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospac
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 ::-webkit-scrollbar-track{background:transparent;}
 .jp{font-family:'Noto Sans JP',sans-serif;}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,200,150,0.012) 3px);}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(46,230,166,0.01) 3px);}
 @keyframes pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
-@keyframes flash-up{0%{background:rgba(38,217,163,.35);}100%{background:transparent;}}
-@keyframes flash-dn{0%{background:rgba(255,64,96,.35);}100%{background:transparent;}}
+@keyframes flash-up{0%{background:rgba(46,230,166,.32);}100%{background:transparent;}}
+@keyframes flash-dn{0%{background:rgba(255,77,109,.32);}100%{background:transparent;}}
 @keyframes slideUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 @keyframes sweep{0%{transform:translateX(-100%);}100%{transform:translateX(400%);}}
-@keyframes nodeFloat{0%,100%{transform:translate(0,0);}50%{transform:translate(0,-4px);}}
+@keyframes breathe{0%,100%{opacity:.85;}50%{opacity:1;}}
 .flash-up{animation:flash-up .6s ease-out;}
 .flash-dn{animation:flash-dn .6s ease-out;}
 
 #app{display:flex;flex-direction:column;height:100vh;}
 .topbar{flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel);display:flex;align-items:center;gap:12px;padding:7px 14px;flex-wrap:wrap;}
-.brand-mark{width:22px;height:22px;border:1px solid var(--gold);border-radius:3px;display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:700;font-size:13px;}
-.brand-name{font-size:12px;font-weight:700;color:var(--txt-br);letter-spacing:.12em;}
+.brand-mark{width:22px;height:22px;border:1px solid var(--gold);border-radius:3px;display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:800;font-size:13px;box-shadow:0 0 8px rgba(255,201,77,.25) inset;}
+.brand-name{font-size:12px;font-weight:800;color:var(--txt-br);letter-spacing:.12em;}
 .brand-sub{font-size:8px;color:var(--txt-dim);letter-spacing:.16em;}
 .chip{display:flex;flex-direction:column;gap:1px;}
 .chip-label{font-size:8px;color:var(--txt-dim);letter-spacing:.12em;}
 .chip-val{font-size:12px;color:var(--txt-br);font-weight:600;}
 .ticker-tape{flex-shrink:0;height:22px;border-bottom:1px solid var(--border);background:var(--panel2);overflow:hidden;display:flex;align-items:center;white-space:nowrap;}
-.tabbar{flex-shrink:0;display:flex;border-bottom:1px solid var(--border);background:var(--panel);}
-.tab{flex:1;padding:9px 4px;text-align:center;color:var(--txt-dim);cursor:pointer;border-bottom:2px solid transparent;display:flex;flex-direction:column;gap:2px;align-items:center;}
-.tab .ti{font-size:13px;}.tab .tl{font-size:9px;letter-spacing:.08em;}.tab .tn{font-size:8px;opacity:.6;}
-.tab.on{color:var(--gold);border-bottom-color:var(--gold);background:rgba(240,184,64,.04);}
+
+/* ===== タブバー: 横スクロール対応・通貨ごと ===== */
+.tabbar-outer{flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel);}
+.tabbar-main{display:flex;border-bottom:1px solid var(--border);}
+.tab-main{flex:1;padding:8px 4px;text-align:center;color:var(--txt-dim);cursor:pointer;border-bottom:2px solid transparent;display:flex;flex-direction:column;gap:2px;align-items:center;}
+.tab-main .ti{font-size:13px;}.tab-main .tl{font-size:9px;letter-spacing:.08em;}.tab-main .tn{font-size:8px;opacity:.7;}
+.tab-main.on{color:var(--gold);border-bottom-color:var(--gold);background:rgba(255,201,77,.05);}
+/* 通貨タブの帯 */
+.tabbar-sym{display:flex;overflow-x:auto;gap:0;padding:0;scrollbar-width:none;}
+.tabbar-sym::-webkit-scrollbar{display:none;}
+.tab-sym{flex-shrink:0;padding:7px 13px;font-size:10px;font-weight:600;color:var(--txt-dim);cursor:pointer;border-right:1px solid var(--border);border-bottom:2px solid transparent;white-space:nowrap;letter-spacing:.03em;}
+.tab-sym.on{color:var(--txt-br);border-bottom-color:var(--gold);background:rgba(255,201,77,.06);}
+.tab-sym.all{color:var(--violet);font-weight:700;}
+.tab-sym.all.on{border-bottom-color:var(--violet);background:rgba(140,125,255,.08);}
+
 .page{flex:1;overflow-y:auto;display:none;}.page.on{display:block;}
-.ph{min-height:24px;display:flex;align-items:center;padding:5px 12px;border-bottom:1px solid var(--border);background:var(--row);font-size:8.5px;letter-spacing:.14em;color:var(--txt-dim);text-transform:uppercase;gap:6px;position:sticky;top:0;z-index:10;}
+.ph{min-height:24px;display:flex;align-items:center;padding:5px 12px;border-bottom:1px solid var(--border);background:var(--row);font-size:8.5px;letter-spacing:.14em;color:var(--txt-mid);text-transform:uppercase;gap:6px;position:sticky;top:0;z-index:10;}
 .ph .dot{width:4px;height:4px;border-radius:50%;background:var(--bull);box-shadow:0 0 5px var(--bull);}
-.ph-right{margin-left:auto;color:var(--txt-mid);text-transform:none;}
-/* ブルックス裁量の帯: 各ページ上部の解説 */
-.brooks{padding:9px 12px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(240,184,64,.05),transparent);font-size:9.5px;line-height:1.7;color:var(--txt-mid);}
+.ph-right{margin-left:auto;color:var(--txt-dim);text-transform:none;}
+.brooks{padding:9px 12px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(255,201,77,.04),transparent);font-size:9.5px;line-height:1.75;color:var(--txt);}
 .brooks b{color:var(--gold);font-weight:600;}
 .brooks .tag{display:inline-block;font-size:7.5px;letter-spacing:.14em;color:var(--gold);border:1px solid var(--gold-dim);border-radius:2px;padding:0 5px;margin-right:6px;vertical-align:1px;}
 
@@ -57,7 +76,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .wl-row.sel{background:var(--panel2);border-left-color:var(--gold);}
 .wl-sym{font-size:13px;color:var(--txt-br);font-weight:600;}
 .wl-name{font-size:8px;color:var(--txt-dim);}
-.wl-price{font-size:12px;text-align:right;font-weight:500;}
+.wl-price{font-size:12px;text-align:right;font-weight:500;color:var(--txt-br);}
 .wl-chg{font-size:9px;text-align:right;}
 .wl-ai{grid-column:1/3;display:flex;align-items:center;gap:5px;margin-top:5px;}
 .wl-ai-track{flex:1;height:5px;background:linear-gradient(90deg,var(--bear-dim),var(--border),var(--bull-dim));border-radius:3px;position:relative;overflow:hidden;}
@@ -77,7 +96,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 
 .ai-meter{padding:14px 12px;border-bottom:1px solid var(--border);text-align:center;}
 .ai-dir{font-size:20px;font-weight:700;letter-spacing:.04em;}
-.ai-conf{font-size:38px;font-weight:700;line-height:1;margin-top:2px;}
+.ai-conf{font-size:38px;font-weight:800;line-height:1;margin-top:2px;}
 .ai-conf-lbl{font-size:8px;letter-spacing:.16em;color:var(--txt-dim);margin-top:3px;}
 .ai-scale{display:flex;height:8px;margin-top:12px;border-radius:4px;overflow:hidden;border:1px solid var(--border2);position:relative;background:linear-gradient(90deg,var(--bear) 0%,var(--bear-dim) 30%,var(--border) 50%,var(--bull-dim) 70%,var(--bull) 100%);}
 .ai-needle{position:absolute;top:-2px;width:3px;height:12px;background:#fff;box-shadow:0 0 5px #fff;border-radius:1px;transition:left .5s cubic-bezier(.4,0,.2,1);}
@@ -88,7 +107,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .heat-cell{flex:1;border-radius:1px;min-width:2px;}
 
 .gauge{padding:12px;border-bottom:1px solid var(--border);text-align:center;}
-.gauge-num{font-size:40px;font-weight:700;line-height:1;}
+.gauge-num{font-size:40px;font-weight:800;line-height:1;}
 .gauge-label{font-size:8px;letter-spacing:.16em;color:var(--txt-dim);margin-top:4px;}
 .gauge-bias{display:inline-block;font-size:10px;padding:2px 12px;border-radius:2px;margin-top:8px;letter-spacing:.1em;border:1px solid;}
 .gauge-bars{display:flex;gap:2px;justify-content:center;margin-top:8px;}
@@ -96,12 +115,12 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .sig-card{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;animation:slideUp .3s ease;}
 .sig-icon{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0;}
 .sig-name{font-size:11px;font-weight:600;margin-bottom:2px;}
-.sig-desc{font-size:10px;color:var(--txt-mid);line-height:1.5;}
+.sig-desc{font-size:10px;color:var(--txt);line-height:1.5;}
 .sig-str{font-size:8px;color:var(--txt-dim);}
 .ind-grid{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;border-bottom:1px solid var(--border);}
 .ind-item{display:flex;justify-content:space-between;}
 .ind-k{font-size:9px;color:var(--txt-dim);}
-.ind-v{font-size:10px;font-weight:500;}
+.ind-v{font-size:10px;font-weight:500;color:var(--txt-br);}
 
 .exec-bar{display:flex;overflow-x:auto;border-bottom:1px solid var(--border);background:var(--panel);position:relative;}
 .exec-step{min-width:108px;flex:1;border-right:1px solid var(--border);padding:7px 10px;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden;}
@@ -110,10 +129,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .exec-name{font-size:12px;color:var(--txt-br);font-weight:600;}
 .exec-detail{font-size:8px;color:var(--txt-dim);}
 .exec-ms{font-size:9px;color:var(--bull);min-height:11px;}
-.exec-step.active{background:rgba(240,184,64,.06);}
+.exec-step.active{background:rgba(255,201,77,.06);}
 .exec-step.active .exec-name{color:var(--gold);}
 .exec-step.active::after{content:'';position:absolute;bottom:0;left:0;height:2px;width:40%;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:sweep .4s linear;}
-.cycle-head{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--border);background:var(--row);font-size:8.5px;letter-spacing:.14em;color:var(--txt-dim);}
+.cycle-head{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--border);background:var(--row);font-size:8.5px;letter-spacing:.14em;color:var(--txt-mid);}
 .cycle-count{color:var(--gold);}
 
 .of-pressure{display:flex;height:30px;margin:12px;border-radius:3px;overflow:hidden;border:1px solid var(--border2);}
@@ -122,7 +141,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .book{display:grid;grid-template-columns:1fr 1fr;gap:1px;padding:0 12px 12px;}
 .book-col-h{font-size:8px;color:var(--txt-dim);padding:6px 0;letter-spacing:.1em;}
 .book-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 6px;position:relative;}
-.book-row .depth{position:absolute;top:0;bottom:0;opacity:.13;}
+.book-row .depth{position:absolute;top:0;bottom:0;opacity:.15;}
 .book-row.bid .depth{right:0;background:var(--bull);}
 .book-row.ask .depth{left:0;background:var(--bear);}
 .book-row span{position:relative;z-index:1;}
@@ -136,17 +155,17 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .vp-price{font-size:8px;color:var(--txt-mid);width:80px;text-align:right;}
 .vp-bar{height:9px;border-radius:1px;}
 
-/* ===== AGENT SWARM ノードグラフ ===== */
-.swarm-wrap{position:relative;padding:0;border-bottom:1px solid var(--border);overflow:hidden;background:radial-gradient(ellipse at 50% 40%,rgba(40,74,102,.08),transparent 70%);}
-#swarmSvg{display:block;width:100%;height:340px;}
-.swarm-legend{display:flex;justify-content:center;gap:16px;padding:8px;font-size:8px;border-bottom:1px solid var(--border);background:var(--row);}
+/* ===== AGENT SWARM ノードグラフ: アート級 ===== */
+.swarm-wrap{position:relative;padding:0;border-bottom:1px solid var(--border);overflow:hidden;background:radial-gradient(ellipse at 50% 45%,rgba(52,82,110,.10),rgba(7,10,15,0) 65%),#070a0f;}
+#swarmSvg{display:block;width:100%;height:380px;}
+.swarm-legend{display:flex;justify-content:center;gap:16px;padding:8px;font-size:8px;border-bottom:1px solid var(--border);background:var(--row);color:var(--txt-mid);}
 .swarm-legend span{display:flex;align-items:center;gap:4px;}
 .swarm-dot{width:8px;height:8px;border-radius:50%;}
-.node-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;fill:var(--txt-br);text-anchor:middle;pointer-events:none;}
-.node-sub{font-family:'JetBrains Mono',monospace;font-size:7px;fill:var(--txt-mid);text-anchor:middle;pointer-events:none;}
+.node-label{font-family:'JetBrains Mono',monospace;font-weight:700;fill:var(--txt-br);text-anchor:middle;pointer-events:none;}
+.node-sub{font-family:'JetBrains Mono',monospace;fill:var(--txt-mid);text-anchor:middle;pointer-events:none;}
 .cluster-label{font-family:'Noto Sans JP',sans-serif;font-size:9px;font-weight:700;text-anchor:middle;letter-spacing:.1em;}
+.mtf-hint{padding:9px 12px;font-size:9.5px;line-height:1.7;color:var(--txt);border-bottom:1px solid var(--border);background:var(--panel2);}
 
-/* トレード判断ボード */
 .tj-box{padding:12px;border-bottom:1px solid var(--border);}
 .tj-verdict{font-size:14px;font-weight:700;text-align:center;padding:10px;border-radius:4px;margin-bottom:10px;border:1px solid;}
 .tj-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:10px;}
@@ -155,7 +174,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .tj-v{color:var(--txt-br);font-weight:500;}
 
 @media (min-width:900px) and (orientation:landscape){
-  #pgChart .lscols{display:grid;grid-template-columns:1fr 340px;}
+  .lscols{display:grid;grid-template-columns:1fr 340px;}
 }
 </style>
 </head>
@@ -176,11 +195,17 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 
   <div class="ticker-tape"><div id="tape" style="display:flex;gap:26px;padding-left:14px;"></div></div>
 
-  <div class="tabbar" id="tabbar">
-    <div class="tab on" data-pg="Scan"><span class="ti">📡</span><span class="tl">SCAN</span><span class="tn">スキャナー</span></div>
-    <div class="tab" data-pg="Chart"><span class="ti">📈</span><span class="tl">CHART</span><span class="tn">チャート</span></div>
-    <div class="tab" data-pg="Flow"><span class="ti">⇅</span><span class="tl">FLOW</span><span class="tn">フロー</span></div>
-    <div class="tab" data-pg="Ana"><span class="ti">🧮</span><span class="tl">ANALYSIS</span><span class="tn">分析</span></div>
+  <!-- メインタブ + 通貨タブ -->
+  <div class="tabbar-outer">
+    <div class="tabbar-main" id="tabbarMain">
+      <div class="tab-main on" data-pg="Scan"><span class="ti">📡</span><span class="tl">SCAN</span><span class="tn">スキャナー</span></div>
+      <div class="tab-main" data-pg="Chart"><span class="ti">📈</span><span class="tl">CHART</span><span class="tn">チャート</span></div>
+      <div class="tab-main" data-pg="Flow"><span class="ti">⇅</span><span class="tl">FLOW</span><span class="tn">フロー</span></div>
+      <div class="tab-main" data-pg="Swarm"><span class="ti">🌌</span><span class="tl">SWARM</span><span class="tn">主導権マップ</span></div>
+      <div class="tab-main" data-pg="Ana"><span class="ti">🧮</span><span class="tl">ANALYSIS</span><span class="tn">分析</span></div>
+    </div>
+    <!-- 通貨タブ(SWARMページ用): 各通貨 + 全通貨 -->
+    <div class="tabbar-sym" id="tabbarSym"></div>
   </div>
 
   <!-- ════ SCAN ════ -->
@@ -256,37 +281,35 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
     <div id="tradeFeed"></div>
   </div>
 
-  <!-- ════ ANALYSIS ════ -->
-  <div class="page" id="pgAna">
-    <!-- AGENT SWARM -->
-    <div class="ph">AGENT SWARM · 市場全体の主導権マップ <span class="ph-right" id="swarmSym">全銘柄</span></div>
-    <div class="brooks jp"><span class="tag">裁量</span>各銘柄を泡にして、<b>Always-Inの方向が同じものを引き寄せて</b>配置。買い優勢は右(緑)、売り優勢は左(赤)に集まる。<b>泡が大きいほど確信度が高い</b>。市場全体がどちらに傾き、どの銘柄が同じ群れにいるかが一目で分かる。群れに逆らう孤立した泡は要注意。</div>
+  <!-- ════ SWARM (主導権マップ・マルチタイムフレーム) ════ -->
+  <div class="page" id="pgSwarm">
+    <div class="ph">AGENT SWARM · 主導権マップ <span class="ph-right" id="swarmModeLabel">全通貨</span></div>
+    <div class="mtf-hint jp" id="swarmHint"></div>
     <div class="swarm-legend">
       <span><span class="swarm-dot" style="background:var(--bull)"></span>買い優勢 LONG</span>
       <span><span class="swarm-dot" style="background:var(--gold)"></span>中立 NEUTRAL</span>
       <span><span class="swarm-dot" style="background:var(--bear)"></span>売り優勢 SHORT</span>
     </div>
-    <div class="swarm-wrap"><svg id="swarmSvg" viewBox="0 0 360 340" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="swarm-wrap"><svg id="swarmSvg" viewBox="0 0 360 380" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div style="padding:10px 12px;font-size:9px;color:var(--txt-dim);" class="jp" id="swarmFooter"></div>
+  </div>
 
-    <!-- トレード判断ボード -->
+  <!-- ════ ANALYSIS ════ -->
+  <div class="page" id="pgAna">
     <div class="ph">TRADE JUDGEMENT · トレード判断ボード <span class="ph-right" id="tjSym">—</span></div>
     <div class="brooks jp"><span class="tag">裁量</span>ブルックスは「<b>どこで入り、どこで損切るか</b>」を常に決めてから触る。POC(出来高が最も厚い価格)は強力な支持/抵抗。今の価格がレンジのどこにいて、Always-Inがどちらかを掛け合わせ、行動の目安を示す。<b>あくまで参考値。最終判断は自分で</b>。</div>
     <div class="tj-box" id="tjBox"><div style="text-align:center;color:var(--txt-dim);padding:10px;">銘柄を選択すると判断材料を表示</div></div>
 
-    <!-- 長期参考スコア -->
     <div class="ph">LONG-TERM REFERENCE · 長期保有 参考スコア <span class="ph-right">テクニカル外・補助</span></div>
     <div class="brooks jp"><span class="tag">補助</span>ブルックス手法は純粋にテクニカル。これは<b>長期保有の判断を補助する参考値</b>に過ぎず、短期売買には使わない。Binanceのデータから「資金の勢い・BTC比の相対強弱・出来高の厚み」を集計したもの。</div>
     <div class="ind-grid" id="fundGrid" style="border:none;"></div>
 
-    <!-- Volume Profile -->
     <div class="ph">VOLUME PROFILE · 価格帯別出来高 · <span id="vpSym">—</span></div>
     <div class="vp-wrap" id="vpWrap"></div>
 
-    <!-- 24h stats -->
     <div class="ph">PRICE STATISTICS · 24時間統計</div>
     <div class="ind-grid" id="statsGrid" style="border:none;"></div>
 
-    <!-- Always-In 解説 -->
     <div class="ph">ALWAYS-IN 解説 · 今の状況の言語化</div>
     <div style="padding:12px;font-size:10.5px;line-height:1.85;" class="jp" id="aiNarrative">銘柄を選択すると、現在のAlways-In状態をブルックスの視点で解説します。</div>
     <div style="height:30px;"></div>
@@ -301,11 +324,17 @@ const SYMBOLS=[
   {s:"DOGEJPY",name:"Dogecoin"},{s:"LTCJPY",name:"Litecoin"},{s:"LINKJPY",name:"Chainlink"},
   {s:"DOTJPY",name:"Polkadot"},
 ];
+const TFS=["1m","5m","15m","1h","4h","1d"];
+const TF_LABEL={"1m":"1分","5m":"5分","15m":"15分","1h":"1時間","4h":"4時間","1d":"日足"};
 const REST_HOSTS=["https://api.binance.com/api/v3","https://data-api.binance.vision/api/v3","https://api1.binance.com/api/v3"];
 const WS_HOSTS=["wss://stream.binance.com:9443/stream","wss://stream.binance.com:443/stream","wss://data-stream.binance.vision/stream"];
 let TF="5m", activeSymbol="BTCJPY", activePage="Scan", cycleNum=0, scanMode="ai";
+let swarmMode="all"; // "all"=全通貨, または "BTCJPY"等=その通貨のマルチタイムフレーム
 let chart,candleSeries,volSeries,ema20Series,ema50Series;
-const store={};
+const store={};      // store[sym] = {candles, pa, ticker, aiHist}
+const mtfStore={};   // mtfStore[sym][tf] = alwaysIn値 (マルチタイムフレーム用)
+const fmtSym=s=>s.replace("JPY","/JPY"); // 表示用: BTCJPY -> BTC/JPY
+const shortSym=s=>s.replace("JPY","");   // 短縮: BTCJPY -> BTC
 
 // ===== ALWAYS-IN ENGINE =====
 function alwaysIn(c){
@@ -376,11 +405,9 @@ function runPA(c){
   let atrAvg=null;
   if(tr.length>=64){const series=[];for(let i=tr.length-50;i<tr.length;i++){series.push(tr.slice(i-14,i).reduce((s,v)=>s+v,0)/14);}atrAvg=series.reduce((s,v)=>s+v,0)/series.length/last.close*100;}
   const atrHot=atrAvg&&atrPct?atrPct>atrAvg*1.3:false;
-  // 24h高安/レンジ位置(POC計算用に直近150本のレンジも)
   const recent=c.slice(-150);
   const rHi=Math.max(...recent.map(x=>x.high)),rLo=Math.min(...recent.map(x=>x.low));
   const rangePos=rHi>rLo?+((last.close-rLo)/(rHi-rLo)*100).toFixed(0):50;
-  // POC
   const BINS=24,step=(rHi-rLo)/BINS||1,vbin=new Array(BINS).fill(0);
   recent.forEach(x=>{const mid=(x.high+x.low)/2;let bi=Math.floor((mid-rLo)/step);if(bi<0)bi=0;if(bi>=BINS)bi=BINS-1;vbin[bi]+=x.volume;});
   const pocIdx=vbin.indexOf(Math.max(...vbin)),poc=rLo+step*(pocIdx+.5);
@@ -392,6 +419,13 @@ async function loadHistory(symbol,tf){
   let err;
   for(const h of REST_HOSTS){try{const r=await fetch(`${h}/klines?symbol=${symbol}&interval=${tf}&limit=300`,{signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error(r.status);const raw=await r.json();return raw.map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5]}));}catch(e){err=e;}}
   throw err;
+}
+// マルチタイムフレーム: 1銘柄の全時間軸のAlways-Inを取得
+async function loadMTF(symbol){
+  mtfStore[symbol]=mtfStore[symbol]||{};
+  await Promise.allSettled(TFS.map(async tf=>{
+    try{const c=await loadHistory(symbol,tf);mtfStore[symbol][tf]=alwaysIn(c);}catch(e){}
+  }));
 }
 let ws=null,tickerWs=null,wsKI=0,wsTI=0;
 function connectKlineWS(symbol,tf){
@@ -411,15 +445,15 @@ function connectTickerWS(){
   tickerWs.onopen=()=>{op=true;};
   tickerWs.onerror=()=>{if(!op)nextT();};
   tickerWs.onclose=()=>{if(!op){nextT();return;}setTimeout(connectTickerWS,2000);};
-  tickerWs.onmessage=ev=>{const d=JSON.parse(ev.data).data;if(!d)return;const s=d.s;store[s]=store[s]||{candles:[],pa:null,ticker:{}};store[s].ticker={price:+d.c,chg:+d.P,high:+d.h,low:+d.l,vol:+d.q,open:+d.o};updateWLRow(s);updateTape();if(s===activeSymbol)updateChartHead();if(activePage==="Ana")renderSwarm();};
+  tickerWs.onmessage=ev=>{const d=JSON.parse(ev.data).data;if(!d)return;const s=d.s;store[s]=store[s]||{candles:[],pa:null,ticker:{}};store[s].ticker={price:+d.c,chg:+d.P,high:+d.h,low:+d.l,vol:+d.q,open:+d.o};updateWLRow(s);updateTape();if(s===activeSymbol)updateChartHead();};
 }
 function nextT(){wsTI++;if(wsTI<WS_HOSTS.length)setTimeout(connectTickerWS,400);else wsTI=0;}
 
 let flowWs=null,buyVol=0,sellVol=0,tradeBuf=[];
 function connectFlowWS(symbol){
   disconnectFlowWS();
-  document.getElementById("flowSym").textContent=symbol.replace("JPY","");
-  document.getElementById("vpSym").textContent=symbol.replace("JPY","");
+  document.getElementById("flowSym").textContent=fmtSym(symbol);
+  document.getElementById("vpSym").textContent=fmtSym(symbol);
   buyVol=0;sellVol=0;tradeBuf=[];
   const streams=`${symbol.toLowerCase()}@depth20@100ms/${symbol.toLowerCase()}@aggTrade`;
   try{flowWs=new WebSocket(`${WS_HOSTS[0]}?streams=${streams}`);}catch(e){document.getElementById("flowConn").textContent="接続失敗";return;}
@@ -461,35 +495,34 @@ let lastClosed=0;
 function onLiveBar(symbol,bar,closed){
   const st=store[symbol];if(!st)return;const a=st.candles;
   if(a.length&&a[a.length-1].time===bar.time)a[a.length-1]=bar;else{a.push(bar);if(a.length>300)a.shift();}
-  if(symbol===activeSymbol&&candleSeries){candleSeries.update(bar);volSeries.update({time:bar.time,value:bar.volume,color:bar.close>=bar.open?"rgba(38,217,163,.4)":"rgba(255,64,96,.4)"});}
+  if(symbol===activeSymbol&&candleSeries){candleSeries.update(bar);volSeries.update({time:bar.time,value:bar.volume,color:bar.close>=bar.open?"rgba(46,230,166,.4)":"rgba(255,77,109,.4)"});}
   st.pa=runPA(a);st.aiHist=st.aiHist||[];
   if(symbol===activeSymbol){
     renderAlwaysIn(st.pa);renderSignals(st.pa);renderGauge(st.pa);renderInd(st.pa);updateChartHead();renderNarrative(st.pa);renderTradeJudge(st.pa);renderFund(symbol);
     if(closed&&bar.time!==lastClosed){lastClosed=bar.time;st.aiHist.push(st.pa.ai.val);if(st.aiHist.length>40)st.aiHist.shift();renderHeat(st.aiHist);pulseExec();if(activePage==="Ana")renderVP(a);}
   }
   updateWLRow(symbol);updateSummary();
-  if(activePage==="Ana")renderSwarm();
 }
 
 // ===== CHART =====
 function initChart(){
   const el=document.getElementById("chart");
-  chart=LightweightCharts.createChart(el,{layout:{background:{color:"transparent"},textColor:"#52708a",fontFamily:"JetBrains Mono",fontSize:10},grid:{vertLines:{color:"#10191f"},horzLines:{color:"#10191f"}},rightPriceScale:{borderColor:"#15202c",scaleMargins:{top:.08,bottom:.28}},timeScale:{borderColor:"#15202c",timeVisible:true,secondsVisible:false},crosshair:{mode:LightweightCharts.CrosshairMode.Normal}});
-  candleSeries=chart.addCandlestickSeries({upColor:"#26d9a3",downColor:"#ff4060",borderUpColor:"#26d9a3",borderDownColor:"#ff4060",wickUpColor:"#1a9670",wickDownColor:"#b02c40"});
+  chart=LightweightCharts.createChart(el,{layout:{background:{color:"transparent"},textColor:"#8ba3b8",fontFamily:"JetBrains Mono",fontSize:10},grid:{vertLines:{color:"#141d27"},horzLines:{color:"#141d27"}},rightPriceScale:{borderColor:"#1c2836",scaleMargins:{top:.08,bottom:.28}},timeScale:{borderColor:"#1c2836",timeVisible:true,secondsVisible:false},crosshair:{mode:LightweightCharts.CrosshairMode.Normal}});
+  candleSeries=chart.addCandlestickSeries({upColor:"#2ee6a6",downColor:"#ff4d6d",borderUpColor:"#2ee6a6",borderDownColor:"#ff4d6d",wickUpColor:"#1aa87a",wickDownColor:"#cc3a54"});
   volSeries=chart.addHistogramSeries({priceFormat:{type:"volume"},priceScaleId:"vol"});
   chart.priceScale("vol").applyOptions({scaleMargins:{top:.82,bottom:0}});
-  ema20Series=chart.addLineSeries({color:"#f0b840",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
-  ema50Series=chart.addLineSeries({color:"#6c5cb0",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
+  ema20Series=chart.addLineSeries({color:"#ffc94d",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
+  ema50Series=chart.addLineSeries({color:"#8c7dff",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
   new ResizeObserver(()=>chart.applyOptions({width:el.clientWidth,height:el.clientHeight})).observe(el);
 }
 function emaArr(c,p){const k=2/(p+1);const o=[];let v=c[0].close;c.forEach((x,i)=>{v=i===0?x.close:x.close*k+v*(1-k);o.push({time:x.time,value:+v.toFixed(2)});});return o;}
 async function loadChart(symbol,tf){
   setConn("LOADING…",false);
-  document.getElementById("tjSym").textContent=symbol.replace("JPY","");
+  document.getElementById("tjSym").textContent=fmtSym(symbol);
   try{
     const c=await loadHistory(symbol,tf);
     store[symbol]=store[symbol]||{candles:[],pa:null,ticker:{}};store[symbol].candles=c;
-    candleSeries.setData(c);volSeries.setData(c.map(x=>({time:x.time,value:x.volume,color:x.close>=x.open?"rgba(38,217,163,.4)":"rgba(255,64,96,.4)"})));
+    candleSeries.setData(c);volSeries.setData(c.map(x=>({time:x.time,value:x.volume,color:x.close>=x.open?"rgba(46,230,166,.4)":"rgba(255,77,109,.4)"})));
     if(c.length>=20)ema20Series.setData(emaArr(c,20).slice(19));
     if(c.length>=50)ema50Series.setData(emaArr(c,50).slice(49));
     chart.timeScale().fitContent();
@@ -500,7 +533,6 @@ async function loadChart(symbol,tf){
   }catch(e){setConn("ERROR",false);}
 }
 
-// ===== HELPERS =====
 const fmt=v=>v>=1000?v.toLocaleString("en",{maximumFractionDigits:0}):v>=1?v.toFixed(2):v.toFixed(4);
 const dc=d=>d==="bull"?"var(--bull)":d==="bear"?"var(--bear)":"var(--gold)";
 const db=d=>d==="bull"?"var(--bull-dim)":d==="bear"?"var(--bear-dim)":"var(--gold-dim)";
@@ -516,7 +548,7 @@ function renderAlwaysIn(pa){
 }
 function renderHeat(hist){
   if(!hist||!hist.length)return;
-  document.getElementById("heatStrip").innerHTML=hist.map(v=>{let col;if(v>15)col=`rgba(38,217,163,${Math.min(1,.3+Math.abs(v)/100)})`;else if(v<-15)col=`rgba(255,64,96,${Math.min(1,.3+Math.abs(v)/100)})`;else col="rgba(240,184,64,.25)";return `<div class="heat-cell" style="background:${col}"></div>`;}).join("");
+  document.getElementById("heatStrip").innerHTML=hist.map(v=>{let col;if(v>15)col=`rgba(46,230,166,${Math.min(1,.3+Math.abs(v)/100)})`;else if(v<-15)col=`rgba(255,77,109,${Math.min(1,.3+Math.abs(v)/100)})`;else col="rgba(255,201,77,.25)";return `<div class="heat-cell" style="background:${col}"></div>`;}).join("");
 }
 function renderNarrative(pa){
   if(!pa)return;const ai=pa.ai;
@@ -529,14 +561,14 @@ function renderNarrative(pa){
   document.getElementById("aiNarrative").textContent=txt;
 }
 
-// ===== RENDER: watchlist (2 modes) =====
+// ===== WATCHLIST (2 modes) =====
 function buildWL(){
-  document.getElementById("watchlist").innerHTML=SYMBOLS.map(o=>`<div class="wl-row" id="wl-${o.s}" onclick="selectSymbol('${o.s}')"><div><div class="wl-sym">${o.s.replace("JPY","")}</div><div class="wl-name">${o.name}</div></div><div><div class="wl-price" id="px-${o.s}">—</div><div class="wl-chg" id="chg-${o.s}">—</div></div><div class="wl-ai"><div class="wl-ai-track"><div class="wl-ai-marker" id="aim-${o.s}" style="left:50%"></div></div><div class="wl-ai-lbl" id="ail-${o.s}">—</div></div><div class="wl-sigs" id="sg-${o.s}"></div></div>`).join("");
+  document.getElementById("watchlist").innerHTML=SYMBOLS.map(o=>`<div class="wl-row" id="wl-${o.s}" onclick="selectSymbol('${o.s}')"><div><div class="wl-sym">${fmtSym(o.s)}</div><div class="wl-name">${o.name}</div></div><div><div class="wl-price" id="px-${o.s}">—</div><div class="wl-chg" id="chg-${o.s}">—</div></div><div class="wl-ai"><div class="wl-ai-track"><div class="wl-ai-marker" id="aim-${o.s}" style="left:50%"></div></div><div class="wl-ai-lbl" id="ail-${o.s}">—</div></div><div class="wl-sigs" id="sg-${o.s}"></div></div>`).join("");
 }
 function updateWLRow(sym){
   const st=store[sym];if(!st)return;const t=st.ticker,pa=st.pa;
   const px=document.getElementById("px-"+sym);if(!px)return;
-  if(t.price){const old=px.textContent,nv="¥"+fmt(t.price);px.textContent=nv;px.style.color="var(--txt-br)";if(old!=="—"&&old!==nv){const r=document.getElementById("wl-"+sym);r.classList.remove("flash-up","flash-dn");void r.offsetWidth;r.classList.add(t.chg>=0?"flash-up":"flash-dn");}const ch=document.getElementById("chg-"+sym);ch.textContent=(t.chg>=0?"+":"")+t.chg.toFixed(2)+"%";ch.style.color=t.chg>=0?"var(--bull)":"var(--bear)";}
+  if(t.price){const old=px.textContent,nv="¥"+fmt(t.price);px.textContent=nv;if(old!=="—"&&old!==nv){const r=document.getElementById("wl-"+sym);r.classList.remove("flash-up","flash-dn");void r.offsetWidth;r.classList.add(t.chg>=0?"flash-up":"flash-dn");}const ch=document.getElementById("chg-"+sym);ch.textContent=(t.chg>=0?"+":"")+t.chg.toFixed(2)+"%";ch.style.color=t.chg>=0?"var(--bull)":"var(--bear)";}
   if(pa){
     const marker=document.getElementById("aim-"+sym),track=marker?.parentElement,ail=document.getElementById("ail-"+sym);
     if(scanMode==="ai"){
@@ -568,12 +600,12 @@ document.getElementById("scanModeBtn").addEventListener("click",()=>{
   SYMBOLS.forEach(o=>updateWLRow(o.s));
 });
 
-// ===== RENDER: gauge, signals, indicators =====
+// ===== gauge, signals, indicators, stats =====
 function renderGauge(pa){const num=document.getElementById("gaugeNum");if(!pa){num.textContent="—";return;}const c=dc(pa.signalDir);num.textContent=pa.score.toFixed(1);num.style.color=c;document.getElementById("gaugeBias").innerHTML=`<span class="gauge-bias" style="color:${c};background:${db(pa.signalDir)};border-color:${c}55">${pa.signalDir==="bull"?"▲ BUY BIAS":pa.signalDir==="bear"?"▼ SELL BIAS":"◆ NEUTRAL"}</span>`;document.getElementById("gaugeBars").innerHTML=[...Array(10)].map((_,i)=>`<div class="gauge-bar" style="background:${i<Math.round(pa.score)?c:"var(--border2)"}"></div>`).join("");}
 function renderSignals(pa){const f=document.getElementById("sigFeed");document.getElementById("sigCount").textContent=pa?pa.signals.length:0;if(!pa||!pa.signals.length){f.innerHTML=`<div style="padding:14px;text-align:center;color:var(--txt-dim)">パターン未検出</div>`;return;}f.innerHTML=pa.signals.map(s=>{const c=dc(s.dir);return `<div class="sig-card"><div class="sig-icon" style="background:${c};box-shadow:0 0 5px ${c}"></div><div style="flex:1"><div class="sig-name" style="color:${c}">${s.name}</div><div class="sig-desc jp">${s.desc}</div></div><div class="sig-str">${"●".repeat(s.str)}${"○".repeat(3-s.str)}</div></div>`;}).join("");}
-function renderInd(pa){if(!pa)return;document.getElementById("indGrid").innerHTML=[["Always-In 主導権",pa.ai.dir+" "+pa.ai.conf+"%",pa.ai.dir==="LONG"?"bull":pa.ai.dir==="SHORT"?"bear":"neutral"],["Trend トレンド",pa.trendLabel,pa.trendDir],["RSI(14) 過熱度",pa.rsi??"—",pa.rsi>70?"bear":pa.rsi<30?"bull":"neutral"],["Vol Ratio 出来高比",pa.volRatio+"x",pa.highVol?"bull":"neutral"],["EMA20 短期線","¥"+fmt(pa.e20),null],["EMA50 中期線",pa.e50?"¥"+fmt(pa.e50):"—",null],["ATR% 変動幅",pa.atrPct?pa.atrPct+"%":"—",pa.atrHot?"bull":null],["Range位置 レンジ",pa.rangePos+"%",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-mid)"}">${v}</span></div>`).join("");}
-function updateChartHead(){const st=store[activeSymbol];if(!st)return;document.getElementById("chartSym").textContent=activeSymbol.replace("JPY","")+"/JPY";const t=st.ticker;if(t.price){document.getElementById("chartPrice").textContent="¥"+fmt(t.price);document.getElementById("chartPrice").style.color=t.chg>=0?"var(--bull)":"var(--bear)";const ch=document.getElementById("chartChg");ch.textContent=(t.chg>=0?"+":"")+t.chg.toFixed(2)+"%";ch.style.color=t.chg>=0?"var(--bull)":"var(--bear)";}if(t.high){document.getElementById("statsGrid").innerHTML=[["24h High 高値","¥"+fmt(t.high),"bull"],["24h Low 安値","¥"+fmt(t.low),"bear"],["24h Open 始値","¥"+fmt(t.open),null],["24h Vol 出来高","¥"+(t.vol/1e8).toFixed(1)+"億",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-mid)"}">${v}</span></div>`).join("");}}
-function updateTape(){document.getElementById("tape").innerHTML=(()=>{const h=SYMBOLS.map(o=>{const t=store[o.s]?.ticker;if(!t||!t.price)return"";const c=t.chg>=0?"var(--bull)":"var(--bear)";return `<span style="font-size:9px"><span style="color:var(--txt-br)">${o.s.replace("JPY","")}</span> <span style="color:${c}">¥${fmt(t.price)} ${t.chg>=0?"+":""}${t.chg.toFixed(2)}%</span></span>`;}).filter(Boolean).join("");return h+h;})();}
+function renderInd(pa){if(!pa)return;document.getElementById("indGrid").innerHTML=[["Always-In 主導権",pa.ai.dir+" "+pa.ai.conf+"%",pa.ai.dir==="LONG"?"bull":pa.ai.dir==="SHORT"?"bear":"neutral"],["Trend トレンド",pa.trendLabel,pa.trendDir],["RSI(14) 過熱度",pa.rsi??"—",pa.rsi>70?"bear":pa.rsi<30?"bull":"neutral"],["Vol Ratio 出来高比",pa.volRatio+"x",pa.highVol?"bull":"neutral"],["EMA20 短期線","¥"+fmt(pa.e20),null],["EMA50 中期線",pa.e50?"¥"+fmt(pa.e50):"—",null],["ATR% 変動幅",pa.atrPct?pa.atrPct+"%":"—",pa.atrHot?"bull":null],["Range位置 レンジ",pa.rangePos+"%",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");}
+function updateChartHead(){const st=store[activeSymbol];if(!st)return;document.getElementById("chartSym").textContent=fmtSym(activeSymbol);const t=st.ticker;if(t.price){document.getElementById("chartPrice").textContent="¥"+fmt(t.price);document.getElementById("chartPrice").style.color=t.chg>=0?"var(--bull)":"var(--bear)";const ch=document.getElementById("chartChg");ch.textContent=(t.chg>=0?"+":"")+t.chg.toFixed(2)+"%";ch.style.color=t.chg>=0?"var(--bull)":"var(--bear)";}if(t.high){document.getElementById("statsGrid").innerHTML=[["24h High 高値","¥"+fmt(t.high),"bull"],["24h Low 安値","¥"+fmt(t.low),"bear"],["24h Open 始値","¥"+fmt(t.open),null],["24h Vol 出来高","¥"+(t.vol/1e8).toFixed(1)+"億",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");}}
+function updateTape(){document.getElementById("tape").innerHTML=(()=>{const h=SYMBOLS.map(o=>{const t=store[o.s]?.ticker;if(!t||!t.price)return"";const c=t.chg>=0?"var(--bull)":"var(--bear)";return `<span style="font-size:9px"><span style="color:var(--txt-br)">${shortSym(o.s)}</span> <span style="color:${c}">¥${fmt(t.price)} ${t.chg>=0?"+":""}${t.chg.toFixed(2)}%</span></span>`;}).filter(Boolean).join("");return h+h;})();}
 function updateSummary(){let b=0,s=0,n=0;SYMBOLS.forEach(o=>{const pa=store[o.s]?.pa;if(!pa)return;if(pa.ai.dir==="LONG")b++;else if(pa.ai.dir==="SHORT")s++;else n++;});document.getElementById("sigSummary").innerHTML=`<span style="color:var(--bull)">▲${b}</span> <span style="color:var(--bear)">▼${s}</span> <span style="color:var(--gold)">◆${n}</span>`;}
 function renderVP(candles){
   const c=candles.slice(-150);if(!c.length)return;
@@ -585,13 +617,11 @@ function renderVP(candles){
   document.getElementById("vpWrap").innerHTML=html;
 }
 
-// ===== RENDER: トレード判断ボード =====
+// ===== トレード判断ボード =====
 function renderTradeJudge(pa){
   const box=document.getElementById("tjBox");if(!pa){return;}
   const price=pa.last.close, ai=pa.ai;
-  const abovePoc=price>pa.poc;
-  const pos=pa.rangePos; // 0=安値 100=高値
-  // 状況判定
+  const abovePoc=price>pa.poc, pos=pa.rangePos;
   let verdict,vcol,advice;
   if(ai.dir==="LONG"){
     if(pos<40){verdict="押し目買い好機";vcol="var(--bull)";advice="上昇優勢かつレンジ下部。ブルックスの順張りロングの典型。EMA20付近で反発を確認できれば入りやすい。";}
@@ -601,120 +631,155 @@ function renderTradeJudge(pa){
     if(pos>60){verdict="戻り売り好機";vcol="var(--bear)";advice="下降優勢かつレンジ上部。ブルックスの順張りショートの典型。戻りの失速を確認して入る。";}
     else if(pos<25){verdict="売りだが過熱";vcol="var(--gold)";advice="下降優勢だがレンジ下限。底値での売りは危険。反発(踏み上げ)に注意。";}
     else{verdict="売り継続";vcol="var(--bear)";advice="下降優勢でレンジ中央。戻り売り継続。POC上抜けは黄信号。";}
-  }else{
-    verdict="様子見(レンジ)";vcol="var(--gold)";advice="方向感が薄い。ブルックス流ではレンジ両端での逆張りのみ。中央では手を出さず、明確なブレイクを待つ。";
-  }
-  // エントリー/損切り目安(参考値)
-  const atr=pa.atr14||0;
+  }else{verdict="様子見(レンジ)";vcol="var(--gold)";advice="方向感が薄い。ブルックス流ではレンジ両端での逆張りのみ。中央では手を出さず、明確なブレイクを待つ。";}
   let entry,stop,target;
   if(ai.dir==="LONG"){entry=Math.max(pa.poc,pa.e20);stop=pa.rLo;target=pa.rHi;}
   else if(ai.dir==="SHORT"){entry=Math.min(pa.poc,pa.e20);stop=pa.rHi;target=pa.rLo;}
   else{entry=pa.poc;stop=null;target=null;}
   box.innerHTML=`
     <div class="tj-verdict" style="color:${vcol};border-color:${vcol}55;background:${ai.dir==="LONG"?"var(--bull-dim)":ai.dir==="SHORT"?"var(--bear-dim)":"var(--gold-dim)"}">${verdict}</div>
-    <div style="font-size:9.5px;line-height:1.7;color:var(--txt-mid);margin-bottom:10px;" class="jp">${advice}</div>
+    <div style="font-size:9.5px;line-height:1.7;color:var(--txt);margin-bottom:10px;" class="jp">${advice}</div>
     <div class="tj-row"><span class="tj-k">現在価格</span><span class="tj-v">¥${fmt(price)}</span></div>
     <div class="tj-row"><span class="tj-k">POC (出来高集中価格)</span><span class="tj-v" style="color:var(--gold)">¥${fmt(pa.poc)} ${abovePoc?"↑上":"↓下"}</span></div>
     <div class="tj-row"><span class="tj-k">レンジ位置 (安値0〜高値100)</span><span class="tj-v">${pos}%</span></div>
     <div class="tj-row"><span class="tj-k">参考エントリー目安</span><span class="tj-v">¥${fmt(entry)}</span></div>
     <div class="tj-row"><span class="tj-k">参考損切り目安</span><span class="tj-v" style="color:var(--bear)">${stop?"¥"+fmt(stop):"—"}</span></div>
     <div class="tj-row"><span class="tj-k">参考利確目安</span><span class="tj-v" style="color:var(--bull)">${target?"¥"+fmt(target):"—"}</span></div>
-    <div style="font-size:8px;color:var(--txt-dim);margin-top:8px;text-align:center;" class="jp">※ 自動売買指示ではなく参考値。最終判断は自分で。</div>
-  `;
+    <div style="font-size:8px;color:var(--txt-dim);margin-top:8px;text-align:center;" class="jp">※ 自動売買指示ではなく参考値。最終判断は自分で。</div>`;
 }
-
-// ===== RENDER: 長期参考スコア(Binanceデータのみ) =====
+// ===== 長期参考スコア =====
 function renderFund(sym){
   const st=store[sym];if(!st||!st.pa)return;const pa=st.pa,c=st.candles;
-  // 資金の勢い: 直近20本の出来高 vs その前20本
   let momentum="—",momCol=null;
   if(c.length>=40){const recent=c.slice(-20).reduce((s,x)=>s+x.volume*x.close,0),prevV=c.slice(-40,-20).reduce((s,x)=>s+x.volume*x.close,0);const r=prevV>0?recent/prevV:1;momentum=r>1.2?"流入↑強":r>1.05?"流入↑":r<0.8?"流出↓強":r<0.95?"流出↓":"横ばい";momCol=r>1.05?"bull":r<0.95?"bear":null;}
-  // BTC比相対強弱: 直近24本の自分の変化率 vs BTC
-  let relStr="—",relCol=null;
-  const btc=store["BTCJPY"];
+  let relStr="—",relCol=null;const btc=store["BTCJPY"];
   if(c.length>=24&&btc?.candles?.length>=24&&sym!=="BTCJPY"){const myC=(c[c.length-1].close-c[c.length-24].close)/c[c.length-24].close*100;const bC=(btc.candles[btc.candles.length-1].close-btc.candles[btc.candles.length-24].close)/btc.candles[btc.candles.length-24].close*100;const diff=myC-bC;relStr=diff>2?"BTCより強++":diff>0.5?"BTCより強":diff<-2?"BTCより弱--":diff<-0.5?"BTCより弱":"BTC並み";relCol=diff>0.5?"bull":diff<-0.5?"bear":null;}
   else if(sym==="BTCJPY")relStr="基準(BTC)";
-  // 出来高の厚み(24h)
   const vol=st.ticker?.vol;const volStr=vol?"¥"+(vol/1e8).toFixed(1)+"億":"—";
-  // ボラ
   const volat=pa.atrPct?pa.atrPct+"% "+(pa.atrHot?"🔥盛り上がり":"通常"):"—";
-  document.getElementById("fundGrid").innerHTML=[
-    ["資金の勢い (流出入)",momentum,momCol],
-    ["相対強弱 (BTC比)",relStr,relCol],
-    ["出来高の厚み (24h)",volStr,null],
-    ["ボラティリティ",volat,pa.atrHot?"bull":null],
-  ].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-mid)"}">${v}</span></div>`).join("");
+  document.getElementById("fundGrid").innerHTML=[["資金の勢い (流出入)",momentum,momCol],["相対強弱 (BTC比)",relStr,relCol],["出来高の厚み (24h)",volStr,null],["ボラティリティ",volat,pa.atrHot?"bull":null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");
 }
 
-// ===== AGENT SWARM ノードグラフ =====
-const swarmPos={}; // 各銘柄の現在座標を保持(滑らかに動かすため)
+// ════════ AGENT SWARM · アート級ノードグラフ ════════
+const swarmPos={};
+function aiColor(dir){return dir==="LONG"?"#2ee6a6":dir==="SHORT"?"#ff4d6d":"#ffc94d";}
+function buildSymTabs(){
+  const bar=document.getElementById("tabbarSym");
+  let html=`<div class="tab-sym all on" data-sm="all">🌌 全通貨</div>`;
+  html+=SYMBOLS.map(o=>`<div class="tab-sym" data-sm="${o.s}">${shortSym(o.s)}</div>`).join("");
+  bar.innerHTML=html;
+  bar.querySelectorAll(".tab-sym").forEach(t=>t.addEventListener("click",()=>{
+    swarmMode=t.dataset.sm;
+    bar.querySelectorAll(".tab-sym").forEach(x=>x.classList.toggle("on",x===t));
+    if(swarmMode!=="all"){loadMTF(swarmMode).then(()=>renderSwarm());}
+    renderSwarm();updateSwarmText();
+  }));
+}
+function updateSwarmText(){
+  const hint=document.getElementById("swarmHint"),label=document.getElementById("swarmModeLabel"),footer=document.getElementById("swarmFooter");
+  if(swarmMode==="all"){
+    label.textContent="全通貨";
+    hint.innerHTML=`<b style="color:var(--gold)">全通貨マップ</b> — 各通貨を一つの星にして、Always-Inの方向で引き寄せ配置。買い優勢は右(緑)、売り優勢は左(赤)の星雲に集まる。星が大きく明るいほど確信度が高い。市場全体がどちらに傾いているか、どの通貨が同じ群れにいるかが一目で分かる。`;
+    footer.textContent="星をタップでその通貨のチャートへ。群れに逆らう孤立した星は、相場の転換点になりやすい。";
+  }else{
+    label.textContent=fmtSym(swarmMode)+" マルチタイムフレーム";
+    hint.innerHTML=`<b style="color:var(--gold)">${fmtSym(swarmMode)} 時間軸マップ</b> — 同じ通貨の各時間軸(1分〜日足)を星にして配置。<b>全部が同じ側に集まれば全時間軸が一致した強いトレンド</b>。バラけていれば時間軸ごとに主導権が対立した「迷い相場」。ブルックスの複数時間軸分析を一枚に凝縮。`;
+    footer.textContent="短期(1分・5分)と長期(4時間・日足)が揃う方向が、最も信頼できる流れ。";
+  }
+}
 function renderSwarm(){
   const svg=document.getElementById("swarmSvg");if(!svg)return;
-  const W=360,H=340;
-  // データ収集
-  const nodes=SYMBOLS.map(o=>{const pa=store[o.s]?.pa;if(!pa)return null;return{sym:o.s.replace("JPY",""),val:pa.ai.val,dir:pa.ai.dir,conf:pa.ai.conf};}).filter(Boolean);
-  if(!nodes.length){svg.innerHTML='<text x="180" y="170" class="node-sub" style="font-size:10px">データ読み込み中…</text>';return;}
-  // クラスタ中心: LONG=右, SHORT=左, 中立=中央
-  const centers={LONG:{x:W*0.74,y:H*0.5},SHORT:{x:W*0.26,y:H*0.5},"中立":{x:W*0.5,y:H*0.5}};
-  // 各クラスタ内でノードを縦に分散
+  const W=360,H=380,cx0=W/2;
+  // ノードデータ構築
+  let nodes=[];
+  if(swarmMode==="all"){
+    nodes=SYMBOLS.map(o=>{const pa=store[o.s]?.pa;if(!pa)return null;return{id:shortSym(o.s),full:o.s,val:pa.ai.val,dir:pa.ai.dir,conf:pa.ai.conf,sub:pa.ai.conf+"%"};}).filter(Boolean);
+  }else{
+    const m=mtfStore[swarmMode]||{};
+    nodes=TFS.map(tf=>{const ai=m[tf];if(!ai)return null;return{id:TF_LABEL[tf],full:swarmMode,val:ai.val,dir:ai.dir,conf:ai.conf,sub:ai.conf+"%"};}).filter(Boolean);
+  }
+  if(!nodes.length){svg.innerHTML='<text x="180" y="190" class="node-sub" style="font-size:11px">データ読み込み中…</text>';return;}
+  // クラスタ中心
+  const centers={LONG:{x:W*0.74,y:H*0.48},SHORT:{x:W*0.26,y:H*0.48},"中立":{x:W*0.5,y:H*0.5}};
   const groups={LONG:[],SHORT:[],"中立":[]};
   nodes.forEach(n=>groups[n.dir].push(n));
-  // 目標座標を計算
+  // 目標座標(放射状・確信度で中心寄り)
   const target={};
   Object.keys(groups).forEach(dir=>{
-    const arr=groups[dir].sort((a,b)=>b.conf-a.conf);const cx=centers[dir].x,cy=centers[dir].y;
+    const arr=groups[dir].slice().sort((a,b)=>b.conf-a.conf);const cx=centers[dir].x,cy=centers[dir].y,cnt=arr.length;
     arr.forEach((n,i)=>{
-      const cnt=arr.length;
-      // 確信度が高いほど中心に近く、放射状に配置
-      const angle=(i/Math.max(1,cnt))*Math.PI*2 + (dir==="LONG"?0:dir==="SHORT"?Math.PI:Math.PI/2);
-      const spread=cnt>1?(28+ (100-n.conf)*0.5):0;
-      const jx=Math.cos(angle)*spread*(0.6+Math.random()*0.1);
-      const jy=Math.sin(angle)*spread + (i-cnt/2)*8;
-      target[n.sym]={x:Math.max(30,Math.min(W-30,cx+jx)),y:Math.max(40,Math.min(H-30,cy+jy)),n};
+      const ang=(i/Math.max(1,cnt))*Math.PI*2+(dir==="LONG"?-0.3:dir==="SHORT"?Math.PI-0.3:Math.PI/2);
+      const spread=cnt>1?(34+(100-n.conf)*0.42):0;
+      const jx=Math.cos(ang)*spread,jy=Math.sin(ang)*spread*0.85+(i-cnt/2)*6;
+      target[n.id]={x:Math.max(34,Math.min(W-34,cx+jx)),y:Math.max(54,Math.min(H-38,cy+jy)),n};
     });
   });
-  // 滑らかに現在座標を目標へ近づける
-  Object.keys(target).forEach(sym=>{
-    if(!swarmPos[sym])swarmPos[sym]={x:target[sym].x,y:target[sym].y};
-    swarmPos[sym].x+=(target[sym].x-swarmPos[sym].x)*0.18;
-    swarmPos[sym].y+=(target[sym].y-swarmPos[sym].y)*0.18;
+  Object.keys(target).forEach(id=>{
+    if(!swarmPos[id])swarmPos[id]={x:target[id].x,y:target[id].y};
+    swarmPos[id].x+=(target[id].x-swarmPos[id].x)*0.16;
+    swarmPos[id].y+=(target[id].y-swarmPos[id].y)*0.16;
   });
-  // 描画
-  let svgHtml="";
-  // クラスタ背景(淡い円)
-  const clusterMeta=[["LONG",centers.LONG,"var(--bull)","買い優勢"],["SHORT",centers.SHORT,"var(--bear)","売り優勢"],["中立",centers["中立"],"var(--gold)","中立"]];
+  // SVG defs: 各方向の発光グラデーション + ブラー
+  let defs=`<defs>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="softglow" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="9"/></filter>
+    <radialGradient id="gLONG" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#9affda"/><stop offset="35%" stop-color="#2ee6a6"/><stop offset="100%" stop-color="#0d4030"/></radialGradient>
+    <radialGradient id="gSHORT" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#ffb3c3"/><stop offset="35%" stop-color="#ff4d6d"/><stop offset="100%" stop-color="#401320"/></radialGradient>
+    <radialGradient id="gNEU" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#ffe6a8"/><stop offset="35%" stop-color="#ffc94d"/><stop offset="100%" stop-color="#403214"/></radialGradient>
+    <radialGradient id="bgGlow" cx="50%" cy="45%" r="70%"><stop offset="0%" stop-color="#16273a" stop-opacity="0.5"/><stop offset="100%" stop-color="#070a0f" stop-opacity="0"/></radialGradient>
+  </defs>`;
+  const gradId=d=>d==="LONG"?"gLONG":d==="SHORT"?"gSHORT":"gNEU";
+  let s=defs;
+  // 背景の淡い星雲
+  s+=`<rect x="0" y="0" width="${W}" height="${H}" fill="url(#bgGlow)"/>`;
+  // 微細な星(装飾・固定)
+  for(let i=0;i<40;i++){const x=(i*97)%W,y=(i*53+i*i*7)%H,r=(i%3)*0.3+0.3,o=0.1+(i%4)*0.06;s+=`<circle cx="${x}" cy="${y}" r="${r}" fill="#aabccc" opacity="${o}"/>`;}
+  // クラスタ背景の発光
+  const clusterMeta=[["LONG",centers.LONG,"#2ee6a6","買い優勢"],["SHORT",centers.SHORT,"#ff4d6d","売り優勢"],["中立",centers["中立"],"#ffc94d","中立"]];
   clusterMeta.forEach(([dir,ctr,col,lbl])=>{
     if(groups[dir].length>0){
-      svgHtml+=`<circle cx="${ctr.x}" cy="${ctr.y}" r="${48+groups[dir].length*6}" fill="${col}" opacity="0.04"/>`;
-      svgHtml+=`<text x="${ctr.x}" y="${dir==="中立"?ctr.y-72:34}" class="cluster-label jp" fill="${col}">${lbl} (${groups[dir].length})</text>`;
+      const rr=46+groups[dir].length*7;
+      s+=`<circle cx="${ctr.x}" cy="${ctr.y}" r="${rr}" fill="${col}" opacity="0.05" filter="url(#softglow)"/>`;
+      const ly=dir==="中立"?ctr.y-rr-8:38;
+      s+=`<text x="${ctr.x}" y="${ly}" class="cluster-label jp" fill="${col}" opacity="0.85">${lbl} (${groups[dir].length})</text>`;
     }
   });
-  // ノード間の線(同じクラスタ同士を結ぶ)
+  // 同クラスタ内の光の糸
   Object.keys(groups).forEach(dir=>{
-    const arr=groups[dir];const col=dir==="LONG"?"var(--bull)":dir==="SHORT"?"var(--bear)":"var(--gold)";
+    const arr=groups[dir],col=aiColor(dir);
     for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){
-      const a=swarmPos[arr[i].sym],b=swarmPos[arr[j].sym];if(!a||!b)continue;
-      svgHtml+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${col}" stroke-width="0.5" opacity="0.18"/>`;
+      const a=swarmPos[arr[i].id],b=swarmPos[arr[j].id];if(!a||!b)continue;
+      const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-8;
+      s+=`<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="${col}" stroke-width="0.6" opacity="0.16"/>`;
     }
   });
-  // ノード(泡)
+  // 中立から各クラスタへの淡い接続(全体の繋がりを表現)
+  // ノード(星)本体
   nodes.forEach(n=>{
-    const p=swarmPos[n.sym];if(!p)return;
-    const col=n.dir==="LONG"?"var(--bull)":n.dir==="SHORT"?"var(--bear)":"var(--gold)";
-    const r=10+n.conf*0.16; // 確信度で大きさ(10〜26)
-    const isActive=n.sym===activeSymbol.replace("JPY","");
-    svgHtml+=`<g style="cursor:pointer" onclick="selectSymbol('${n.sym}JPY')">`;
-    svgHtml+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${col}" opacity="${0.15+n.conf/100*0.35}"/>`;
-    svgHtml+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="none" stroke="${col}" stroke-width="${isActive?2:1}" opacity="${isActive?1:0.6}"/>`;
-    if(isActive)svgHtml+=`<circle cx="${p.x}" cy="${p.y}" r="${r+4}" fill="none" stroke="${col}" stroke-width="0.5" opacity="0.4"/>`;
-    svgHtml+=`<text x="${p.x}" y="${p.y-1}" class="node-label">${n.sym}</text>`;
-    svgHtml+=`<text x="${p.x}" y="${p.y+8}" class="node-sub">${n.conf}%</text>`;
-    svgHtml+=`</g>`;
+    const p=swarmPos[n.id];if(!p)return;
+    const col=aiColor(n.dir);
+    const r=11+n.conf*0.17; // 確信度で大きさ 11〜28
+    const isActive=(swarmMode==="all"&&n.full===activeSymbol);
+    const lum=0.4+n.conf/100*0.6; // 確信度で明るさ
+    // 外側ハロー(ぼかし)
+    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r*1.8}" fill="${col}" opacity="${0.06+n.conf/100*0.10}" filter="url(#softglow)"/>`;
+    // 本体(グラデ発光)
+    s+=`<g style="cursor:pointer" ${swarmMode==="all"?`onclick="selectSymbol('${n.full}')"`:''}>`;
+    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="url(#${gradId(n.dir)})" opacity="${lum}" filter="url(#glow)"/>`;
+    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="none" stroke="${col}" stroke-width="${isActive?2:1}" opacity="${isActive?1:0.7}"/>`;
+    // ハイライト(上部の光沢)
+    s+=`<ellipse cx="${p.x}" cy="${p.y-r*0.35}" rx="${r*0.45}" ry="${r*0.28}" fill="#ffffff" opacity="${0.12+n.conf/100*0.15}"/>`;
+    if(isActive)s+=`<circle cx="${p.x}" cy="${p.y}" r="${r+5}" fill="none" stroke="${col}" stroke-width="0.7" opacity="0.5"><animate attributeName="r" values="${r+5};${r+9};${r+5}" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.1;0.5" dur="2s" repeatCount="indefinite"/></circle>`;
+    // ラベル
+    const fs=Math.max(9,Math.min(12,r*0.55));
+    s+=`<text x="${p.x}" y="${p.y+fs*0.32}" class="node-label" style="font-size:${fs}px">${n.id}</text>`;
+    s+=`<text x="${p.x}" y="${p.y+r+9}" class="node-sub" style="font-size:7.5px" fill="${col}">${n.sub}</text>`;
+    s+=`</g>`;
   });
-  svg.innerHTML=svgHtml;
+  svg.innerHTML=s;
 }
-// スウォームを定期的に滑らかアニメーション
-setInterval(()=>{if(activePage==="Ana")renderSwarm();},600);
+// 滑らかアニメ
+setInterval(()=>{if(activePage==="Swarm")renderSwarm();},500);
 
 // ===== CYCLE =====
 const ES=[["01","Scan","BAR·TICK"],["02","Detect","PATTERN"],["03","Validate","TREND·RISK"],["04","Score","ALWAYS-IN"],["05","Signal","BIAS OUT"]];
@@ -722,26 +787,30 @@ function buildExec(){document.getElementById("execBar").innerHTML=ES.map(([n,nm,
 function pulseExec(){cycleNum++;document.getElementById("cycleCount").textContent="#"+cycleNum;ES.forEach((_,i)=>setTimeout(()=>{const e=document.getElementById("ex-"+i);if(!e)return;e.classList.add("active");document.getElementById("ems-"+i).textContent=(Math.random()*180+40).toFixed(0)+"ms";setTimeout(()=>e.classList.remove("active"),400);},i*100));}
 
 // ===== TABS =====
-document.getElementById("tabbar").addEventListener("click",e=>{
-  const tab=e.target.closest(".tab");if(!tab)return;const pg=tab.dataset.pg;activePage=pg;
-  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t===tab));
+document.getElementById("tabbarMain").addEventListener("click",e=>{
+  const tab=e.target.closest(".tab-main");if(!tab)return;const pg=tab.dataset.pg;activePage=pg;
+  document.querySelectorAll(".tab-main").forEach(t=>t.classList.toggle("on",t===tab));
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("on"));
   document.getElementById("pg"+pg).classList.add("on");
+  // 通貨タブ帯はSWARMページのときだけ表示
+  document.getElementById("tabbarSym").style.display=(pg==="Swarm")?"flex":"none";
   if(pg==="Chart"&&chart)setTimeout(()=>chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300}),50);
   if(pg==="Flow")connectFlowWS(activeSymbol);else disconnectFlowWS();
-  if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderVP(st.candles);renderTradeJudge(st.pa);renderFund(activeSymbol);}renderSwarm();}
+  if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderVP(st.candles);renderTradeJudge(st.pa);renderFund(activeSymbol);}}
+  if(pg==="Swarm"){updateSwarmText();if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());renderSwarm();}
 });
-function selectSymbol(sym){activeSymbol=sym;document.querySelectorAll(".wl-row").forEach(r=>r.classList.toggle("sel",r.id==="wl-"+sym));document.querySelector('.tab[data-pg="Chart"]').click();loadChart(sym,TF);}
+function selectSymbol(sym){activeSymbol=sym;document.querySelectorAll(".wl-row").forEach(r=>r.classList.toggle("sel",r.id==="wl-"+sym));document.querySelector('.tab-main[data-pg="Chart"]').click();loadChart(sym,TF);}
 document.getElementById("tfGroup").addEventListener("click",e=>{if(!e.target.dataset.tf)return;TF=e.target.dataset.tf;document.querySelectorAll(".tf-btn").forEach(b=>b.classList.toggle("on",b.dataset.tf===TF));loadChart(activeSymbol,TF);});
 function setConn(t,live){const e=document.getElementById("connStatus");e.textContent=t;e.style.color=live?"var(--bull)":t.includes("ERROR")?"var(--bear)":"var(--gold)";}
 setInterval(()=>{const d=new Date();document.getElementById("utcClock").textContent=`${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}:${String(d.getUTCSeconds()).padStart(2,"0")} UTC`;},1000);
 
 // ===== BOOT =====
 (async function(){
-  buildWL();buildExec();initChart();connectTickerWS();
+  buildWL();buildExec();buildSymTabs();initChart();connectTickerWS();updateSwarmText();
+  document.getElementById("tabbarSym").style.display="none";
   await Promise.allSettled(SYMBOLS.map(async o=>{try{const c=await loadHistory(o.s,TF);store[o.s]=store[o.s]||{candles:[],pa:null,ticker:{}};store[o.s].candles=c;store[o.s].pa=runPA(c);updateWLRow(o.s);}catch(e){}}));
-  updateSummary();renderSwarm();
-  if(store["BTCJPY"]?.candles?.length){candleSeries.setData(store["BTCJPY"].candles);const pa=store["BTCJPY"].pa;renderAlwaysIn(pa);renderTradeJudge(pa);renderFund("BTCJPY");}
+  updateSummary();
+  if(store["BTCJPY"]?.candles?.length){candleSeries.setData(store["BTCJPY"].candles);const pa=store["BTCJPY"].pa;renderAlwaysIn(pa);renderTradeJudge(pa);renderFund("BTCJPY");document.getElementById("tjSym").textContent=fmtSym("BTCJPY");}
   connectKlineWS("BTCJPY",TF);
 })();
 </script>
