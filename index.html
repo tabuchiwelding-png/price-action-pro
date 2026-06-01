@@ -324,8 +324,9 @@ const SYMBOLS=[
   {s:"DOGEJPY",name:"Dogecoin"},{s:"LTCJPY",name:"Litecoin"},{s:"LINKJPY",name:"Chainlink"},
   {s:"DOTJPY",name:"Polkadot"},
 ];
-const TFS=["1m","5m","15m","1h","4h","1d"];
-const TF_LABEL={"1m":"1分","5m":"5分","15m":"15分","1h":"1時間","4h":"4時間","1d":"日足"};
+const TFS=["1m","5m","15m","30m","1h","4h","1d","1w","1M"];
+const TF_LABEL={"1m":"1分","5m":"5分","15m":"15分","30m":"30分","1h":"1時間","4h":"4時間","1d":"日足","1w":"週足","1M":"月足"};
+const TF_SHORT={"1m":"1m","5m":"5m","15m":"15m","30m":"30m","1h":"1h","4h":"4h","1d":"1D","1w":"1W","1M":"1Mo"};
 const REST_HOSTS=["https://api.binance.com/api/v3","https://data-api.binance.vision/api/v3","https://api1.binance.com/api/v3"];
 const WS_HOSTS=["wss://stream.binance.com:9443/stream","wss://stream.binance.com:443/stream","wss://data-stream.binance.vision/stream"];
 let TF="5m", activeSymbol="BTCJPY", activePage="Scan", cycleNum=0, scanMode="ai";
@@ -424,8 +425,33 @@ async function loadHistory(symbol,tf){
 async function loadMTF(symbol){
   mtfStore[symbol]=mtfStore[symbol]||{};
   await Promise.allSettled(TFS.map(async tf=>{
-    try{const c=await loadHistory(symbol,tf);mtfStore[symbol][tf]=alwaysIn(c);}catch(e){}
+    try{const c=await loadHistory(symbol,tf);mtfStore[symbol][tf]={ai:alwaysIn(c),bars:c.length,enough:c.length>=25};}catch(e){mtfStore[symbol][tf]={ai:{val:0,dir:"中立",conf:0},bars:0,enough:false};}
   }));
+}
+// 全通貨のMTFを段階的に取得(銀河を少しずつ点灯)
+function loadAllMTF(onEach){
+  SYMBOLS.forEach(o=>{
+    mtfStore[o.s]=mtfStore[o.s]||{};
+    TFS.forEach(async tf=>{
+      try{const c=await loadHistory(o.s,tf);mtfStore[o.s][tf]={ai:alwaysIn(c),bars:c.length,enough:c.length>=25};}
+      catch(e){mtfStore[o.s][tf]={ai:{val:0,dir:"中立",conf:0},bars:0,enough:false};}
+      if(onEach)onEach();
+    });
+  });
+}
+// 関係性エンジン: 通貨間の収束・対立を検出(道Cの核)
+function computeRelations(){
+  // 各通貨の総合方向(5分足ベース=store.pa)
+  const dirs={};SYMBOLS.forEach(o=>{const pa=store[o.s]?.pa;if(pa)dirs[o.s]=pa.ai;});
+  const longs=Object.keys(dirs).filter(s=>dirs[s].dir==="LONG");
+  const shorts=Object.keys(dirs).filter(s=>dirs[s].dir==="SHORT");
+  const rels=[];
+  // CONVERGENCE(収束): 同方向に3つ以上集まったら関係性ノード
+  if(longs.length>=3)rels.push({type:"CONVERGENCE",jp:"買い収束",dir:"LONG",members:longs,strength:longs.reduce((s,m)=>s+dirs[m].conf,0)/longs.length});
+  if(shorts.length>=3)rels.push({type:"CONVERGENCE",jp:"売り収束",dir:"SHORT",members:shorts,strength:shorts.reduce((s,m)=>s+dirs[m].conf,0)/shorts.length});
+  // COLLISION(対立): 買いと売りが拮抗していたら衝突ノード
+  if(longs.length>=2&&shorts.length>=2)rels.push({type:"COLLISION",jp:"方向対立",dir:"中立",members:[...longs.slice(0,2),...shorts.slice(0,2)],strength:50});
+  return rels;
 }
 let ws=null,tickerWs=null,wsKI=0,wsTI=0;
 function connectKlineWS(symbol,tf){
@@ -687,99 +713,130 @@ function updateSwarmText(){
     footer.textContent="短期(1分・5分)と長期(4時間・日足)が揃う方向が、最も信頼できる流れ。";
   }
 }
+// ════════ NEURAL SWARM · 神経網ノードグラフ (道C) ════════
+// 通貨ハブ → 時間軸ノード → シグナルノード → 関係性ノード。全て本物のデータ。
+const nodePos={}; // 全ノードの座標を保持(滑らかアニメ)
+let starfield=null; // 背景の星(固定・一度だけ生成)
+function genStarfield(W,H){const a=[];for(let i=0;i<90;i++){a.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*0.9+0.2,o:Math.random()*0.18+0.04,tw:Math.random()*2+1});}return a;}
+
 function renderSwarm(){
   const svg=document.getElementById("swarmSvg");if(!svg)return;
-  const W=360,H=380,cx0=W/2;
-  // ノードデータ構築
-  let nodes=[];
+  const W=360,H=420;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  if(!starfield)starfield=genStarfield(W,H);
+
+  // ===== ノード収集 =====
+  let nodes=[];  // {id,kind,sym,tf,dir,conf,r,col,label,sub,enough}
+  let links=[];  // {a,b,col,w,o}
+  const colOf=d=>d==="LONG"?"#2ee6a6":d==="SHORT"?"#ff4d6d":"#ffc94d";
+  const gradOf=d=>d==="LONG"?"gLONG":d==="SHORT"?"gSHORT":"gNEU";
+
   if(swarmMode==="all"){
-    nodes=SYMBOLS.map(o=>{const pa=store[o.s]?.pa;if(!pa)return null;return{id:shortSym(o.s),full:o.s,val:pa.ai.val,dir:pa.ai.dir,conf:pa.ai.conf,sub:pa.ai.conf+"%"};}).filter(Boolean);
-  }else{
-    const m=mtfStore[swarmMode]||{};
-    nodes=TFS.map(tf=>{const ai=m[tf];if(!ai)return null;return{id:TF_LABEL[tf],full:swarmMode,val:ai.val,dir:ai.dir,conf:ai.conf,sub:ai.conf+"%"};}).filter(Boolean);
-  }
-  if(!nodes.length){svg.innerHTML='<text x="180" y="190" class="node-sub" style="font-size:11px">データ読み込み中…</text>';return;}
-  // クラスタ中心
-  const centers={LONG:{x:W*0.74,y:H*0.48},SHORT:{x:W*0.26,y:H*0.48},"中立":{x:W*0.5,y:H*0.5}};
-  const groups={LONG:[],SHORT:[],"中立":[]};
-  nodes.forEach(n=>groups[n.dir].push(n));
-  // 目標座標(放射状・確信度で中心寄り)
-  const target={};
-  Object.keys(groups).forEach(dir=>{
-    const arr=groups[dir].slice().sort((a,b)=>b.conf-a.conf);const cx=centers[dir].x,cy=centers[dir].y,cnt=arr.length;
-    arr.forEach((n,i)=>{
-      const ang=(i/Math.max(1,cnt))*Math.PI*2+(dir==="LONG"?-0.3:dir==="SHORT"?Math.PI-0.3:Math.PI/2);
-      const spread=cnt>1?(34+(100-n.conf)*0.42):0;
-      const jx=Math.cos(ang)*spread,jy=Math.sin(ang)*spread*0.85+(i-cnt/2)*6;
-      target[n.id]={x:Math.max(34,Math.min(W-34,cx+jx)),y:Math.max(54,Math.min(H-38,cy+jy)),n};
+    // --- 全通貨: 銀河全体 ---
+    // クラスタ中心
+    const C={LONG:{x:W*0.76,y:H*0.46},SHORT:{x:W*0.24,y:H*0.46},"中立":{x:W*0.5,y:H*0.52}};
+    const hubGroups={LONG:[],SHORT:[],"中立":[]};
+    SYMBOLS.forEach(o=>{const pa=store[o.s]?.pa;if(pa)hubGroups[pa.ai.dir].push({sym:o.s,ai:pa.ai});});
+    // 通貨ハブ + その時間軸ノード
+    Object.keys(hubGroups).forEach(dir=>{
+      const arr=hubGroups[dir].slice().sort((a,b)=>b.ai.conf-a.ai.conf);const ctr=C[dir],cnt=arr.length;
+      arr.forEach((h,i)=>{
+        const ang=(i/Math.max(1,cnt))*Math.PI*2+(dir==="LONG"?-0.4:dir==="SHORT"?Math.PI-0.4:Math.PI/2);
+        const sp=cnt>1?(46+(100-h.ai.conf)*0.4):0;
+        const hx=Math.max(40,Math.min(W-40,ctr.x+Math.cos(ang)*sp));
+        const hy=Math.max(60,Math.min(H-50,ctr.y+Math.sin(ang)*sp*0.8+(i-cnt/2)*5));
+        const hubId="hub-"+h.sym;
+        nodes.push({id:hubId,kind:"hub",sym:h.sym,dir:h.ai.dir,conf:h.ai.conf,r:11+h.ai.conf*0.13,col:colOf(h.ai.dir),label:shortSym(h.sym),sub:h.ai.conf+"%",enough:true,fx:hx,fy:hy});
+        // 時間軸ノード(MTFがあれば)
+        const m=mtfStore[h.sym];
+        if(m){TFS.forEach((tf,ti)=>{const d=m[tf];if(!d)return;const tang=(ti/TFS.length)*Math.PI*2;const tr=18+Math.random()*4;const tx=hx+Math.cos(tang)*tr;const ty=hy+Math.sin(tang)*tr;const tfId="tf-"+h.sym+"-"+tf;
+          nodes.push({id:tfId,kind:"tf",sym:h.sym,tf,dir:d.ai.dir,conf:d.ai.conf,r:d.enough?(3+d.ai.conf*0.04):2.5,col:colOf(d.ai.dir),label:"",sub:"",enough:d.enough,fx:tx,fy:ty});
+          links.push({a:hubId,b:tfId,col:colOf(d.ai.dir),w:0.5,o:d.enough?0.22:0.08});
+        });}
+      });
     });
-  });
-  Object.keys(target).forEach(id=>{
-    if(!swarmPos[id])swarmPos[id]={x:target[id].x,y:target[id].y};
-    swarmPos[id].x+=(target[id].x-swarmPos[id].x)*0.16;
-    swarmPos[id].y+=(target[id].y-swarmPos[id].y)*0.16;
-  });
-  // SVG defs: 各方向の発光グラデーション + ブラー
-  let defs=`<defs>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="softglow" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="9"/></filter>
-    <radialGradient id="gLONG" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#9affda"/><stop offset="35%" stop-color="#2ee6a6"/><stop offset="100%" stop-color="#0d4030"/></radialGradient>
-    <radialGradient id="gSHORT" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#ffb3c3"/><stop offset="35%" stop-color="#ff4d6d"/><stop offset="100%" stop-color="#401320"/></radialGradient>
-    <radialGradient id="gNEU" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#ffe6a8"/><stop offset="35%" stop-color="#ffc94d"/><stop offset="100%" stop-color="#403214"/></radialGradient>
-    <radialGradient id="bgGlow" cx="50%" cy="45%" r="70%"><stop offset="0%" stop-color="#16273a" stop-opacity="0.5"/><stop offset="100%" stop-color="#070a0f" stop-opacity="0"/></radialGradient>
+    // 同方向ハブ同士を結ぶ(クラスタの結束)
+    Object.keys(hubGroups).forEach(dir=>{const arr=hubGroups[dir];const col=colOf(dir);for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){links.push({a:"hub-"+arr[i].sym,b:"hub-"+arr[j].sym,col,w:0.5,o:0.12});}});
+    // 関係性ノード(収束/対立)
+    const rels=computeRelations();
+    rels.forEach((rel,ri)=>{
+      const relId="rel-"+ri;const ctr=rel.dir==="中立"?C["中立"]:C[rel.dir];
+      const rx=ctr.x+(rel.type==="COLLISION"?0:(rel.dir==="LONG"?-20:20));const ry=ctr.y-30;
+      nodes.push({id:relId,kind:"rel",dir:rel.dir,conf:rel.strength,r:7+rel.strength*0.05,col:colOf(rel.dir),label:rel.type==="CONVERGENCE"?"⊕":"⊗",sub:rel.jp,enough:true,fx:rx,fy:ry,relType:rel.type});
+      rel.members.forEach(m=>{links.push({a:relId,b:"hub-"+m,col:colOf(rel.dir),w:0.6,o:0.2});});
+    });
+    drawNeural(svg,nodes,links,W,H,[["売り優勢",C.SHORT,"#ff4d6d",hubGroups.SHORT.length],["買い優勢",C.LONG,"#2ee6a6",hubGroups.LONG.length],["中立",C["中立"],"#ffc94d",hubGroups["中立"].length]]);
+  }else{
+    // --- 個別通貨: 星系にズーム(時間軸が主役) ---
+    const m=mtfStore[swarmMode]||{};
+    const C={LONG:{x:W*0.74,y:H*0.46},SHORT:{x:W*0.26,y:H*0.46},"中立":{x:W*0.5,y:H*0.52}};
+    const tfGroups={LONG:[],SHORT:[],"中立":[]};
+    TFS.forEach(tf=>{const d=m[tf];if(d)tfGroups[d.ai.dir].push({tf,d});});
+    Object.keys(tfGroups).forEach(dir=>{
+      const arr=tfGroups[dir].slice().sort((a,b)=>b.d.ai.conf-a.d.ai.conf);const ctr=C[dir],cnt=arr.length;
+      arr.forEach((t,i)=>{
+        const ang=(i/Math.max(1,cnt))*Math.PI*2+(dir==="LONG"?-0.4:dir==="SHORT"?Math.PI-0.4:Math.PI/2);
+        const sp=cnt>1?(40+(100-t.d.ai.conf)*0.4):0;
+        const tx=Math.max(42,Math.min(W-42,ctr.x+Math.cos(ang)*sp));
+        const ty=Math.max(64,Math.min(H-54,ctr.y+Math.sin(ang)*sp*0.85+(i-cnt/2)*8));
+        const id="tfz-"+t.tf;
+        nodes.push({id,kind:"tfz",tf:t.tf,dir:t.d.ai.dir,conf:t.d.ai.conf,r:t.d.enough?(13+t.d.ai.conf*0.13):9,col:colOf(t.d.ai.dir),label:TF_SHORT[t.tf],sub:t.d.enough?t.d.ai.conf+"%":"蓄積中",enough:t.d.enough,fx:tx,fy:ty});
+      });
+    });
+    // 同方向の時間軸同士を結ぶ
+    Object.keys(tfGroups).forEach(dir=>{const arr=tfGroups[dir];const col=colOf(dir);for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){links.push({a:"tfz-"+arr[i].tf,b:"tfz-"+arr[j].tf,col,w:0.6,o:0.16});}});
+    drawNeural(svg,nodes,links,W,H,[["売り優勢",C.SHORT,"#ff4d6d",tfGroups.SHORT.length],["買い優勢",C.LONG,"#2ee6a6",tfGroups.LONG.length],["中立",C["中立"],"#ffc94d",tfGroups["中立"].length]]);
+  }
+}
+
+function drawNeural(svg,nodes,links,W,H,clusters){
+  if(!nodes.length){svg.innerHTML='<text x="180" y="210" class="node-sub" style="font-size:11px">データ読み込み中…</text>';return;}
+  // 座標を滑らかに目標へ
+  nodes.forEach(n=>{if(!nodePos[n.id])nodePos[n.id]={x:n.fx,y:n.fy};nodePos[n.id].x+=(n.fx-nodePos[n.id].x)*0.16;nodePos[n.id].y+=(n.fy-nodePos[n.id].y)*0.16;n.x=nodePos[n.id].x;n.y=nodePos[n.id].y;});
+  const pos={};nodes.forEach(n=>pos[n.id]=n);
+  let s=`<defs>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="softglow" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="8"/></filter>
+    <radialGradient id="gLONG" cx="50%" cy="40%" r="62%"><stop offset="0%" stop-color="#bfffe8"/><stop offset="38%" stop-color="#2ee6a6"/><stop offset="100%" stop-color="#0a3526"/></radialGradient>
+    <radialGradient id="gSHORT" cx="50%" cy="40%" r="62%"><stop offset="0%" stop-color="#ffc9d4"/><stop offset="38%" stop-color="#ff4d6d"/><stop offset="100%" stop-color="#350f1a"/></radialGradient>
+    <radialGradient id="gNEU" cx="50%" cy="40%" r="62%"><stop offset="0%" stop-color="#fff0c8"/><stop offset="38%" stop-color="#ffc94d"/><stop offset="100%" stop-color="#352a11"/></radialGradient>
   </defs>`;
-  const gradId=d=>d==="LONG"?"gLONG":d==="SHORT"?"gSHORT":"gNEU";
-  let s=defs;
-  // 背景の淡い星雲
-  s+=`<rect x="0" y="0" width="${W}" height="${H}" fill="url(#bgGlow)"/>`;
-  // 微細な星(装飾・固定)
-  for(let i=0;i<40;i++){const x=(i*97)%W,y=(i*53+i*i*7)%H,r=(i%3)*0.3+0.3,o=0.1+(i%4)*0.06;s+=`<circle cx="${x}" cy="${y}" r="${r}" fill="#aabccc" opacity="${o}"/>`;}
-  // クラスタ背景の発光
-  const clusterMeta=[["LONG",centers.LONG,"#2ee6a6","買い優勢"],["SHORT",centers.SHORT,"#ff4d6d","売り優勢"],["中立",centers["中立"],"#ffc94d","中立"]];
-  clusterMeta.forEach(([dir,ctr,col,lbl])=>{
-    if(groups[dir].length>0){
-      const rr=46+groups[dir].length*7;
-      s+=`<circle cx="${ctr.x}" cy="${ctr.y}" r="${rr}" fill="${col}" opacity="0.05" filter="url(#softglow)"/>`;
-      const ly=dir==="中立"?ctr.y-rr-8:38;
-      s+=`<text x="${ctr.x}" y="${ly}" class="cluster-label jp" fill="${col}" opacity="0.85">${lbl} (${groups[dir].length})</text>`;
-    }
-  });
-  // 同クラスタ内の光の糸
-  Object.keys(groups).forEach(dir=>{
-    const arr=groups[dir],col=aiColor(dir);
-    for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){
-      const a=swarmPos[arr[i].id],b=swarmPos[arr[j].id];if(!a||!b)continue;
-      const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-8;
-      s+=`<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="${col}" stroke-width="0.6" opacity="0.16"/>`;
-    }
-  });
-  // 中立から各クラスタへの淡い接続(全体の繋がりを表現)
-  // ノード(星)本体
+  // 背景の星(固定)
+  starfield.forEach(st=>{s+=`<circle cx="${st.x}" cy="${st.y}" r="${st.r}" fill="#aabccc" opacity="${st.o}"><animate attributeName="opacity" values="${st.o};${st.o*2.2};${st.o}" dur="${st.tw}s" repeatCount="indefinite"/></circle>`;});
+  // クラスタ星雲
+  clusters.forEach(([lbl,ctr,col,cnt])=>{if(cnt>0){const rr=50+cnt*6;s+=`<circle cx="${ctr.x}" cy="${ctr.y}" r="${rr}" fill="${col}" opacity="0.045" filter="url(#softglow)"/>`;const ly=lbl==="中立"?ctr.y-rr-6:42;s+=`<text x="${ctr.x}" y="${ly}" class="cluster-label jp" fill="${col}" opacity="0.8">${lbl} (${cnt})</text>`;}});
+  // リンク(光の糸)
+  links.forEach(l=>{const a=pos[l.a],b=pos[l.b];if(!a||!b)return;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-6;s+=`<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="${l.col}" stroke-width="${l.w}" opacity="${l.o}"/>`;});
+  // ノード(種類別)
   nodes.forEach(n=>{
-    const p=swarmPos[n.id];if(!p)return;
-    const col=aiColor(n.dir);
-    const r=11+n.conf*0.17; // 確信度で大きさ 11〜28
-    const isActive=(swarmMode==="all"&&n.full===activeSymbol);
-    const lum=0.4+n.conf/100*0.6; // 確信度で明るさ
-    // 外側ハロー(ぼかし)
-    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r*1.8}" fill="${col}" opacity="${0.06+n.conf/100*0.10}" filter="url(#softglow)"/>`;
-    // 本体(グラデ発光)
-    s+=`<g style="cursor:pointer" ${swarmMode==="all"?`onclick="selectSymbol('${n.full}')"`:''}>`;
-    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="url(#${gradId(n.dir)})" opacity="${lum}" filter="url(#glow)"/>`;
-    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="none" stroke="${col}" stroke-width="${isActive?2:1}" opacity="${isActive?1:0.7}"/>`;
-    // ハイライト(上部の光沢)
-    s+=`<ellipse cx="${p.x}" cy="${p.y-r*0.35}" rx="${r*0.45}" ry="${r*0.28}" fill="#ffffff" opacity="${0.12+n.conf/100*0.15}"/>`;
-    if(isActive)s+=`<circle cx="${p.x}" cy="${p.y}" r="${r+5}" fill="none" stroke="${col}" stroke-width="0.7" opacity="0.5"><animate attributeName="r" values="${r+5};${r+9};${r+5}" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.1;0.5" dur="2s" repeatCount="indefinite"/></circle>`;
-    // ラベル
-    const fs=Math.max(9,Math.min(12,r*0.55));
-    s+=`<text x="${p.x}" y="${p.y+fs*0.32}" class="node-label" style="font-size:${fs}px">${n.id}</text>`;
-    s+=`<text x="${p.x}" y="${p.y+r+9}" class="node-sub" style="font-size:7.5px" fill="${col}">${n.sub}</text>`;
+    const op=n.enough?(0.45+n.conf/100*0.55):0.3;
+    if(n.kind==="tf"){ // 小さな時間軸ノード(全通貨ビュー)
+      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.col}" opacity="${n.enough?op*0.7:0.18}"/>`;
+      return;
+    }
+    // ハロー
+    s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r*1.7}" fill="${n.col}" opacity="${(n.enough?0.06:0.02)+n.conf/100*0.08}" filter="url(#softglow)"/>`;
+    const clickable=(n.kind==="hub")?`onclick="selectSymbol('${n.sym}')" style="cursor:pointer"`:"";
+    s+=`<g ${clickable}>`;
+    if(n.kind==="rel"){ // 関係性ノード: リング状
+      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="none" stroke="${n.col}" stroke-width="1.5" opacity="0.8" stroke-dasharray="${n.relType==='COLLISION'?'3 2':'0'}"><animate attributeName="r" values="${n.r};${n.r+3};${n.r}" dur="3s" repeatCount="indefinite"/></circle>`;
+      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r*0.5}" fill="${n.col}" opacity="0.5" filter="url(#glow)"/>`;
+      s+=`<text x="${n.x}" y="${n.y+3}" class="node-label" style="font-size:10px" fill="${n.col}">${n.label}</text>`;
+      s+=`<text x="${n.x}" y="${n.y+n.r+9}" class="node-sub" style="font-size:7px" fill="${n.col}">${n.sub}</text>`;
+    }else{ // ハブ / ズーム時間軸: 発光する星
+      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="url(#${gradOf(n.dir)})" opacity="${op}" filter="url(#glow)"/>`;
+      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="none" stroke="${n.col}" stroke-width="1" opacity="${n.enough?0.7:0.35}" ${n.enough?'':'stroke-dasharray="2 2"'}/>`;
+      s+=`<ellipse cx="${n.x}" cy="${n.y-n.r*0.35}" rx="${n.r*0.45}" ry="${n.r*0.26}" fill="#fff" opacity="${0.1+n.conf/100*0.12}"/>`;
+      const fs=Math.max(8,Math.min(12,n.r*0.5));
+      if(n.label)s+=`<text x="${n.x}" y="${n.y+fs*0.32}" class="node-label" style="font-size:${fs}px">${n.label}</text>`;
+      if(n.sub)s+=`<text x="${n.x}" y="${n.y+n.r+9}" class="node-sub" style="font-size:7px" fill="${n.col}">${n.sub}</text>`;
+    }
     s+=`</g>`;
   });
   svg.innerHTML=s;
 }
-// 滑らかアニメ
-setInterval(()=>{if(activePage==="Swarm")renderSwarm();},500);
+setInterval(()=>{if(activePage==="Swarm")renderSwarm();},600);
+
 
 // ===== CYCLE =====
 const ES=[["01","Scan","BAR·TICK"],["02","Detect","PATTERN"],["03","Validate","TREND·RISK"],["04","Score","ALWAYS-IN"],["05","Signal","BIAS OUT"]];
@@ -797,7 +854,7 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   if(pg==="Chart"&&chart)setTimeout(()=>chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300}),50);
   if(pg==="Flow")connectFlowWS(activeSymbol);else disconnectFlowWS();
   if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderVP(st.candles);renderTradeJudge(st.pa);renderFund(activeSymbol);}}
-  if(pg==="Swarm"){updateSwarmText();if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());renderSwarm();}
+  if(pg==="Swarm"){updateSwarmText();if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());if(!window._mtfLoaded){window._mtfLoaded=true;loadAllMTF(()=>{if(activePage==="Swarm")renderSwarm();});}renderSwarm();}
 });
 function selectSymbol(sym){activeSymbol=sym;document.querySelectorAll(".wl-row").forEach(r=>r.classList.toggle("sel",r.id==="wl-"+sym));document.querySelector('.tab-main[data-pg="Chart"]').click();loadChart(sym,TF);}
 document.getElementById("tfGroup").addEventListener("click",e=>{if(!e.target.dataset.tf)return;TF=e.target.dataset.tf;document.querySelectorAll(".tf-btn").forEach(b=>b.classList.toggle("on",b.dataset.tf===TF));loadChart(activeSymbol,TF);});
