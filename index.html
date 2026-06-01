@@ -161,7 +161,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
   </div>
 
   <div class="page on" id="pgScan">
-    <div class="ph"><span class="dot"></span> WATCHLIST · ALWAYS-IN SCANNER <span class="ph-right">強度順 ▼</span></div>
+    <div class="ph"><span class="dot"></span> WATCHLIST · 監視銘柄 <span class="ph-right" id="scanModeBtn" style="cursor:pointer;color:var(--gold)">主導権(強度)順 ⇄ ボラ順</span></div>
     <div id="watchlist"></div>
   </div>
 
@@ -312,7 +312,15 @@ function runPA(c){
   if(rsi&&rsi>70)adj.push(-.5); if(rsi&&rsi<30)adj.push(.5);
   const score=Math.max(0,Math.min(10,+(5+adj.reduce((s,v)=>s+v,0)).toFixed(1)));
   const sd=score>=6.5?"bull":score<=3.5?"bear":"neutral";
-  return{score,signalDir:sd,trendDir,trendLabel,signals:sig.sort((a,b)=>b.str-a.str),ma20:+ma20.toFixed(2),ma50:ma50?+ma50.toFixed(2):null,e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,rsi,volRatio:vR,highVol:vR>1.8,aboveMA20:last.close>ma20,aboveMA50:ma50?last.close>ma50:null,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai:alwaysIn(c)};
+  // ATR14 (平均変動幅) と ATR% を計算
+  const tr=[];for(let i=1;i<c.length;i++){const h=c[i].high,l=c[i].low,pc=c[i-1].close;tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));}
+  const atr14=tr.length>=14?tr.slice(-14).reduce((s,v)=>s+v,0)/14:null;
+  const atrPct=atr14?+(atr14/last.close*100).toFixed(2):null;
+  // 過去のATR%平均(直近50本ぶんのATR14系列)と比べて今が高いか
+  let atrAvg=null;
+  if(tr.length>=64){const series=[];for(let i=tr.length-50;i<tr.length;i++){series.push(tr.slice(i-14,i).reduce((s,v)=>s+v,0)/14);}atrAvg=series.reduce((s,v)=>s+v,0)/series.length/last.close*100;}
+  const atrHot=atrAvg&&atrPct?atrPct>atrAvg*1.3:false; // 平均比1.3倍超で「盛り上がり」
+  return{score,signalDir:sd,trendDir,trendLabel,signals:sig.sort((a,b)=>b.str-a.str),ma20:+ma20.toFixed(2),ma50:ma50?+ma50.toFixed(2):null,e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,rsi,volRatio:vR,highVol:vR>1.8,aboveMA20:last.close>ma20,aboveMA50:ma50?last.close>ma50:null,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai:alwaysIn(c),atr14,atrPct,atrHot};
 }
 
 async function loadHistory(symbol,tf){
@@ -452,15 +460,45 @@ function renderNarrative(pa){
 function buildWL(){
   document.getElementById("watchlist").innerHTML=SYMBOLS.map(o=>`<div class="wl-row" id="wl-${o.s}" onclick="selectSymbol('${o.s}')"><div><div class="wl-sym">${o.s.replace("JPY","")}</div><div class="wl-name">${o.name}</div></div><div><div class="wl-price" id="px-${o.s}">—</div><div class="wl-chg" id="chg-${o.s}">—</div></div><div class="wl-ai"><div class="wl-ai-track"><div class="wl-ai-marker" id="aim-${o.s}" style="left:50%"></div></div><div class="wl-ai-lbl" id="ail-${o.s}">—</div></div><div class="wl-sigs" id="sg-${o.s}"></div></div>`).join("");
 }
+let scanMode="ai"; // "ai" = 主導権順, "vol" = ボラ順
 function updateWLRow(sym){
   const st=store[sym];if(!st)return;const t=st.ticker,pa=st.pa;
   const px=document.getElementById("px-"+sym);if(!px)return;
   if(t.price){const old=px.textContent,nv="¥"+fmt(t.price);px.textContent=nv;px.style.color="var(--txt-br)";if(old!=="—"&&old!==nv){const r=document.getElementById("wl-"+sym);r.classList.remove("flash-up","flash-dn");void r.offsetWidth;r.classList.add(t.chg>=0?"flash-up":"flash-dn");}const ch=document.getElementById("chg-"+sym);ch.textContent=(t.chg>=0?"+":"")+t.chg.toFixed(2)+"%";ch.style.color=t.chg>=0?"var(--bull)":"var(--bear)";}
-  if(pa){const ai=pa.ai;const col=ai.dir==="LONG"?"var(--bull)":ai.dir==="SHORT"?"var(--bear)":"var(--gold)";document.getElementById("aim-"+sym).style.left=((ai.val+100)/2)+"%";document.getElementById("aim-"+sym).style.background=col;const ail=document.getElementById("ail-"+sym);ail.textContent=ai.dir==="LONG"?`L ${ai.conf}%`:ai.dir==="SHORT"?`S ${ai.conf}%`:`中立`;ail.style.color=col;document.getElementById("sg-"+sym).innerHTML=pa.signals.slice(0,2).map(s=>`<span class="sig-pill" style="color:${dc(s.dir)};background:${db(s.dir)};border-color:${dc(s.dir)}55">${s.name.split(" ").slice(0,2).join(" ")}</span>`).join("");}
+  if(pa){
+    const marker=document.getElementById("aim-"+sym),track=marker?.parentElement,ail=document.getElementById("ail-"+sym);
+    if(scanMode==="ai"){
+      // 主導権(Always-In)モード: 中央基準の針
+      if(track)track.style.background="linear-gradient(90deg,var(--bear-dim),var(--border),var(--bull-dim))";
+      const ai=pa.ai;const col=ai.dir==="LONG"?"var(--bull)":ai.dir==="SHORT"?"var(--bear)":"var(--gold)";
+      if(marker){marker.style.left=((ai.val+100)/2)+"%";marker.style.width="3px";marker.style.background=col;}
+      if(ail){ail.textContent=ai.dir==="LONG"?`買 ${ai.conf}%`:ai.dir==="SHORT"?`売 ${ai.conf}%`:`中立`;ail.style.color=col;}
+    }else{
+      // ボラティリティモード: 左から伸びる棒 + 盛り上がりで発光
+      const atrPct=pa.atrPct||0;
+      // 全銘柄中の最大ATR%で正規化
+      const maxAtr=Math.max(...SYMBOLS.map(o=>store[o.s]?.pa?.atrPct||0))||1;
+      const w=Math.min(100,atrPct/maxAtr*100);
+      const col=pa.atrHot?"var(--gold)":"var(--blue)";
+      if(track)track.style.background="var(--border)";
+      if(marker){marker.style.left="0";marker.style.width=w+"%";marker.style.background=col;marker.style.boxShadow=pa.atrHot?`0 0 6px ${col}`:"none";}
+      if(ail){ail.textContent=(pa.atrHot?"🔥":"")+atrPct+"%";ail.style.color=col;}
+    }
+    document.getElementById("sg-"+sym).innerHTML=pa.signals.slice(0,2).map(s=>`<span class="sig-pill" style="color:${dc(s.dir)};background:${db(s.dir)};border-color:${dc(s.dir)}55">${s.name.split(" ").slice(0,2).join(" ")}</span>`).join("");
+  }
   sortWL();
 }
 let sortRAF=null;
-function sortWL(){if(sortRAF)return;sortRAF=requestAnimationFrame(()=>{sortRAF=null;const wl=document.getElementById("watchlist");[...wl.children].sort((a,b)=>(store[b.id.slice(3)]?.pa?.ai?.val??-999)-(store[a.id.slice(3)]?.pa?.ai?.val??-999)).forEach(r=>wl.appendChild(r));});}
+function sortWL(){if(sortRAF)return;sortRAF=requestAnimationFrame(()=>{sortRAF=null;const wl=document.getElementById("watchlist");
+  if(scanMode==="ai"){[...wl.children].sort((a,b)=>(store[b.id.slice(3)]?.pa?.ai?.val??-999)-(store[a.id.slice(3)]?.pa?.ai?.val??-999)).forEach(r=>wl.appendChild(r));}
+  else{[...wl.children].sort((a,b)=>(store[b.id.slice(3)]?.pa?.atrPct??-1)-(store[a.id.slice(3)]?.pa?.atrPct??-1)).forEach(r=>wl.appendChild(r));}
+});}
+// SCANモード切替
+document.getElementById("scanModeBtn").addEventListener("click",()=>{
+  scanMode=scanMode==="ai"?"vol":"ai";
+  document.getElementById("scanModeBtn").innerHTML=scanMode==="ai"?'主導権(強度)順 ⇄ ボラ順':'ボラティリティ順 ⇄ 主導権順';
+  SYMBOLS.forEach(o=>updateWLRow(o.s));
+});
 function renderGauge(pa){const num=document.getElementById("gaugeNum");if(!pa){num.textContent="—";return;}const c=dc(pa.signalDir);num.textContent=pa.score.toFixed(1);num.style.color=c;document.getElementById("gaugeBias").innerHTML=`<span class="gauge-bias" style="color:${c};background:${db(pa.signalDir)};border-color:${c}55">${pa.signalDir==="bull"?"▲ BUY BIAS":pa.signalDir==="bear"?"▼ SELL BIAS":"◆ NEUTRAL"}</span>`;document.getElementById("gaugeBars").innerHTML=[...Array(10)].map((_,i)=>`<div class="gauge-bar" style="background:${i<Math.round(pa.score)?c:"var(--border2)"}"></div>`).join("");}
 function renderSignals(pa){const f=document.getElementById("sigFeed");document.getElementById("sigCount").textContent=pa?pa.signals.length:0;if(!pa||!pa.signals.length){f.innerHTML=`<div style="padding:14px;text-align:center;color:var(--txt-dim)">パターン未検出</div>`;return;}f.innerHTML=pa.signals.map(s=>{const c=dc(s.dir);return `<div class="sig-card"><div class="sig-icon" style="background:${c};box-shadow:0 0 5px ${c}"></div><div style="flex:1"><div class="sig-name" style="color:${c}">${s.name}</div><div class="sig-desc jp">${s.desc}</div></div><div class="sig-str">${"●".repeat(s.str)}${"○".repeat(3-s.str)}</div></div>`;}).join("");}
 function renderInd(pa){if(!pa)return;document.getElementById("indGrid").innerHTML=[["Always-In",pa.ai.dir+" "+pa.ai.conf+"%",pa.ai.dir==="LONG"?"bull":pa.ai.dir==="SHORT"?"bear":"neutral"],["Trend",pa.trendLabel,pa.trendDir],["RSI(14)",pa.rsi??"—",pa.rsi>70?"bear":pa.rsi<30?"bull":"neutral"],["Vol Ratio",pa.volRatio+"x",pa.highVol?"bull":"neutral"],["EMA20","¥"+fmt(pa.e20),null],["EMA50",pa.e50?"¥"+fmt(pa.e50):"—",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-mid)"}">${v}</span></div>`).join("");}
