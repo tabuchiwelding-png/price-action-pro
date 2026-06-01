@@ -173,6 +173,28 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .tj-k{color:var(--txt-dim);}
 .tj-v{color:var(--txt-br);font-weight:500;}
 
+/* ===== ENTRY PLAN / RR2.3 ===== */
+.entry-wrap{padding:10px 12px;border-bottom:1px solid var(--border);}
+.entry-card{border:1px solid var(--border);background:var(--panel2);border-radius:5px;margin-bottom:8px;overflow:hidden;}
+.entry-card.valid{border-color:rgba(46,230,166,.45);box-shadow:0 0 0 1px rgba(46,230,166,.04) inset;}
+.entry-card.watch{border-color:rgba(255,201,77,.38);}
+.entry-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);}
+.entry-title{font-size:11px;font-weight:700;color:var(--txt-br);}
+.entry-badge{font-size:8px;letter-spacing:.12em;border:1px solid;border-radius:2px;padding:2px 6px;white-space:nowrap;}
+.entry-body{padding:8px 10px;}
+.entry-reason{font-size:9.5px;line-height:1.65;color:var(--txt);margin-bottom:8px;}
+.entry-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;}
+.entry-kv{display:flex;justify-content:space-between;gap:8px;font-size:9px;border-bottom:1px solid rgba(255,255,255,.035);padding-bottom:3px;}
+.entry-k{color:var(--txt-dim);}
+.entry-v{color:var(--txt-br);font-weight:600;}
+.entry-note{font-size:8px;color:var(--txt-dim);line-height:1.55;margin-top:7px;}
+.log-table{padding:8px 12px;border-bottom:1px solid var(--border);}
+.log-row{display:grid;grid-template-columns:58px 1fr 58px 62px;gap:6px;align-items:center;font-size:8.5px;padding:5px 0;border-bottom:1px solid var(--border);}
+.log-row:last-child{border-bottom:none;}
+.log-name{color:var(--txt-br);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.log-status{font-weight:700;text-align:right;}
+.log-muted{color:var(--txt-dim);}
+
 @media (min-width:900px) and (orientation:landscape){
   .lscols{display:grid;grid-template-columns:1fr 340px;}
 }
@@ -300,6 +322,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
     <div class="brooks jp"><span class="tag">裁量</span>ブルックスは「<b>どこで入り、どこで損切るか</b>」を常に決めてから触る。POC(出来高が最も厚い価格)は強力な支持/抵抗。今の価格がレンジのどこにいて、Always-Inがどちらかを掛け合わせ、行動の目安を示す。<b>あくまで参考値。最終判断は自分で</b>。</div>
     <div class="tj-box" id="tjBox"><div style="text-align:center;color:var(--txt-dim);padding:10px;">銘柄を選択すると判断材料を表示</div></div>
 
+
+    <div class="ph">ENTRY PLAN · RR2.3候補 <span class="ph-right" id="entryPlanCount">0</span></div>
+    <div class="entry-wrap" id="entryPlanBox"><div style="text-align:center;color:var(--txt-dim);padding:8px;" class="jp">RR2.3候補なし</div></div>
+
+    <div class="ph">SETUP LOG · 検証ログ <span class="ph-right">TP / SL / 未約定</span></div>
+    <div class="log-table" id="setupLogBox"><div style="text-align:center;color:var(--txt-dim);padding:8px;" class="jp">ログなし</div></div>
+
     <div class="ph">LONG-TERM REFERENCE · 長期保有 参考スコア <span class="ph-right">テクニカル外・補助</span></div>
     <div class="brooks jp"><span class="tag">補助</span>ブルックス手法は純粋にテクニカル。これは<b>長期保有の判断を補助する参考値</b>に過ぎず、短期売買には使わない。Binanceのデータから「資金の勢い・BTC比の相対強弱・出来高の厚み」を集計したもの。</div>
     <div class="ind-grid" id="fundGrid" style="border:none;"></div>
@@ -324,9 +353,8 @@ const SYMBOLS=[
   {s:"DOGEJPY",name:"Dogecoin"},{s:"LTCJPY",name:"Litecoin"},{s:"LINKJPY",name:"Chainlink"},
   {s:"DOTJPY",name:"Polkadot"},
 ];
-const TFS=["1m","5m","15m","30m","1h","4h","1d","1w","1M"];
-const TF_LABEL={"1m":"1分","5m":"5分","15m":"15分","30m":"30分","1h":"1時間","4h":"4時間","1d":"日足","1w":"週足","1M":"月足"};
-const TF_SHORT={"1m":"1m","5m":"5m","15m":"15m","30m":"30m","1h":"1h","4h":"4h","1d":"1D","1w":"1W","1M":"1Mo"};
+const TFS=["1m","5m","15m","1h","4h","1d"];
+const TF_LABEL={"1m":"1分","5m":"5分","15m":"15分","1h":"1時間","4h":"4時間","1d":"日足"};
 const REST_HOSTS=["https://api.binance.com/api/v3","https://data-api.binance.vision/api/v3","https://api1.binance.com/api/v3"];
 const WS_HOSTS=["wss://stream.binance.com:9443/stream","wss://stream.binance.com:443/stream","wss://data-stream.binance.vision/stream"];
 let TF="5m", activeSymbol="BTCJPY", activePage="Scan", cycleNum=0, scanMode="ai";
@@ -360,7 +388,7 @@ function alwaysIn(c){
 }
 
 // ===== PA ENGINE =====
-function runPA(c){
+function runPA(c,symbol=activeSymbol){
   const n=c.length; if(n<25)return null;
   const body=x=>Math.abs(x.close-x.open),rng=x=>x.high-x.low,isB=x=>x.close>=x.open;
   const upW=x=>x.high-Math.max(x.open,x.close),dnW=x=>Math.min(x.open,x.close)-x.low,bR=x=>rng(x)>0?body(x)/rng(x):0;
@@ -412,46 +440,226 @@ function runPA(c){
   const BINS=24,step=(rHi-rLo)/BINS||1,vbin=new Array(BINS).fill(0);
   recent.forEach(x=>{const mid=(x.high+x.low)/2;let bi=Math.floor((mid-rLo)/step);if(bi<0)bi=0;if(bi>=BINS)bi=BINS-1;vbin[bi]+=x.volume;});
   const pocIdx=vbin.indexOf(Math.max(...vbin)),poc=rLo+step*(pocIdx+.5);
-  return{score,signalDir:sd,trendDir,trendLabel,signals:sig.sort((a,b)=>b.str-a.str),ma20:+ma20.toFixed(2),ma50:ma50?+ma50.toFixed(2):null,e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,rsi,volRatio:vR,highVol:vR>1.8,aboveMA20:last.close>ma20,aboveMA50:ma50?last.close>ma50:null,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai:alwaysIn(c),atr14,atrPct,atrHot,rangePos,rHi,rLo,poc:+poc.toFixed(2)};
+  const ai=alwaysIn(c);
+  const brooksSetups=detectBrooksSetups(c,{symbol,trendDir,trendLabel,e20,ma20,ma50,rHi,rLo,poc:+poc.toFixed(2),rangePos,ai});
+  return{score,signalDir:sd,trendDir,trendLabel,signals:sig.sort((a,b)=>b.str-a.str),brooksSetups,ma20:+ma20.toFixed(2),ma50:ma50?+ma50.toFixed(2):null,e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,rsi,volRatio:vR,highVol:vR>1.8,aboveMA20:last.close>ma20,aboveMA50:ma50?last.close>ma50:null,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai,atr14,atrPct,atrHot,rangePos,rHi,rLo,poc:+poc.toFixed(2)};
+}
+
+
+// ===== BROOKS SETUP + RR2.3 ENGINE =====
+function getPipValue(symbol, price){
+  const p=Math.abs(price||store[symbol]?.pa?.last?.close||1);
+  if(p>=1000000)return 1000;
+  if(p>=100000)return 100;
+  if(p>=10000)return 10;
+  if(p>=1000)return 1;
+  if(p>=100)return .1;
+  if(p>=1)return .01;
+  return .0001;
+}
+function fmtTime(ts){
+  if(!ts)return "—";
+  const d=new Date(ts*1000);
+  return `${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+function calcRRPlan({symbol, candles, signalIndex, dir, name, setup, reason, strength=3, aiDir="中立", rangeHi=null, rangeLo=null, e20=null}){
+  const bar=candles[signalIndex];if(!bar||!dir||dir==="neutral")return null;
+  const pip=getPipValue(symbol,bar.close);
+  let entry,stop,risk,target,rangeRoom,rangeRR;
+  if(dir==="bull"){
+    entry=bar.high+pip;
+    stop=bar.low-pip;
+    risk=entry-stop;
+    target=entry+risk*2.3;
+    rangeRoom=(rangeHi??Math.max(...candles.slice(Math.max(0,signalIndex-60),signalIndex+1).map(x=>x.high)))-entry;
+  }else{
+    entry=bar.low-pip;
+    stop=bar.high+pip;
+    risk=stop-entry;
+    target=entry-risk*2.3;
+    rangeRoom=entry-(rangeLo??Math.min(...candles.slice(Math.max(0,signalIndex-60),signalIndex+1).map(x=>x.low)));
+  }
+  if(!isFinite(risk)||risk<=0)return null;
+  rangeRR=rangeRoom/risk;
+  const riskPct=risk/entry*100;
+  const aiAligned=(dir==="bull"&&aiDir==="LONG")||(dir==="bear"&&aiDir==="SHORT");
+  const rrSpaceOK=rangeRR>=2.3;
+  const riskOK=riskPct<=2.8; // 暗号資産なので広め。高ボラ地獄への最低限のフェンス。
+  const valid=aiAligned&&riskOK&&(rrSpaceOK||strength>=4);
+  const status=valid?"RR2.3 候補":aiAligned?"監視":"見送り";
+  const block=dir==="bull"?"上値抵抗まで":"下値支持まで";
+  return{
+    id:`${symbol}|${TF}|${bar.time}|${name}|${dir}`,
+    symbol,tf:TF,name,setup,dir,signalTime:bar.time,signalIndex,
+    entry:+entry.toFixed(8),stop:+stop.toFixed(8),target:+target.toFixed(8),risk:+risk.toFixed(8),
+    rr:2.3,rangeRR:+rangeRR.toFixed(2),riskPct:+riskPct.toFixed(2),pip,
+    strength,valid,status,aiAligned,riskOK,rrSpaceOK,
+    reason,
+    note:`${block}の自然RRは${isFinite(rangeRR)?rangeRR.toFixed(2):"—"}。${rrSpaceOK?"障害物までの空間は合格。":"直近レンジ内ではRR2.3未満。ブレイク前提なら監視止まり。"}${riskOK?"":" リスク幅が広すぎる。"}`
+  };
+}
+function detectBrooksSetups(c, ctx){
+  const n=c.length;if(n<35)return [];
+  const body=x=>Math.abs(x.close-x.open),rng=x=>x.high-x.low,isB=x=>x.close>=x.open;
+  const upperHalf=x=>x.close>(x.high+x.low)/2,lowerHalf=x=>x.close<(x.high+x.low)/2;
+  const last=c[n-1],prev=c[n-2],p2=c[n-3],p3=c[n-4];
+  const recent20=c.slice(n-21,n-1),recent30=c.slice(n-31,n-1);
+  const h20=Math.max(...recent20.map(x=>x.high)),l20=Math.min(...recent20.map(x=>x.low));
+  const avgR=c.slice(-20).reduce((s,x)=>s+rng(x),0)/20;
+  const avgB=c.slice(-20).reduce((s,x)=>s+body(x),0)/20;
+  const ai=ctx.ai||alwaysIn(c);
+  const setups=[];
+  const add=(name,dir,str,reason,setup,idx=n-1)=>{
+    const plan=calcRRPlan({symbol:ctx.symbol||activeSymbol,candles:c,signalIndex:idx,dir,name,setup,reason,strength:str,aiDir:ai.dir,rangeHi:ctx.rHi,rangeLo:ctx.rLo,e20:ctx.e20});
+    if(plan)setups.push(plan);
+  };
+  const hadPullbackLong=c.slice(n-6,n-1).some(x=>!isB(x)||x.low<=ctx.e20*1.002);
+  const hadPullbackShort=c.slice(n-6,n-1).some(x=>isB(x)||x.high>=ctx.e20*.998);
+
+  if((ctx.trendDir==="bull"||ai.dir==="LONG")&&hadPullbackLong&&isB(last)&&last.high>prev.high&&last.close>ctx.e20&&last.low<=ctx.e20*1.004){
+    add("Small H1 EMA Pullback","bull",4,"EMA20付近への浅い押しから、前足高値を上抜く小さいH1。Always-In LONG側なら順張り候補。","小さいH1 / EMA20反発");
+  }
+  if((ctx.trendDir==="bear"||ai.dir==="SHORT")&&hadPullbackShort&&!isB(last)&&last.low<prev.low&&last.close<ctx.e20&&last.high>=ctx.e20*.996){
+    add("Small L1/L2 EMA Pullback","bear",4,"EMA20付近への戻りから、前足安値を下抜く小さいL1/L2。Always-In SHORT側なら戻り売り候補。","小さいL2 / EMA20反発");
+  }
+  if(prev.low<l20&&isB(last)&&last.close>prev.high&&upperHalf(last)){
+    add("Failed Bear Breakout","bull",4,"20本安値を一度割った後に強い陽線で戻した形。売り手の失敗を買うセットアップ。","ベアBO失敗 / 反転ロング");
+  }
+  if(prev.high>h20&&!isB(last)&&last.close<prev.low&&lowerHalf(last)){
+    add("Failed Bull Breakout","bear",4,"20本高値を一度抜いた後に強い陰線で戻した形。買い手の失敗を売るセットアップ。","ブルBO失敗 / 反転ショート");
+  }
+  const lowNear=Math.abs(last.low-p2.low)/last.close<0.0018||Math.abs(last.low-p3.low)/last.close<0.0018;
+  const highNear=Math.abs(last.high-p2.high)/last.close<0.0018||Math.abs(last.high-p3.high)/last.close<0.0018;
+  if(lowNear&&isB(last)&&last.close>prev.close&&last.low<=ctx.e20*1.01){
+    add("Micro Double Bottom","bull",3,"直近数本で安値を二度試して崩れず、陽線で戻した形。売り手が下を取り切れない。","マイクロダブルボトム");
+  }
+  if(highNear&&!isB(last)&&last.close<prev.close&&last.high>=ctx.e20*.99){
+    add("Micro Double Top","bear",3,"直近数本で高値を二度試して抜け切れず、陰線で落とした形。買い手が上を取り切れない。","マイクロダブルトップ");
+  }
+  const brokeUp=c.slice(n-8,n-2).some((x,i,arr)=>x.close>Math.max(...c.slice(Math.max(0,n-35+i),n-8+i).map(y=>y.high)));
+  const brokeDn=c.slice(n-8,n-2).some((x,i,arr)=>x.close<Math.min(...c.slice(Math.max(0,n-35+i),n-8+i).map(y=>y.low)));
+  if(brokeUp&&isB(last)&&last.low>h20-avgR*1.5&&body(last)>=avgB*.55){
+    add("BO Pullback Long","bull",3,"上方向ブレイク後に浅く押し、再び陽線で持ち直す形。レンジ上抜け後の小さいBOプルバック。","BOプルバック / ロング");
+  }
+  if(brokeDn&&!isB(last)&&last.high<l20+avgR*1.5&&body(last)>=avgB*.55){
+    add("BO Pullback Short","bear",3,"下方向ブレイク後に浅く戻し、再び陰線で落ちる形。レンジ下抜け後の小さいBOプルバック。","BOプルバック / ショート");
+  }
+  // 3 pushes approximation: 直近スイングの3回試し。完璧なWedgeではないが、教材用の警報として使う。
+  const swingsH=[],swingsL=[];
+  for(let i=Math.max(3,n-60);i<n-3;i++){
+    if(c[i].high>c[i-1].high&&c[i].high>c[i-2].high&&c[i].high>c[i+1].high&&c[i].high>c[i+2].high)swingsH.push({i,v:c[i].high});
+    if(c[i].low<c[i-1].low&&c[i].low<c[i-2].low&&c[i].low<c[i+1].low&&c[i].low<c[i+2].low)swingsL.push({i,v:c[i].low});
+  }
+  const h3=swingsH.slice(-3),l3=swingsL.slice(-3);
+  if(h3.length===3&&h3[2].v>h3[1].v&&h3[1].v>h3[0].v&&!isB(last)&&last.close<prev.low){
+    add("Wedge Top Attempt","bear",3,"上への三回目の試し後に陰線で崩れた形。上昇継続というより利確・反転警戒。","Wedge Top / MTR候補");
+  }
+  if(l3.length===3&&l3[2].v<l3[1].v&&l3[1].v<l3[0].v&&isB(last)&&last.close>prev.high){
+    add("Wedge Bottom Attempt","bull",3,"下への三回目の試し後に陽線で戻した形。売り尽くしからの反転警戒。","Wedge Bottom / MTR候補");
+  }
+  const seen=new Set();
+  return setups.filter(x=>{const k=x.name+x.dir+x.signalTime;if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>(b.valid-a.valid)||b.strength-a.strength||b.rangeRR-a.rangeRR).slice(0,6);
+}
+const SETUP_LOG_KEY="pa_terminal_rr23_logs_v1";
+function readSetupLogs(){try{return JSON.parse(localStorage.getItem(SETUP_LOG_KEY)||"[]");}catch(e){return[];}}
+function writeSetupLogs(logs){try{localStorage.setItem(SETUP_LOG_KEY,JSON.stringify(logs.slice(0,120)));}catch(e){}}
+function updateSetupLog(symbol,tf,candles,setups){
+  if(!candles?.length)return;
+  let logs=readSetupLogs();
+  setups.filter(x=>x.valid||x.status==="監視").forEach(p=>{
+    if(!logs.some(l=>l.id===p.id))logs.unshift({...p,status:"WAIT_ENTRY",createdAt:Date.now(),entryTime:null,exitTime:null,result:null,barsToResult:null});
+  });
+  logs=logs.map(l=>{
+    if(l.symbol!==symbol||l.tf!==tf||!["WAIT_ENTRY","OPEN"].includes(l.status))return l;
+    const start=candles.findIndex(x=>x.time===l.signalTime);if(start<0)return l;
+    let state={...l};
+    for(let i=start+1;i<candles.length;i++){
+      const b=candles[i];
+      if(state.status==="WAIT_ENTRY"){
+        const hitEntry=state.dir==="bull"?b.high>=state.entry:b.low<=state.entry;
+        const invalid=state.dir==="bull"?b.low<=state.stop:b.high>=state.stop;
+        if(hitEntry){state.status="OPEN";state.entryTime=b.time;}
+        else if(invalid||i-start>12){state.status="NO_ENTRY";state.exitTime=b.time;state.result=invalid?"未約定失効":"時間切れ";state.barsToResult=i-start;break;}
+      }
+      if(state.status==="OPEN"){
+        const hitTP=state.dir==="bull"?b.high>=state.target:b.low<=state.target;
+        const hitSL=state.dir==="bull"?b.low<=state.stop:b.high>=state.stop;
+        if(hitTP&&hitSL){state.status="AMBIGUOUS";state.exitTime=b.time;state.result="同足TP/SL";state.barsToResult=i-start;break;}
+        if(hitTP){state.status="TP";state.exitTime=b.time;state.result="RR2.3到達";state.barsToResult=i-start;break;}
+        if(hitSL){state.status="SL";state.exitTime=b.time;state.result="損切り";state.barsToResult=i-start;break;}
+      }
+    }
+    return state;
+  });
+  writeSetupLogs(logs);
+  renderSetupLog();
+}
+function renderEntryPlans(pa){
+  const box=document.getElementById("entryPlanBox"),cnt=document.getElementById("entryPlanCount");if(!box||!cnt)return;
+  const plans=pa?.brooksSetups||[];cnt.textContent=plans.length;
+  if(!plans.length){box.innerHTML=`<div style="text-align:center;color:var(--txt-dim);padding:8px;" class="jp">RR2.3候補なし</div>`;return;}
+  box.innerHTML=plans.map(p=>{
+    const col=p.dir==="bull"?"var(--bull)":"var(--bear)";
+    const badgeCol=p.valid?col:p.aiAligned?"var(--gold)":"var(--txt-dim)";
+    return `<div class="entry-card ${p.valid?"valid":"watch"}">
+      <div class="entry-head"><div><div class="entry-title" style="color:${col}">${p.dir==="bull"?"▲":"▼"} ${p.name}</div><div style="font-size:8px;color:var(--txt-dim);margin-top:2px;">${p.setup} · ${fmtTime(p.signalTime)}</div></div><div class="entry-badge" style="color:${badgeCol};border-color:${badgeCol}55;background:${p.valid?(p.dir==="bull"?"var(--bull-dim)":"var(--bear-dim)"):"var(--gold-dim)"}">${p.status}</div></div>
+      <div class="entry-body"><div class="entry-reason jp">${p.reason}</div>
+        <div class="entry-grid">
+          <div class="entry-kv"><span class="entry-k">Entry</span><span class="entry-v">¥${fmt(p.entry)}</span></div>
+          <div class="entry-kv"><span class="entry-k">Stop</span><span class="entry-v" style="color:var(--bear)">¥${fmt(p.stop)}</span></div>
+          <div class="entry-kv"><span class="entry-k">TP RR2.3</span><span class="entry-v" style="color:var(--bull)">¥${fmt(p.target)}</span></div>
+          <div class="entry-kv"><span class="entry-k">Risk</span><span class="entry-v">${p.riskPct}%</span></div>
+          <div class="entry-kv"><span class="entry-k">自然RR</span><span class="entry-v" style="color:${p.rrSpaceOK?"var(--bull)":"var(--gold)"}">${p.rangeRR}</span></div>
+          <div class="entry-kv"><span class="entry-k">AI一致</span><span class="entry-v" style="color:${p.aiAligned?"var(--bull)":"var(--bear)"}">${p.aiAligned?"YES":"NO"}</span></div>
+        </div><div class="entry-note jp">${p.note}</div></div></div>`;
+  }).join("");
+}
+function renderSetupLog(){
+  const box=document.getElementById("setupLogBox");if(!box)return;
+  const logs=readSetupLogs().filter(l=>l.symbol===activeSymbol&&l.tf===TF).slice(0,12);
+  if(!logs.length){box.innerHTML=`<div style="text-align:center;color:var(--txt-dim);padding:8px;" class="jp">ログなし</div>`;return;}
+  const color=l=>l.status==="TP"?"var(--bull)":l.status==="SL"?"var(--bear)":l.status==="OPEN"?"var(--gold)":l.status==="AMBIGUOUS"?"var(--violet)":"var(--txt-dim)";
+  box.innerHTML=logs.map(l=>`<div class="log-row"><div class="log-muted">${fmtTime(l.signalTime)}</div><div class="log-name">${l.dir==="bull"?"▲":"▼"} ${l.name}</div><div class="log-muted">${l.barsToResult?l.barsToResult+"本":"—"}</div><div class="log-status" style="color:${color(l)}">${l.status}</div></div>`).join("");
 }
 
 // ===== DATA =====
+function makeDemoCandles(symbol,tf){
+  const sec={"1m":60,"5m":300,"15m":900,"1h":3600,"4h":14400,"1d":86400}[tf]||300;
+  let base=symbol.startsWith("BTC")?15000000:symbol.startsWith("ETH")?600000:symbol.startsWith("SOL")?25000:symbol.startsWith("BNB")?90000:symbol.startsWith("XRP")?350:symbol.startsWith("DOGE")?25:1000;
+  let seed=[...symbol+tf].reduce((a,ch)=>a+ch.charCodeAt(0),0);
+  const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
+  const out=[];let t=Math.floor(Date.now()/1000)-sec*300,p=base;
+  for(let i=0;i<300;i++){
+    const drift=Math.sin(i/23)*base*.0009;
+    const noise=(rnd()-.48)*base*.006;
+    const o=p,c=Math.max(base*.05,p+drift+noise);
+    const h=Math.max(o,c)+rnd()*base*.004,l=Math.min(o,c)-rnd()*base*.004;
+    out.push({time:t+i*sec,open:+o.toFixed(8),high:+h.toFixed(8),low:+l.toFixed(8),close:+c.toFixed(8),volume:+(rnd()*100+10).toFixed(4)});
+    p=c;
+  }
+  return out;
+}
 async function loadHistory(symbol,tf){
   let err;
-  for(const h of REST_HOSTS){try{const r=await fetch(`${h}/klines?symbol=${symbol}&interval=${tf}&limit=300`,{signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error(r.status);const raw=await r.json();return raw.map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5]}));}catch(e){err=e;}}
-  throw err;
+  for(const h of REST_HOSTS){
+    try{
+      const opt=(window.AbortSignal&&AbortSignal.timeout)?{signal:AbortSignal.timeout(8000)}:{};
+      const r=await fetch(`${h}/klines?symbol=${symbol}&interval=${tf}&limit=300`,opt);
+      if(!r.ok)throw new Error(r.status);
+      const raw=await r.json();
+      if(!Array.isArray(raw)||!raw.length)throw new Error("empty");
+      return raw.map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5]}));
+    }catch(e){err=e;}
+  }
+  setConn("DEMO",false);
+  return makeDemoCandles(symbol,tf);
 }
 // マルチタイムフレーム: 1銘柄の全時間軸のAlways-Inを取得
 async function loadMTF(symbol){
   mtfStore[symbol]=mtfStore[symbol]||{};
   await Promise.allSettled(TFS.map(async tf=>{
-    try{const c=await loadHistory(symbol,tf);mtfStore[symbol][tf]={ai:alwaysIn(c),bars:c.length,enough:c.length>=25};}catch(e){mtfStore[symbol][tf]={ai:{val:0,dir:"中立",conf:0},bars:0,enough:false};}
+    try{const c=await loadHistory(symbol,tf);mtfStore[symbol][tf]=alwaysIn(c);}catch(e){}
   }));
-}
-// 全通貨のMTFを段階的に取得(銀河を少しずつ点灯)
-function loadAllMTF(onEach){
-  SYMBOLS.forEach(o=>{
-    mtfStore[o.s]=mtfStore[o.s]||{};
-    TFS.forEach(async tf=>{
-      try{const c=await loadHistory(o.s,tf);mtfStore[o.s][tf]={ai:alwaysIn(c),bars:c.length,enough:c.length>=25};}
-      catch(e){mtfStore[o.s][tf]={ai:{val:0,dir:"中立",conf:0},bars:0,enough:false};}
-      if(onEach)onEach();
-    });
-  });
-}
-// 関係性エンジン: 通貨間の収束・対立を検出(道Cの核)
-function computeRelations(){
-  // 各通貨の総合方向(5分足ベース=store.pa)
-  const dirs={};SYMBOLS.forEach(o=>{const pa=store[o.s]?.pa;if(pa)dirs[o.s]=pa.ai;});
-  const longs=Object.keys(dirs).filter(s=>dirs[s].dir==="LONG");
-  const shorts=Object.keys(dirs).filter(s=>dirs[s].dir==="SHORT");
-  const rels=[];
-  // CONVERGENCE(収束): 同方向に3つ以上集まったら関係性ノード
-  if(longs.length>=3)rels.push({type:"CONVERGENCE",jp:"買い収束",dir:"LONG",members:longs,strength:longs.reduce((s,m)=>s+dirs[m].conf,0)/longs.length});
-  if(shorts.length>=3)rels.push({type:"CONVERGENCE",jp:"売り収束",dir:"SHORT",members:shorts,strength:shorts.reduce((s,m)=>s+dirs[m].conf,0)/shorts.length});
-  // COLLISION(対立): 買いと売りが拮抗していたら衝突ノード
-  if(longs.length>=2&&shorts.length>=2)rels.push({type:"COLLISION",jp:"方向対立",dir:"中立",members:[...longs.slice(0,2),...shorts.slice(0,2)],strength:50});
-  return rels;
 }
 let ws=null,tickerWs=null,wsKI=0,wsTI=0;
 function connectKlineWS(symbol,tf){
@@ -524,8 +732,8 @@ function onLiveBar(symbol,bar,closed){
   if(symbol===activeSymbol&&candleSeries){candleSeries.update(bar);volSeries.update({time:bar.time,value:bar.volume,color:bar.close>=bar.open?"rgba(46,230,166,.4)":"rgba(255,77,109,.4)"});}
   st.pa=runPA(a);st.aiHist=st.aiHist||[];
   if(symbol===activeSymbol){
-    renderAlwaysIn(st.pa);renderSignals(st.pa);renderGauge(st.pa);renderInd(st.pa);updateChartHead();renderNarrative(st.pa);renderTradeJudge(st.pa);renderFund(symbol);
-    if(closed&&bar.time!==lastClosed){lastClosed=bar.time;st.aiHist.push(st.pa.ai.val);if(st.aiHist.length>40)st.aiHist.shift();renderHeat(st.aiHist);pulseExec();if(activePage==="Ana")renderVP(a);}
+    renderAlwaysIn(st.pa);renderSignals(st.pa);renderGauge(st.pa);renderInd(st.pa);updateChartHead();renderNarrative(st.pa);renderTradeJudge(st.pa);renderEntryPlans(st.pa);renderFund(symbol);
+    if(closed&&bar.time!==lastClosed){lastClosed=bar.time;st.aiHist.push(st.pa.ai.val);if(st.aiHist.length>40)st.aiHist.shift();renderHeat(st.aiHist);updateSetupLog(symbol,TF,a,st.pa?.brooksSetups||[]);pulseExec();if(activePage==="Ana")renderVP(a);}
   }
   updateWLRow(symbol);updateSummary();
 }
@@ -533,6 +741,14 @@ function onLiveBar(symbol,bar,closed){
 // ===== CHART =====
 function initChart(){
   const el=document.getElementById("chart");
+  if(!window.LightweightCharts){
+    el.innerHTML='<div style="padding:18px;color:var(--gold);font-size:11px;line-height:1.7" class="jp">チャートライブラリを読み込めませんでした。通信環境またはCDNブロックが原因です。端末表示は継続します。</div>';
+    const stubSeries={setData(){},update(){}};
+    chart={addCandlestickSeries(){return stubSeries;},addHistogramSeries(){return stubSeries;},addLineSeries(){return stubSeries;},priceScale(){return{applyOptions(){}}},timeScale(){return{fitContent(){}}},applyOptions(){}};
+    candleSeries=volSeries=ema20Series=ema50Series=stubSeries;
+    setConn("CDN ERROR",false);
+    return;
+  }
   chart=LightweightCharts.createChart(el,{layout:{background:{color:"transparent"},textColor:"#8ba3b8",fontFamily:"JetBrains Mono",fontSize:10},grid:{vertLines:{color:"#141d27"},horzLines:{color:"#141d27"}},rightPriceScale:{borderColor:"#1c2836",scaleMargins:{top:.08,bottom:.28}},timeScale:{borderColor:"#1c2836",timeVisible:true,secondsVisible:false},crosshair:{mode:LightweightCharts.CrosshairMode.Normal}});
   candleSeries=chart.addCandlestickSeries({upColor:"#2ee6a6",downColor:"#ff4d6d",borderUpColor:"#2ee6a6",borderDownColor:"#ff4d6d",wickUpColor:"#1aa87a",wickDownColor:"#cc3a54"});
   volSeries=chart.addHistogramSeries({priceFormat:{type:"volume"},priceScaleId:"vol"});
@@ -554,7 +770,7 @@ async function loadChart(symbol,tf){
     chart.timeScale().fitContent();
     const pa=runPA(c);store[symbol].pa=pa;
     store[symbol].aiHist=[];for(let i=Math.max(25,c.length-40);i<c.length;i++){store[symbol].aiHist.push(alwaysIn(c.slice(0,i+1)).val);}
-    renderAlwaysIn(pa);renderHeat(store[symbol].aiHist);renderSignals(pa);renderGauge(pa);renderInd(pa);renderVP(c);renderNarrative(pa);renderTradeJudge(pa);renderFund(symbol);
+    renderAlwaysIn(pa);renderHeat(store[symbol].aiHist);renderSignals(pa);renderGauge(pa);renderInd(pa);renderVP(c);renderNarrative(pa);renderTradeJudge(pa);renderEntryPlans(pa);renderSetupLog();renderFund(symbol);
     connectKlineWS(symbol,tf);
   }catch(e){setConn("ERROR",false);}
 }
@@ -713,130 +929,99 @@ function updateSwarmText(){
     footer.textContent="短期(1分・5分)と長期(4時間・日足)が揃う方向が、最も信頼できる流れ。";
   }
 }
-// ════════ NEURAL SWARM · 神経網ノードグラフ (道C) ════════
-// 通貨ハブ → 時間軸ノード → シグナルノード → 関係性ノード。全て本物のデータ。
-const nodePos={}; // 全ノードの座標を保持(滑らかアニメ)
-let starfield=null; // 背景の星(固定・一度だけ生成)
-function genStarfield(W,H){const a=[];for(let i=0;i<90;i++){a.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*0.9+0.2,o:Math.random()*0.18+0.04,tw:Math.random()*2+1});}return a;}
-
 function renderSwarm(){
   const svg=document.getElementById("swarmSvg");if(!svg)return;
-  const W=360,H=420;
-  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
-  if(!starfield)starfield=genStarfield(W,H);
-
-  // ===== ノード収集 =====
-  let nodes=[];  // {id,kind,sym,tf,dir,conf,r,col,label,sub,enough}
-  let links=[];  // {a,b,col,w,o}
-  const colOf=d=>d==="LONG"?"#2ee6a6":d==="SHORT"?"#ff4d6d":"#ffc94d";
-  const gradOf=d=>d==="LONG"?"gLONG":d==="SHORT"?"gSHORT":"gNEU";
-
+  const W=360,H=380,cx0=W/2;
+  // ノードデータ構築
+  let nodes=[];
   if(swarmMode==="all"){
-    // --- 全通貨: 銀河全体 ---
-    // クラスタ中心
-    const C={LONG:{x:W*0.76,y:H*0.46},SHORT:{x:W*0.24,y:H*0.46},"中立":{x:W*0.5,y:H*0.52}};
-    const hubGroups={LONG:[],SHORT:[],"中立":[]};
-    SYMBOLS.forEach(o=>{const pa=store[o.s]?.pa;if(pa)hubGroups[pa.ai.dir].push({sym:o.s,ai:pa.ai});});
-    // 通貨ハブ + その時間軸ノード
-    Object.keys(hubGroups).forEach(dir=>{
-      const arr=hubGroups[dir].slice().sort((a,b)=>b.ai.conf-a.ai.conf);const ctr=C[dir],cnt=arr.length;
-      arr.forEach((h,i)=>{
-        const ang=(i/Math.max(1,cnt))*Math.PI*2+(dir==="LONG"?-0.4:dir==="SHORT"?Math.PI-0.4:Math.PI/2);
-        const sp=cnt>1?(46+(100-h.ai.conf)*0.4):0;
-        const hx=Math.max(40,Math.min(W-40,ctr.x+Math.cos(ang)*sp));
-        const hy=Math.max(60,Math.min(H-50,ctr.y+Math.sin(ang)*sp*0.8+(i-cnt/2)*5));
-        const hubId="hub-"+h.sym;
-        nodes.push({id:hubId,kind:"hub",sym:h.sym,dir:h.ai.dir,conf:h.ai.conf,r:11+h.ai.conf*0.13,col:colOf(h.ai.dir),label:shortSym(h.sym),sub:h.ai.conf+"%",enough:true,fx:hx,fy:hy});
-        // 時間軸ノード(MTFがあれば)
-        const m=mtfStore[h.sym];
-        if(m){TFS.forEach((tf,ti)=>{const d=m[tf];if(!d)return;const tang=(ti/TFS.length)*Math.PI*2;const tr=18+Math.random()*4;const tx=hx+Math.cos(tang)*tr;const ty=hy+Math.sin(tang)*tr;const tfId="tf-"+h.sym+"-"+tf;
-          nodes.push({id:tfId,kind:"tf",sym:h.sym,tf,dir:d.ai.dir,conf:d.ai.conf,r:d.enough?(3+d.ai.conf*0.04):2.5,col:colOf(d.ai.dir),label:"",sub:"",enough:d.enough,fx:tx,fy:ty});
-          links.push({a:hubId,b:tfId,col:colOf(d.ai.dir),w:0.5,o:d.enough?0.22:0.08});
-        });}
-      });
-    });
-    // 同方向ハブ同士を結ぶ(クラスタの結束)
-    Object.keys(hubGroups).forEach(dir=>{const arr=hubGroups[dir];const col=colOf(dir);for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){links.push({a:"hub-"+arr[i].sym,b:"hub-"+arr[j].sym,col,w:0.5,o:0.12});}});
-    // 関係性ノード(収束/対立)
-    const rels=computeRelations();
-    rels.forEach((rel,ri)=>{
-      const relId="rel-"+ri;const ctr=rel.dir==="中立"?C["中立"]:C[rel.dir];
-      const rx=ctr.x+(rel.type==="COLLISION"?0:(rel.dir==="LONG"?-20:20));const ry=ctr.y-30;
-      nodes.push({id:relId,kind:"rel",dir:rel.dir,conf:rel.strength,r:7+rel.strength*0.05,col:colOf(rel.dir),label:rel.type==="CONVERGENCE"?"⊕":"⊗",sub:rel.jp,enough:true,fx:rx,fy:ry,relType:rel.type});
-      rel.members.forEach(m=>{links.push({a:relId,b:"hub-"+m,col:colOf(rel.dir),w:0.6,o:0.2});});
-    });
-    drawNeural(svg,nodes,links,W,H,[["売り優勢",C.SHORT,"#ff4d6d",hubGroups.SHORT.length],["買い優勢",C.LONG,"#2ee6a6",hubGroups.LONG.length],["中立",C["中立"],"#ffc94d",hubGroups["中立"].length]]);
+    nodes=SYMBOLS.map(o=>{const pa=store[o.s]?.pa;if(!pa)return null;return{id:shortSym(o.s),full:o.s,val:pa.ai.val,dir:pa.ai.dir,conf:pa.ai.conf,sub:pa.ai.conf+"%"};}).filter(Boolean);
   }else{
-    // --- 個別通貨: 星系にズーム(時間軸が主役) ---
     const m=mtfStore[swarmMode]||{};
-    const C={LONG:{x:W*0.74,y:H*0.46},SHORT:{x:W*0.26,y:H*0.46},"中立":{x:W*0.5,y:H*0.52}};
-    const tfGroups={LONG:[],SHORT:[],"中立":[]};
-    TFS.forEach(tf=>{const d=m[tf];if(d)tfGroups[d.ai.dir].push({tf,d});});
-    Object.keys(tfGroups).forEach(dir=>{
-      const arr=tfGroups[dir].slice().sort((a,b)=>b.d.ai.conf-a.d.ai.conf);const ctr=C[dir],cnt=arr.length;
-      arr.forEach((t,i)=>{
-        const ang=(i/Math.max(1,cnt))*Math.PI*2+(dir==="LONG"?-0.4:dir==="SHORT"?Math.PI-0.4:Math.PI/2);
-        const sp=cnt>1?(40+(100-t.d.ai.conf)*0.4):0;
-        const tx=Math.max(42,Math.min(W-42,ctr.x+Math.cos(ang)*sp));
-        const ty=Math.max(64,Math.min(H-54,ctr.y+Math.sin(ang)*sp*0.85+(i-cnt/2)*8));
-        const id="tfz-"+t.tf;
-        nodes.push({id,kind:"tfz",tf:t.tf,dir:t.d.ai.dir,conf:t.d.ai.conf,r:t.d.enough?(13+t.d.ai.conf*0.13):9,col:colOf(t.d.ai.dir),label:TF_SHORT[t.tf],sub:t.d.enough?t.d.ai.conf+"%":"蓄積中",enough:t.d.enough,fx:tx,fy:ty});
-      });
-    });
-    // 同方向の時間軸同士を結ぶ
-    Object.keys(tfGroups).forEach(dir=>{const arr=tfGroups[dir];const col=colOf(dir);for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){links.push({a:"tfz-"+arr[i].tf,b:"tfz-"+arr[j].tf,col,w:0.6,o:0.16});}});
-    drawNeural(svg,nodes,links,W,H,[["売り優勢",C.SHORT,"#ff4d6d",tfGroups.SHORT.length],["買い優勢",C.LONG,"#2ee6a6",tfGroups.LONG.length],["中立",C["中立"],"#ffc94d",tfGroups["中立"].length]]);
+    nodes=TFS.map(tf=>{const ai=m[tf];if(!ai)return null;return{id:TF_LABEL[tf],full:swarmMode,val:ai.val,dir:ai.dir,conf:ai.conf,sub:ai.conf+"%"};}).filter(Boolean);
   }
-}
-
-function drawNeural(svg,nodes,links,W,H,clusters){
-  if(!nodes.length){svg.innerHTML='<text x="180" y="210" class="node-sub" style="font-size:11px">データ読み込み中…</text>';return;}
-  // 座標を滑らかに目標へ
-  nodes.forEach(n=>{if(!nodePos[n.id])nodePos[n.id]={x:n.fx,y:n.fy};nodePos[n.id].x+=(n.fx-nodePos[n.id].x)*0.16;nodePos[n.id].y+=(n.fy-nodePos[n.id].y)*0.16;n.x=nodePos[n.id].x;n.y=nodePos[n.id].y;});
-  const pos={};nodes.forEach(n=>pos[n.id]=n);
-  let s=`<defs>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="softglow" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="8"/></filter>
-    <radialGradient id="gLONG" cx="50%" cy="40%" r="62%"><stop offset="0%" stop-color="#bfffe8"/><stop offset="38%" stop-color="#2ee6a6"/><stop offset="100%" stop-color="#0a3526"/></radialGradient>
-    <radialGradient id="gSHORT" cx="50%" cy="40%" r="62%"><stop offset="0%" stop-color="#ffc9d4"/><stop offset="38%" stop-color="#ff4d6d"/><stop offset="100%" stop-color="#350f1a"/></radialGradient>
-    <radialGradient id="gNEU" cx="50%" cy="40%" r="62%"><stop offset="0%" stop-color="#fff0c8"/><stop offset="38%" stop-color="#ffc94d"/><stop offset="100%" stop-color="#352a11"/></radialGradient>
+  if(!nodes.length){svg.innerHTML='<text x="180" y="190" class="node-sub" style="font-size:11px">データ読み込み中…</text>';return;}
+  // クラスタ中心
+  const centers={LONG:{x:W*0.74,y:H*0.48},SHORT:{x:W*0.26,y:H*0.48},"中立":{x:W*0.5,y:H*0.5}};
+  const groups={LONG:[],SHORT:[],"中立":[]};
+  nodes.forEach(n=>groups[n.dir].push(n));
+  // 目標座標(放射状・確信度で中心寄り)
+  const target={};
+  Object.keys(groups).forEach(dir=>{
+    const arr=groups[dir].slice().sort((a,b)=>b.conf-a.conf);const cx=centers[dir].x,cy=centers[dir].y,cnt=arr.length;
+    arr.forEach((n,i)=>{
+      const ang=(i/Math.max(1,cnt))*Math.PI*2+(dir==="LONG"?-0.3:dir==="SHORT"?Math.PI-0.3:Math.PI/2);
+      const spread=cnt>1?(34+(100-n.conf)*0.42):0;
+      const jx=Math.cos(ang)*spread,jy=Math.sin(ang)*spread*0.85+(i-cnt/2)*6;
+      target[n.id]={x:Math.max(34,Math.min(W-34,cx+jx)),y:Math.max(54,Math.min(H-38,cy+jy)),n};
+    });
+  });
+  Object.keys(target).forEach(id=>{
+    if(!swarmPos[id])swarmPos[id]={x:target[id].x,y:target[id].y};
+    swarmPos[id].x+=(target[id].x-swarmPos[id].x)*0.16;
+    swarmPos[id].y+=(target[id].y-swarmPos[id].y)*0.16;
+  });
+  // SVG defs: 各方向の発光グラデーション + ブラー
+  let defs=`<defs>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="softglow" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="9"/></filter>
+    <radialGradient id="gLONG" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#9affda"/><stop offset="35%" stop-color="#2ee6a6"/><stop offset="100%" stop-color="#0d4030"/></radialGradient>
+    <radialGradient id="gSHORT" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#ffb3c3"/><stop offset="35%" stop-color="#ff4d6d"/><stop offset="100%" stop-color="#401320"/></radialGradient>
+    <radialGradient id="gNEU" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#ffe6a8"/><stop offset="35%" stop-color="#ffc94d"/><stop offset="100%" stop-color="#403214"/></radialGradient>
+    <radialGradient id="bgGlow" cx="50%" cy="45%" r="70%"><stop offset="0%" stop-color="#16273a" stop-opacity="0.5"/><stop offset="100%" stop-color="#070a0f" stop-opacity="0"/></radialGradient>
   </defs>`;
-  // 背景の星(固定)
-  starfield.forEach(st=>{s+=`<circle cx="${st.x}" cy="${st.y}" r="${st.r}" fill="#aabccc" opacity="${st.o}"><animate attributeName="opacity" values="${st.o};${st.o*2.2};${st.o}" dur="${st.tw}s" repeatCount="indefinite"/></circle>`;});
-  // クラスタ星雲
-  clusters.forEach(([lbl,ctr,col,cnt])=>{if(cnt>0){const rr=50+cnt*6;s+=`<circle cx="${ctr.x}" cy="${ctr.y}" r="${rr}" fill="${col}" opacity="0.045" filter="url(#softglow)"/>`;const ly=lbl==="中立"?ctr.y-rr-6:42;s+=`<text x="${ctr.x}" y="${ly}" class="cluster-label jp" fill="${col}" opacity="0.8">${lbl} (${cnt})</text>`;}});
-  // リンク(光の糸)
-  links.forEach(l=>{const a=pos[l.a],b=pos[l.b];if(!a||!b)return;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-6;s+=`<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="${l.col}" stroke-width="${l.w}" opacity="${l.o}"/>`;});
-  // ノード(種類別)
+  const gradId=d=>d==="LONG"?"gLONG":d==="SHORT"?"gSHORT":"gNEU";
+  let s=defs;
+  // 背景の淡い星雲
+  s+=`<rect x="0" y="0" width="${W}" height="${H}" fill="url(#bgGlow)"/>`;
+  // 微細な星(装飾・固定)
+  for(let i=0;i<40;i++){const x=(i*97)%W,y=(i*53+i*i*7)%H,r=(i%3)*0.3+0.3,o=0.1+(i%4)*0.06;s+=`<circle cx="${x}" cy="${y}" r="${r}" fill="#aabccc" opacity="${o}"/>`;}
+  // クラスタ背景の発光
+  const clusterMeta=[["LONG",centers.LONG,"#2ee6a6","買い優勢"],["SHORT",centers.SHORT,"#ff4d6d","売り優勢"],["中立",centers["中立"],"#ffc94d","中立"]];
+  clusterMeta.forEach(([dir,ctr,col,lbl])=>{
+    if(groups[dir].length>0){
+      const rr=46+groups[dir].length*7;
+      s+=`<circle cx="${ctr.x}" cy="${ctr.y}" r="${rr}" fill="${col}" opacity="0.05" filter="url(#softglow)"/>`;
+      const ly=dir==="中立"?ctr.y-rr-8:38;
+      s+=`<text x="${ctr.x}" y="${ly}" class="cluster-label jp" fill="${col}" opacity="0.85">${lbl} (${groups[dir].length})</text>`;
+    }
+  });
+  // 同クラスタ内の光の糸
+  Object.keys(groups).forEach(dir=>{
+    const arr=groups[dir],col=aiColor(dir);
+    for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){
+      const a=swarmPos[arr[i].id],b=swarmPos[arr[j].id];if(!a||!b)continue;
+      const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-8;
+      s+=`<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="${col}" stroke-width="0.6" opacity="0.16"/>`;
+    }
+  });
+  // 中立から各クラスタへの淡い接続(全体の繋がりを表現)
+  // ノード(星)本体
   nodes.forEach(n=>{
-    const op=n.enough?(0.45+n.conf/100*0.55):0.3;
-    if(n.kind==="tf"){ // 小さな時間軸ノード(全通貨ビュー)
-      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.col}" opacity="${n.enough?op*0.7:0.18}"/>`;
-      return;
-    }
-    // ハロー
-    s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r*1.7}" fill="${n.col}" opacity="${(n.enough?0.06:0.02)+n.conf/100*0.08}" filter="url(#softglow)"/>`;
-    const clickable=(n.kind==="hub")?`onclick="selectSymbol('${n.sym}')" style="cursor:pointer"`:"";
-    s+=`<g ${clickable}>`;
-    if(n.kind==="rel"){ // 関係性ノード: リング状
-      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="none" stroke="${n.col}" stroke-width="1.5" opacity="0.8" stroke-dasharray="${n.relType==='COLLISION'?'3 2':'0'}"><animate attributeName="r" values="${n.r};${n.r+3};${n.r}" dur="3s" repeatCount="indefinite"/></circle>`;
-      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r*0.5}" fill="${n.col}" opacity="0.5" filter="url(#glow)"/>`;
-      s+=`<text x="${n.x}" y="${n.y+3}" class="node-label" style="font-size:10px" fill="${n.col}">${n.label}</text>`;
-      s+=`<text x="${n.x}" y="${n.y+n.r+9}" class="node-sub" style="font-size:7px" fill="${n.col}">${n.sub}</text>`;
-    }else{ // ハブ / ズーム時間軸: 発光する星
-      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="url(#${gradOf(n.dir)})" opacity="${op}" filter="url(#glow)"/>`;
-      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="none" stroke="${n.col}" stroke-width="1" opacity="${n.enough?0.7:0.35}" ${n.enough?'':'stroke-dasharray="2 2"'}/>`;
-      s+=`<ellipse cx="${n.x}" cy="${n.y-n.r*0.35}" rx="${n.r*0.45}" ry="${n.r*0.26}" fill="#fff" opacity="${0.1+n.conf/100*0.12}"/>`;
-      const fs=Math.max(8,Math.min(12,n.r*0.5));
-      if(n.label)s+=`<text x="${n.x}" y="${n.y+fs*0.32}" class="node-label" style="font-size:${fs}px">${n.label}</text>`;
-      if(n.sub)s+=`<text x="${n.x}" y="${n.y+n.r+9}" class="node-sub" style="font-size:7px" fill="${n.col}">${n.sub}</text>`;
-    }
+    const p=swarmPos[n.id];if(!p)return;
+    const col=aiColor(n.dir);
+    const r=11+n.conf*0.17; // 確信度で大きさ 11〜28
+    const isActive=(swarmMode==="all"&&n.full===activeSymbol);
+    const lum=0.4+n.conf/100*0.6; // 確信度で明るさ
+    // 外側ハロー(ぼかし)
+    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r*1.8}" fill="${col}" opacity="${0.06+n.conf/100*0.10}" filter="url(#softglow)"/>`;
+    // 本体(グラデ発光)
+    s+=`<g style="cursor:pointer" ${swarmMode==="all"?`onclick="selectSymbol('${n.full}')"`:''}>`;
+    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="url(#${gradId(n.dir)})" opacity="${lum}" filter="url(#glow)"/>`;
+    s+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="none" stroke="${col}" stroke-width="${isActive?2:1}" opacity="${isActive?1:0.7}"/>`;
+    // ハイライト(上部の光沢)
+    s+=`<ellipse cx="${p.x}" cy="${p.y-r*0.35}" rx="${r*0.45}" ry="${r*0.28}" fill="#ffffff" opacity="${0.12+n.conf/100*0.15}"/>`;
+    if(isActive)s+=`<circle cx="${p.x}" cy="${p.y}" r="${r+5}" fill="none" stroke="${col}" stroke-width="0.7" opacity="0.5"><animate attributeName="r" values="${r+5};${r+9};${r+5}" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.1;0.5" dur="2s" repeatCount="indefinite"/></circle>`;
+    // ラベル
+    const fs=Math.max(9,Math.min(12,r*0.55));
+    s+=`<text x="${p.x}" y="${p.y+fs*0.32}" class="node-label" style="font-size:${fs}px">${n.id}</text>`;
+    s+=`<text x="${p.x}" y="${p.y+r+9}" class="node-sub" style="font-size:7.5px" fill="${col}">${n.sub}</text>`;
     s+=`</g>`;
   });
   svg.innerHTML=s;
 }
-setInterval(()=>{if(activePage==="Swarm")renderSwarm();},600);
-
+// 滑らかアニメ
+setInterval(()=>{if(activePage==="Swarm")renderSwarm();},500);
 
 // ===== CYCLE =====
 const ES=[["01","Scan","BAR·TICK"],["02","Detect","PATTERN"],["03","Validate","TREND·RISK"],["04","Score","ALWAYS-IN"],["05","Signal","BIAS OUT"]];
@@ -853,8 +1038,8 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   document.getElementById("tabbarSym").style.display=(pg==="Swarm")?"flex":"none";
   if(pg==="Chart"&&chart)setTimeout(()=>chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300}),50);
   if(pg==="Flow")connectFlowWS(activeSymbol);else disconnectFlowWS();
-  if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderVP(st.candles);renderTradeJudge(st.pa);renderFund(activeSymbol);}}
-  if(pg==="Swarm"){updateSwarmText();if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());if(!window._mtfLoaded){window._mtfLoaded=true;loadAllMTF(()=>{if(activePage==="Swarm")renderSwarm();});}renderSwarm();}
+  if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderVP(st.candles);renderTradeJudge(st.pa);renderEntryPlans(st.pa);renderSetupLog();renderFund(activeSymbol);}}
+  if(pg==="Swarm"){updateSwarmText();if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());renderSwarm();}
 });
 function selectSymbol(sym){activeSymbol=sym;document.querySelectorAll(".wl-row").forEach(r=>r.classList.toggle("sel",r.id==="wl-"+sym));document.querySelector('.tab-main[data-pg="Chart"]').click();loadChart(sym,TF);}
 document.getElementById("tfGroup").addEventListener("click",e=>{if(!e.target.dataset.tf)return;TF=e.target.dataset.tf;document.querySelectorAll(".tf-btn").forEach(b=>b.classList.toggle("on",b.dataset.tf===TF));loadChart(activeSymbol,TF);});
@@ -867,7 +1052,7 @@ setInterval(()=>{const d=new Date();document.getElementById("utcClock").textCont
   document.getElementById("tabbarSym").style.display="none";
   await Promise.allSettled(SYMBOLS.map(async o=>{try{const c=await loadHistory(o.s,TF);store[o.s]=store[o.s]||{candles:[],pa:null,ticker:{}};store[o.s].candles=c;store[o.s].pa=runPA(c);updateWLRow(o.s);}catch(e){}}));
   updateSummary();
-  if(store["BTCJPY"]?.candles?.length){candleSeries.setData(store["BTCJPY"].candles);const pa=store["BTCJPY"].pa;renderAlwaysIn(pa);renderTradeJudge(pa);renderFund("BTCJPY");document.getElementById("tjSym").textContent=fmtSym("BTCJPY");}
+  if(store["BTCJPY"]?.candles?.length){candleSeries.setData(store["BTCJPY"].candles);const pa=store["BTCJPY"].pa;renderAlwaysIn(pa);renderTradeJudge(pa);renderEntryPlans(pa);renderSetupLog();renderFund("BTCJPY");document.getElementById("tjSym").textContent=fmtSym("BTCJPY");}
   connectKlineWS("BTCJPY",TF);
 })();
 </script>
