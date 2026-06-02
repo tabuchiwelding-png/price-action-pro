@@ -168,6 +168,24 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 
 /* ===== NEURAL SWARM ===== */
 .swarm-wrap{position:relative;border-bottom:1px solid var(--border);overflow:hidden;background:radial-gradient(ellipse at 50% 42%,rgba(52,82,110,.12),rgba(6,9,14,0) 62%),#06090e;}
+/* ===== 設定パネル ===== */
+.settings-overlay{position:fixed;inset:0;z-index:10000;background:rgba(3,5,8,.7);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:flex-end;}
+.settings-overlay.on{display:flex;}
+.settings-panel{width:min(340px,86vw);max-height:100vh;overflow-y:auto;background:linear-gradient(180deg,var(--panel),var(--bg));border-left:1px solid var(--border2);box-shadow:-8px 0 30px rgba(0,0,0,.5);animation:slideIn .25s ease;}
+@keyframes slideIn{from{transform:translateX(100%);}to{transform:translateX(0);}}
+.settings-head{display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border2);font-size:11px;letter-spacing:.14em;color:var(--txt-br);font-weight:700;}
+.settings-body{padding:14px;}
+.set-group-title{font-size:9px;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+.set-desc{font-size:8.5px;line-height:1.6;color:var(--txt-dim);margin-bottom:8px;}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
+.set-label{font-size:10px;color:var(--txt);}
+.set-toggle{font-size:9px;font-weight:700;letter-spacing:.1em;padding:3px 14px;border:1px solid var(--border2);color:var(--txt-dim);cursor:pointer;user-select:none;transition:all .2s;}
+.set-toggle.on{background:var(--bull);color:#000;border-color:var(--bull);box-shadow:0 0 8px rgba(46,230,166,.4);}
+.set-btn{font-size:9px;font-weight:600;padding:3px 12px;border:1px solid var(--borderAcc);color:var(--cyan);cursor:pointer;user-select:none;}
+.set-btn:active{background:rgba(52,230,224,.15);}
+.set-slider{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--raised);outline:none;margin:4px 0;border:1px solid var(--border);}
+.set-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;background:var(--gold);cursor:pointer;border-radius:50%;box-shadow:0 0 6px rgba(255,201,77,.5);}
+.set-slider::-moz-range-thumb{width:16px;height:16px;background:var(--gold);cursor:pointer;border-radius:50%;border:none;}
 /* ===== 時間軸インテリジェンス: ダイバージングバー ===== */
 .tfi-sec{border-bottom:1px solid var(--border);}
 .tfi-note{padding:9px 12px;font-size:9px;line-height:1.7;color:var(--txt);background:linear-gradient(180deg,rgba(77,166,255,.04),transparent);border-bottom:1px solid var(--border);}
@@ -245,11 +263,33 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
       <span style="font-size:9px;color:var(--txt-dim)" id="utcClock">—</span>
       <div id="audioBtn" style="cursor:pointer;font-size:13px;opacity:0.5;user-select:none;" title="サウンド ON/OFF">🔇</div>
+      <div id="settingsBtn" style="cursor:pointer;font-size:13px;opacity:0.6;user-select:none;" title="設定">⚙</div>
       <div style="width:6px;height:6px;border-radius:50%;background:var(--bull);box-shadow:0 0 6px var(--bull);animation:pulse 2s infinite"></div>
     </div>
   </div>
 
   <div class="ticker-tape"><div id="tape" style="display:flex;gap:26px;padding-left:14px;"></div></div>
+
+  <!-- 設定パネル -->
+  <div id="settingsOverlay" class="settings-overlay">
+    <div class="settings-panel">
+      <div class="settings-head"><span>⚙ 設定 · SETTINGS</span><span id="settingsClose" style="cursor:pointer;font-size:16px;color:var(--txt-dim)">✕</span></div>
+      <div class="settings-body">
+        <div class="set-group-title jp">サウンド</div>
+        <div class="set-row"><span class="set-label jp">効果音・環境音</span><span id="setSfxToggle" class="set-toggle">OFF</span></div>
+        <div class="set-group-title jp" style="margin-top:14px;">音声アラート</div>
+        <div class="set-desc jp">強いシグナルが出た通貨を、女性の音声で読み上げます。例:「ビットコイン、強い買いシグナル」</div>
+        <div class="set-row"><span class="set-label jp">音声アラート</span><span id="setVoiceToggle" class="set-toggle">OFF</span></div>
+        <div class="set-row"><span class="set-label jp">読み上げ速度</span><span id="setRateVal" style="color:var(--gold);font-size:11px;font-weight:600">1.0x</span></div>
+        <input type="range" id="setRate" min="0.6" max="1.6" step="0.1" value="1.0" class="set-slider">
+        <div class="set-row" style="margin-top:6px;"><span class="set-label jp">テスト再生</span><span id="setVoiceTest" class="set-btn">▶ 試す</span></div>
+        <div class="set-row" style="margin-top:14px;"><span class="set-label jp">シグナル感度</span><span id="setSensVal" style="color:var(--gold);font-size:10px;font-weight:600">強(8以上)</span></div>
+        <div class="set-desc jp">どれだけ強いシグナルで音声を出すか。「強」は頻度少なめ、「中」は多め。</div>
+        <input type="range" id="setSens" min="7" max="9" step="1" value="8" class="set-slider">
+        <div style="height:10px;"></div>
+      </div>
+    </div>
+  </div>
 
   <div class="tabbar-outer">
     <div class="tabbar-main" id="tabbarMain">
@@ -592,7 +632,7 @@ function onLiveBar(symbol,bar,closed){
   st.pa=runPA(a);st.aiHist=st.aiHist||[];
   if(symbol===activeSymbol){
     renderAlwaysIn(st.pa);renderBreakdown(st.pa);renderSignals(st.pa);renderGauge(st.pa);renderInd(st.pa);updateChartHead();renderNarrative(st.pa);renderTradeJudge(st.pa);renderFund(symbol);
-    if(closed&&bar.time!==lastClosed){lastClosed=bar.time;st.aiHist.push(st.pa.ai.val);if(st.aiHist.length>40)st.aiHist.shift();renderHeat(st.aiHist);pulseExec();if(activePage==="Ana")renderVP(a);}
+    if(closed&&bar.time!==lastClosed){lastClosed=bar.time;st.aiHist.push(st.pa.ai.val);if(st.aiHist.length>40)st.aiHist.shift();renderHeat(st.aiHist);pulseExec();checkVoiceAlert(symbol,st.pa);if(activePage==="Ana")renderVP(a);}
   }
   updateWLRow(symbol);updateSummary();
 }
@@ -1123,6 +1163,7 @@ function selectSymbol(sym){activeSymbol=sym;document.querySelectorAll(".wl-row")
 
 // ════════ AUDIO ENGINE (Web Audio・全合成・iPhone級の粒立ち) ════════
 let AC=null,audioOn=false,masterGain=null,masterComp=null,ambientNodes=null,reduceMotion=false;
+let sfxBus=null,bgmBus=null,sfxVol=0.85,bgmVol=0.5,bgmOn=true;
 try{reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){}
 function initAudio(){
   if(AC)return;
@@ -1131,6 +1172,9 @@ function initAudio(){
     masterComp=AC.createDynamicsCompressor();
     masterComp.threshold.value=-18;masterComp.knee.value=24;masterComp.ratio.value=4;masterComp.attack.value=0.002;masterComp.release.value=0.18;
     masterGain=AC.createGain();masterGain.gain.value=0.0;
+    // 効果音バスとBGMバスを分離(周波数帯も分けて干渉を防ぐ)
+    sfxBus=AC.createGain();sfxBus.gain.value=sfxVol;sfxBus.connect(masterGain);
+    bgmBus=AC.createGain();bgmBus.gain.value=bgmVol;bgmBus.connect(masterGain);
     masterGain.connect(masterComp);masterComp.connect(AC.destination);
   }catch(e){AC=null;}
 }
@@ -1171,26 +1215,63 @@ function sfx(type){
   }
 }
 // アンビエント(宇宙の持続音ドローン + 遠いパルス)
+// 集中音響: ゆっくり移ろう協和音 + 呼吸する強弱 + きらめき + 40Hzうねり(メロディなし)
 function startAmbient(){
-  if(!AC||ambientNodes||reduceMotion)return;
+  if(!AC||ambientNodes||reduceMotion||!bgmOn)return;
   const t=AC.currentTime;
-  const d1=AC.createOscillator(),d2=AC.createOscillator(),dg=AC.createGain(),flt=AC.createBiquadFilter();
-  d1.type="sine";d1.frequency.value=55;d2.type="sine";d2.frequency.value=55.4;
-  flt.type="lowpass";flt.frequency.value=240;
-  dg.gain.value=0.10;
-  d1.connect(flt);d2.connect(flt);flt.connect(dg);dg.connect(masterGain);
-  d1.start(t);d2.start(t);
-  const p=AC.createOscillator(),pg=AC.createGain();p.type="triangle";p.frequency.value=110;pg.gain.value=0.03;p.connect(pg);pg.connect(masterGain);p.start(t);
-  const pulseTimer=setInterval(()=>{
+  const nodes={osc:[],timers:[]};
+  // --- 全体を通すやわらかいフィルタ(耳に刺さる帯域を削る) ---
+  const tone=AC.createBiquadFilter();tone.type="lowpass";tone.frequency.value=1400;tone.Q.value=0.5;
+  tone.connect(bgmBus);
+  // --- 呼吸する強弱(約11秒周期=深呼吸のテンポ) ---
+  const breath=AC.createGain();breath.gain.value=0.5;breath.connect(tone);
+  const lfo=AC.createOscillator(),lfoG=AC.createGain();lfo.frequency.value=1/11;lfoG.gain.value=0.32;
+  lfo.connect(lfoG);lfoG.connect(breath.gain);lfo.start(t);
+  nodes.osc.push(lfo);
+  // --- 協和音のパッド(ルート+5度+オクターブ+10度=美しい和音) ---
+  // 和音の基音を、数十秒かけてゆっくり移ろわせる(単調さを消す)
+  const chordRoots=[110,98,123.47,87.31]; // A2, G2, B2, F2 — 協和的に移ろう
+  const voices=[1,1.5,2,3.01]; // ルート, 5度, オクターブ, 12度
+  const padGains=[];
+  voices.forEach((mult,i)=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=i<2?"sine":"triangle";
+    o.frequency.value=chordRoots[0]*mult;
+    g.gain.value=[0.12,0.08,0.06,0.03][i];
+    // 各声部をわずかにデチューンした2つ目で厚み(コーラス効果)
+    const o2=AC.createOscillator();o2.type=o.type;o2.frequency.value=chordRoots[0]*mult*1.004;
+    o.connect(g);o2.connect(g);g.connect(breath);
+    o.start(t);o2.start(t);
+    nodes.osc.push(o,o2);padGains.push({o,o2,mult});
+  });
+  // 和音をゆっくり切り替える(28秒ごと=飽きない、急変しない)
+  let ci=0;
+  const chordTimer=setInterval(()=>{
     if(!audioOn||!AC)return;
-    const tt=AC.currentTime;const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(masterGain);
-    o.type="sine";const pf=400+Math.random()*500;o.frequency.setValueAtTime(pf,tt);o.frequency.exponentialRampToValueAtTime(pf*0.7,tt+0.4);
-    g.gain.setValueAtTime(0.0001,tt);g.gain.exponentialRampToValueAtTime(0.05,tt+0.05);g.gain.exponentialRampToValueAtTime(0.0001,tt+0.6);
-    o.start(tt);o.stop(tt+0.7);
-  },5000+Math.random()*4000);
-  ambientNodes={d1,d2,p,pulseTimer};
+    ci=(ci+1)%chordRoots.length;const root=chordRoots[ci];const tt=AC.currentTime;
+    padGains.forEach(p=>{p.o.frequency.linearRampToValueAtTime(root*p.mult,tt+6);p.o2.frequency.linearRampToValueAtTime(root*p.mult*1.004,tt+6);});
+  },28000);
+  nodes.timers.push(chordTimer);
+  // --- 40Hzのごく薄いうねり(集中誘導・左右でわずかに差) ---
+  const b1=AC.createOscillator(),b2=AC.createOscillator(),bg=AC.createGain();
+  b1.type="sine";b1.frequency.value=120;b2.type="sine";b2.frequency.value=160; // 差=40Hz
+  bg.gain.value=0.015;b1.connect(bg);b2.connect(bg);bg.connect(tone);b1.start(t);b2.start(t);
+  nodes.osc.push(b1,b2);
+  // --- きらめき(星の瞬き: たまに高音がふわっと現れて消える) ---
+  const shimmerTimer=setInterval(()=>{
+    if(!audioOn||!AC)return;
+    const tt=AC.currentTime;const o=AC.createOscillator(),g=AC.createGain();
+    o.type="sine";
+    // 和音と協和する高音(ペンタトニックでハズさない)
+    const notes=[523.25,587.33,659.25,783.99,880];const f=notes[Math.floor(Math.random()*notes.length)];
+    o.frequency.value=f;o.connect(g);g.connect(tone);
+    g.gain.setValueAtTime(0.0001,tt);g.gain.linearRampToValueAtTime(0.035,tt+1.5);g.gain.linearRampToValueAtTime(0.0001,tt+4);
+    o.start(tt);o.stop(tt+4.2);
+  },7000+Math.random()*5000);
+  nodes.timers.push(shimmerTimer);
+  ambientNodes=nodes;
 }
-function stopAmbient(){if(!ambientNodes)return;try{ambientNodes.d1.stop();ambientNodes.d2.stop();ambientNodes.p.stop();clearInterval(ambientNodes.pulseTimer);}catch(e){}ambientNodes=null;}
+function stopAmbient(){if(!ambientNodes)return;try{ambientNodes.osc.forEach(o=>{try{o.stop();}catch(_){}});ambientNodes.timers.forEach(t=>clearInterval(t));}catch(e){}ambientNodes=null;}
 function toggleAudio(){
   initAudio();if(!AC)return;
   audioOn=!audioOn;
@@ -1212,6 +1293,71 @@ function toggleAudio(){
   }
 }
 document.getElementById("audioBtn").addEventListener("click",toggleAudio);
+
+// ════════ 音声アラート (SpeechSynthesis・女性音声) ════════
+let voiceOn=false,voiceRate=1.0,sigThreshold=8,jpVoice=null;
+const sigCooldown={}; // 通貨ごとのクールダウン(連呼防止)
+const lastSigState={}; // 前回の状態(変化時だけ鳴らす)
+function pickVoice(){
+  if(!("speechSynthesis" in window))return;
+  const vs=speechSynthesis.getVoices();
+  // 日本語の女性音声を優先選択
+  const jp=vs.filter(v=>/ja|JP|日本/i.test(v.lang)||/japanese/i.test(v.name));
+  // 女性らしい名前を優先(Kyoko=iOS日本語女性, O-ren, Google 日本語 等)
+  jpVoice=jp.find(v=>/kyoko|o-ren|female|女性|google 日本語/i.test(v.name))||jp[0]||null;
+}
+if("speechSynthesis" in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+const SYM_YOMI={BTCJPY:"ビットコイン",ETHJPY:"イーサリアム",XRPJPY:"リップル",SOLJPY:"ソラナ",BNBJPY:"ビーエヌビー",ADAJPY:"カルダノ",DOGEJPY:"ドージコイン",LTCJPY:"ライトコイン",LINKJPY:"チェーンリンク",DOTJPY:"ポルカドット"};
+function speak(text){
+  if(!voiceOn||!("speechSynthesis" in window))return;
+  try{
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang="ja-JP";u.rate=voiceRate;u.pitch=1.15;u.volume=1.0;
+    if(jpVoice)u.voice=jpVoice;
+    speechSynthesis.cancel(); // 重複読み上げを防ぐ
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+// 強シグナルの検出と音声アラート(確定足ごとに呼ばれる)
+function checkVoiceAlert(symbol,pa){
+  if(!voiceOn||!pa)return;
+  const score=pa.score;
+  let state=null;
+  if(score>=sigThreshold)state="buy";
+  else if(score<=(10-sigThreshold))state="sell";
+  // 状態が変化したときだけ(同じ強シグナルを鳴らし続けない)
+  if(state&&state!==lastSigState[symbol]){
+    const now=Date.now();
+    if(!sigCooldown[symbol]||now-sigCooldown[symbol]>180000){ // 同一通貨3分に1回まで
+      sigCooldown[symbol]=now;
+      const yomi=SYM_YOMI[symbol]||shortSym(symbol);
+      const dir=state==="buy"?"強い買いシグナル":"強い売りシグナル";
+      const conf=pa.ai.conf;
+      speak(`${yomi}、${dir}。確信度${conf}パーセント`);
+    }
+  }
+  lastSigState[symbol]=state;
+}
+
+// ===== 設定パネル配線 =====
+const sOv=document.getElementById("settingsOverlay");
+document.getElementById("settingsBtn").addEventListener("click",()=>{sOv.classList.add("on");document.getElementById("setSfxToggle").classList.toggle("on",audioOn);document.getElementById("setSfxToggle").textContent=audioOn?"ON":"OFF";});
+document.getElementById("settingsClose").addEventListener("click",()=>sOv.classList.remove("on"));
+sOv.addEventListener("click",e=>{if(e.target===sOv)sOv.classList.remove("on");});
+// 効果音トグル(既存のtoggleAudioと連動)
+document.getElementById("setSfxToggle").addEventListener("click",()=>{toggleAudio();const t=document.getElementById("setSfxToggle");t.classList.toggle("on",audioOn);t.textContent=audioOn?"ON":"OFF";});
+// 音声アラートトグル
+document.getElementById("setVoiceToggle").addEventListener("click",()=>{
+  voiceOn=!voiceOn;const t=document.getElementById("setVoiceToggle");t.classList.toggle("on",voiceOn);t.textContent=voiceOn?"ON":"OFF";
+  if(voiceOn){pickVoice();speak("音声アラートを有効にしました");}
+  else if("speechSynthesis" in window)speechSynthesis.cancel();
+});
+// 読み上げ速度
+document.getElementById("setRate").addEventListener("input",e=>{voiceRate=parseFloat(e.target.value);document.getElementById("setRateVal").textContent=voiceRate.toFixed(1)+"x";});
+// テスト再生
+document.getElementById("setVoiceTest").addEventListener("click",()=>{if(!voiceOn){voiceOn=true;const t=document.getElementById("setVoiceToggle");t.classList.add("on");t.textContent="ON";pickVoice();}speak("ビットコイン、強い買いシグナル。確信度78パーセント");});
+// シグナル感度
+document.getElementById("setSens").addEventListener("input",e=>{sigThreshold=parseInt(e.target.value);const lbl=sigThreshold>=9?"強(9以上)":sigThreshold>=8?"強(8以上)":"中(7以上)";document.getElementById("setSensVal").textContent=lbl;});
 document.getElementById("tfGroup").addEventListener("click",e=>{if(!e.target.dataset.tf)return;TF=e.target.dataset.tf;document.querySelectorAll(".tf-btn").forEach(b=>b.classList.toggle("on",b.dataset.tf===TF));loadChart(activeSymbol,TF);});
 function setConn(t,live){const e=document.getElementById("connStatus");e.textContent=t;e.style.color=live?"var(--bull)":t.includes("ERROR")?"var(--bear)":"var(--gold)";}
 setInterval(()=>{const d=new Date();document.getElementById("utcClock").textContent=`${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}:${String(d.getUTCSeconds()).padStart(2,"0")} UTC`;},1000);
