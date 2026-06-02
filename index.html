@@ -215,6 +215,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
     <div class="chip"><span class="chip-label">ALWAYS-IN</span><span class="chip-val" id="sigSummary">—</span></div>
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
       <span style="font-size:9px;color:var(--txt-dim)" id="utcClock">—</span>
+      <div id="audioBtn" style="cursor:pointer;font-size:13px;opacity:0.5;user-select:none;" title="サウンド ON/OFF">🔇</div>
       <div style="width:6px;height:6px;border-radius:50%;background:var(--bull);box-shadow:0 0 6px var(--bull);animation:pulse 2s infinite"></div>
     </div>
   </div>
@@ -981,7 +982,80 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderVP(st.candles);renderTradeJudge(st.pa);renderFund(activeSymbol);}}
   if(pg==="Swarm"){updateSwarmText();if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());if(!_mtfLoaded){_mtfLoaded=true;loadAllMTF(()=>{if(activePage==="Swarm")renderSwarm();});}renderSwarm();}
 });
-function selectSymbol(sym){activeSymbol=sym;document.querySelectorAll(".wl-row").forEach(r=>r.classList.toggle("sel",r.id==="wl-"+sym));document.querySelector('.tab-main[data-pg="Chart"]').click();loadChart(sym,TF);}
+function selectSymbol(sym){activeSymbol=sym;document.querySelectorAll(".wl-row").forEach(r=>r.classList.toggle("sel",r.id==="wl-"+sym));document.querySelector('.tab-main[data-pg="Chart"]').click();loadChart(sym,TF);sfx("select");}
+
+// ════════ AUDIO ENGINE (Web Audio・全合成・外部ファイルなし) ════════
+let AC=null,audioOn=false,masterGain=null,ambientNodes=null,reduceMotion=false;
+try{reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){}
+function initAudio(){
+  if(AC)return;
+  try{AC=new (window.AudioContext||window.webkitAudioContext)();masterGain=AC.createGain();masterGain.gain.value=0.0;masterGain.connect(AC.destination);}catch(e){AC=null;}
+}
+// 短い電子音(サイバー操作音)
+function sfx(type){
+  if(!audioOn||!AC)return;
+  const t=AC.currentTime;
+  const g=AC.createGain();g.connect(masterGain);
+  const o=AC.createOscillator();o.connect(g);
+  let f1,f2,dur,vol,wave="sine";
+  if(type==="tab"){f1=880;f2=1320;dur=0.07;vol=0.10;wave="triangle";}
+  else if(type==="select"){f1=660;f2=990;dur=0.06;vol=0.09;wave="sine";}
+  else if(type==="cycle"){f1=420;f2=380;dur=0.05;vol=0.05;wave="sine";}
+  else if(type==="signal-bull"){f1=720;f2=1080;dur=0.16;vol=0.11;wave="triangle";}
+  else if(type==="signal-bear"){f1=480;f2=300;dur=0.16;vol=0.11;wave="triangle";}
+  else if(type==="flow"){f1=300;f2=700;dur=0.3;vol=0.07;wave="sine";}
+  else{f1=600;f2=600;dur=0.05;vol=0.06;}
+  o.type=wave;o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.008);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t);o.stop(t+dur+0.02);
+  // サイバー感: かすかな高音の倍音
+  if(type.startsWith("signal")){const o2=AC.createOscillator();const g2=AC.createGain();o2.connect(g2);g2.connect(masterGain);o2.type="sine";o2.frequency.setValueAtTime(f2*2,t);g2.gain.setValueAtTime(0.0001,t);g2.gain.exponentialRampToValueAtTime(vol*0.3,t+0.01);g2.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.8);o2.start(t);o2.stop(t+dur);}
+}
+// アンビエント(宇宙の持続音ドローン + 遠いパルス)
+function startAmbient(){
+  if(!AC||ambientNodes||reduceMotion)return;
+  const t=AC.currentTime;
+  // 低いドローン(2つのわずかにずれた正弦波=うねり)
+  const d1=AC.createOscillator(),d2=AC.createOscillator(),dg=AC.createGain(),flt=AC.createBiquadFilter();
+  d1.type="sine";d1.frequency.value=55;d2.type="sine";d2.frequency.value=55.4;
+  flt.type="lowpass";flt.frequency.value=220;
+  dg.gain.value=0.06;
+  d1.connect(flt);d2.connect(flt);flt.connect(dg);dg.connect(masterGain);
+  d1.start(t);d2.start(t);
+  // 中域のかすかなパッド
+  const p=AC.createOscillator(),pg=AC.createGain();p.type="triangle";p.frequency.value=110;pg.gain.value=0.018;p.connect(pg);pg.connect(masterGain);p.start(t);
+  // 遠い電子パルス(ランダム間隔・レーダーの反響)
+  const pulseTimer=setInterval(()=>{
+    if(!audioOn||!AC)return;
+    const tt=AC.currentTime;const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(masterGain);
+    o.type="sine";const pf=400+Math.random()*500;o.frequency.setValueAtTime(pf,tt);o.frequency.exponentialRampToValueAtTime(pf*0.7,tt+0.4);
+    g.gain.setValueAtTime(0.0001,tt);g.gain.exponentialRampToValueAtTime(0.025,tt+0.05);g.gain.exponentialRampToValueAtTime(0.0001,tt+0.6);
+    o.start(tt);o.stop(tt+0.7);
+  },4000+Math.random()*4000);
+  ambientNodes={d1,d2,p,pulseTimer};
+}
+function stopAmbient(){if(!ambientNodes)return;try{ambientNodes.d1.stop();ambientNodes.d2.stop();ambientNodes.p.stop();clearInterval(ambientNodes.pulseTimer);}catch(e){}ambientNodes=null;}
+function toggleAudio(){
+  initAudio();if(!AC)return;
+  audioOn=!audioOn;
+  const btn=document.getElementById("audioBtn");
+  if(audioOn){
+    AC.resume&&AC.resume();
+    masterGain.gain.cancelScheduledValues(AC.currentTime);
+    masterGain.gain.setValueAtTime(masterGain.gain.value,AC.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.7,AC.currentTime+0.4);
+    startAmbient();
+    btn.textContent="🔊";btn.style.opacity="1";
+    sfx("tab");
+  }else{
+    masterGain.gain.cancelScheduledValues(AC.currentTime);
+    masterGain.gain.setValueAtTime(masterGain.gain.value,AC.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.0,AC.currentTime+0.3);
+    setTimeout(stopAmbient,350);
+    btn.textContent="🔇";btn.style.opacity="0.5";
+  }
+}
+document.getElementById("audioBtn").addEventListener("click",toggleAudio);
 document.getElementById("tfGroup").addEventListener("click",e=>{if(!e.target.dataset.tf)return;TF=e.target.dataset.tf;document.querySelectorAll(".tf-btn").forEach(b=>b.classList.toggle("on",b.dataset.tf===TF));loadChart(activeSymbol,TF);});
 function setConn(t,live){const e=document.getElementById("connStatus");e.textContent=t;e.style.color=live?"var(--bull)":t.includes("ERROR")?"var(--bear)":"var(--gold)";}
 setInterval(()=>{const d=new Date();document.getElementById("utcClock").textContent=`${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}:${String(d.getUTCSeconds()).padStart(2,"0")} UTC`;},1000);
