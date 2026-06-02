@@ -167,8 +167,25 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .vp-bar{height:9px;}
 
 /* ===== NEURAL SWARM ===== */
-.swarm-wrap{position:relative;border-bottom:1px solid var(--border);overflow:hidden;background:radial-gradient(ellipse at 50% 45%,rgba(52,82,110,.10),rgba(6,9,14,0) 65%),#06090e;}
-#swarmSvg{display:block;width:100%;height:440px;}
+.swarm-wrap{position:relative;border-bottom:1px solid var(--border);overflow:hidden;background:radial-gradient(ellipse at 50% 42%,rgba(52,82,110,.12),rgba(6,9,14,0) 62%),#06090e;}
+#swarmSvg{display:block;width:100%;height:480px;}
+/* 市場ダッシュボード */
+.swarm-dash{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--panel2),var(--bg));}
+.dash-side{text-align:center;}
+.dash-side .dlbl{font-size:9px;letter-spacing:.1em;margin-bottom:3px;}
+.dash-side .dval{font-size:30px;font-weight:800;line-height:1;}
+.dash-side .dsub{font-size:8px;margin-top:3px;}
+.dash-gauge{display:flex;flex-direction:column;align-items:center;}
+.dash-gauge svg{display:block;}
+.dash-gauge .gv{font-size:20px;font-weight:800;}
+.dash-gauge .gl{font-size:8px;letter-spacing:.1em;color:var(--txt-dim);margin-top:2px;}
+.dash-gauge .gs{font-size:9px;font-weight:700;}
+/* 統計バー */
+.swarm-stats{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
+.stat-cell{background:var(--panel2);padding:9px 8px;display:flex;flex-direction:column;gap:3px;}
+.stat-k{font-size:7.5px;letter-spacing:.06em;color:var(--txt-dim);}
+.stat-v{font-size:14px;font-weight:700;color:var(--txt-br);}
+.stat-s{font-size:8px;}
 .swarm-legend{display:flex;justify-content:center;gap:14px;padding:8px;font-size:8px;border-bottom:1px solid var(--border);background:var(--row);color:var(--txt-mid);flex-wrap:wrap;}
 .swarm-legend span{display:flex;align-items:center;gap:4px;}
 .swarm-dot{width:8px;height:8px;border-radius:50%;}
@@ -298,14 +315,18 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
     <div class="ph">AGENT SWARM · 主導権マップ <span class="ph-right" id="swarmModeLabel">全通貨</span></div>
     <div class="mtf-hint jp" id="swarmHint"></div>
     <div class="swarm-legend">
-      <span><span class="swarm-dot" style="background:var(--bull)"></span>買い優勢</span>
-      <span><span class="swarm-dot" style="background:var(--gold)"></span>中立</span>
       <span><span class="swarm-dot" style="background:var(--bear)"></span>売り優勢</span>
+      <span><span class="swarm-dot" style="background:var(--gold)"></span>中立</span>
+      <span><span class="swarm-dot" style="background:var(--bull)"></span>買い優勢</span>
       <span style="color:var(--txt-faint)">|</span>
       <span><span class="swarm-dot" style="background:var(--txt-br);width:11px;height:11px"></span>大=確信度高</span>
-      <span><span class="swarm-dot" style="background:var(--violet)"></span>小点=各時間軸/指標</span>
+      <span><span class="swarm-dot" style="background:var(--violet)"></span>小点=各時間軸</span>
     </div>
-    <div class="swarm-wrap"><svg id="swarmSvg" viewBox="0 0 360 440" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <!-- 市場ダッシュボード(全通貨ビューのみ) -->
+    <div id="swarmDash" class="swarm-dash"></div>
+    <div class="swarm-wrap"><svg id="swarmSvg" viewBox="0 0 360 480" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <!-- 統計バー(全通貨ビューのみ) -->
+    <div id="swarmStats" class="swarm-stats"></div>
     <div style="padding:10px 12px;font-size:9px;color:var(--txt-dim);" class="jp" id="swarmFooter"></div>
   </div>
 
@@ -730,13 +751,17 @@ function indicatorNodes(pa,baseId){
 function renderSwarm(){try{_renderSwarm();}catch(err){const svg=document.getElementById("swarmSvg");if(svg)svg.innerHTML=`<text x="180" y="210" class="node-sub" style="font-size:10px" fill="#ff4d6d">描画エラー: ${(""+err.message).slice(0,40)}</text>`;}}
 function _renderSwarm(){
   const svg=document.getElementById("swarmSvg");if(!svg)return;
-  const W=360,H=440;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  const W=360,H=480;svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
   if(!starfield)starfield=genStars(W,H);
   let nodes=[],links=[];
   const C={LONG:{x:W*0.76,y:H*0.45},SHORT:{x:W*0.24,y:H*0.45},"中立":{x:W*0.5,y:H*0.52}};
-  // データがまだ無ければ明示(真っ暗を防ぐ)
+  // データがまだ無ければ取得を促し、明示(真っ暗を防ぐ)
   const haveData=SYMBOLS.some(o=>store[o.s]?.pa);
-  if(swarmMode==="all"&&!haveData){svg.innerHTML=`<rect x="0" y="0" width="${W}" height="${H}" fill="transparent"/><text x="180" y="210" class="node-sub" style="font-size:11px">銀河を生成中… データ取得待ち</text>`;return;}
+  if(swarmMode==="all"&&!haveData){
+    // 起動時取得が失敗していても、ここで再取得を起動(BTCタブと同じ仕組み)
+    if(!window._swarmRetry){window._swarmRetry=true;loadAllMTF(()=>{const pg=document.getElementById("pgSwarm");if(pg&&pg.classList.contains("on"))renderSwarm();});SYMBOLS.forEach(async o=>{if(!store[o.s]?.pa){try{const c=await loadHistory(o.s,TF);store[o.s]=store[o.s]||{candles:[],pa:null,ticker:{}};store[o.s].candles=c;store[o.s].pa=runPA(c);const pg=document.getElementById("pgSwarm");if(pg&&pg.classList.contains("on"))renderSwarm();}catch(e){}}});}
+    svg.innerHTML=`<rect x="0" y="0" width="${W}" height="${H}" fill="transparent"/><text x="180" y="200" class="node-sub" style="font-size:11px">銀河を生成中… データ取得中</text><text x="180" y="220" class="node-sub" style="font-size:8px" fill="#6f879b">通貨タブ(BTC等)は個別に表示できます</text>`;return;
+  }
 
   if(swarmMode==="all"){
     const hubGroups={LONG:[],SHORT:[],"中立":[]};
@@ -749,7 +774,7 @@ function _renderSwarm(){
         const hx=Math.max(42,Math.min(W-42,ctr.x+Math.cos(ang)*sp));
         const hy=Math.max(64,Math.min(H-54,ctr.y+Math.sin(ang)*sp*0.8+(i-cnt/2)*5));
         const hubId="hub-"+h.sym;
-        nodes.push({id:hubId,kind:"hub",sym:h.sym,dir:h.ai.dir,conf:h.ai.conf,r:11+h.ai.conf*0.13,col:colOf(h.ai.dir),label:shortSym(h.sym),sub:h.ai.conf+"%",enough:true,fx:hx,fy:hy});
+        nodes.push({id:hubId,kind:"hub",sym:h.sym,dir:h.ai.dir,conf:h.ai.conf,r:15+h.ai.conf*0.16,col:colOf(h.ai.dir),label:shortSym(h.sym),sub:h.ai.conf+"%",enough:true,fx:hx,fy:hy,candles:(store[h.sym]&&store[h.sym].candles)?store[h.sym].candles.slice(-30):null});
         // 時間軸ノード
         const m=mtfStore[h.sym];
         if(m){TFS.forEach((tf,ti)=>{const d=m[tf];if(!d)return;const ta=(ti/TFS.length)*Math.PI*2;const tr=19+(ti%2)*4;const tx=hx+Math.cos(ta)*tr;const ty=hy+Math.sin(ta)*tr;const tfId="tf-"+h.sym+"-"+tf;
@@ -763,6 +788,7 @@ function _renderSwarm(){
     Object.keys(hubGroups).forEach(dir=>{const arr=hubGroups[dir];const col=colOf(dir);for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){links.push({a:"hub-"+arr[i].sym,b:"hub-"+arr[j].sym,col,w:0.5,o:0.1});}});
     const rels=computeRelations();
     rels.forEach((rel,ri)=>{const relId="rel-"+ri;const ctr=rel.dir==="中立"?C["中立"]:C[rel.dir];const rx=ctr.x+(rel.type==="COLLISION"?0:(rel.dir==="LONG"?-22:22));const ry=ctr.y-34;nodes.push({id:relId,kind:"rel",dir:rel.dir,conf:rel.strength,r:7+rel.strength*0.05,col:colOf(rel.dir),label:rel.type==="CONVERGENCE"?"⊕":"⊗",sub:rel.jp,enough:true,fx:rx,fy:ry,relType:rel.type});rel.members.forEach(m=>{links.push({a:relId,b:"hub-"+m,col:colOf(rel.dir),w:0.6,o:0.2});});});
+    renderSwarmDash(hubGroups);renderSwarmStats();
     drawNeural(svg,nodes,links,W,H,[["売り優勢",C.SHORT,"#ff4d6d",hubGroups.SHORT.length],["買い優勢",C.LONG,"#2ee6a6",hubGroups.LONG.length],["中立",C["中立"],"#ffc94d",hubGroups["中立"].length]]);
   }else{
     const m=mtfStore[swarmMode]||{};const tfGroups={LONG:[],SHORT:[],"中立":[]};
@@ -781,44 +807,131 @@ function _renderSwarm(){
       });
     });
     Object.keys(tfGroups).forEach(dir=>{const arr=tfGroups[dir];const col=colOf(dir);for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){links.push({a:"tfz-"+arr[i].tf,b:"tfz-"+arr[j].tf,col,w:0.6,o:0.14});}});
+    document.getElementById("swarmDash").innerHTML="";document.getElementById("swarmStats").innerHTML="";
     drawNeural(svg,nodes,links,W,H,[["売り優勢",C.SHORT,"#ff4d6d",tfGroups.SHORT.length],["買い優勢",C.LONG,"#2ee6a6",tfGroups.LONG.length],["中立",C["中立"],"#ffc94d",tfGroups["中立"].length]]);
   }
 }
+function sparkPath(candles,w,h){
+  if(!candles||candles.length<2)return"";
+  const cl=candles.map(c=>c.close);const mn=Math.min(...cl),mx=Math.max(...cl),rg=mx-mn||1;
+  return cl.map((v,i)=>{const x=(i/(cl.length-1))*w-w/2;const y=h/2-((v-mn)/rg)*h;return(i?"L":"M")+x.toFixed(1)+","+y.toFixed(1);}).join("");
+}
+// 市場ダッシュボード(全通貨ビュー) — 全て本物のAlways-In集計
+function renderSwarmDash(hubGroups){
+  const el=document.getElementById("swarmDash");if(!el)return;
+  const longs=hubGroups.LONG,shorts=hubGroups.SHORT,neu=hubGroups["中立"];
+  // 確信度で重み付けした売り買い圧力
+  const buyW=longs.reduce((s,h)=>s+h.ai.conf,0),sellW=shorts.reduce((s,h)=>s+h.ai.conf,0);
+  const totW=buyW+sellW;
+  const buyPct=totW>0?Math.round(buyW/totW*100):50,sellPct=100-buyPct;
+  // 市場センチメント 0-100 (全通貨Always-In値の平均→50中心)
+  const all=[...longs,...shorts,...neu];
+  const avgVal=all.length?all.reduce((s,h)=>s+h.ai.val,0)/all.length:0;
+  const sent=Math.max(0,Math.min(100,Math.round(50+avgVal/2)));
+  const sLbl=sent<30?"強い弱気":sent<45?"弱気":sent<=55?"中立":sent<70?"強気":"強い強気";
+  const sCol=sent<45?"#ff4d6d":sent<=55?"#ffc94d":"#2ee6a6";
+  // 半円ゲージ
+  const R=26,cx=32,cy=34;const ang=Math.PI*(1-sent/100);const ex=cx+Math.cos(ang)*R,ey=cy-Math.sin(ang)*R;
+  const arcBg=`M${cx-R},${cy} A${R},${R} 0 0 1 ${cx+R},${cy}`;
+  const arcFg=`M${cx-R},${cy} A${R},${R} 0 0 1 ${ex.toFixed(1)},${ey.toFixed(1)}`;
+  el.innerHTML=`
+    <div class="dash-side"><div class="dlbl" style="color:var(--bear)">売り優勢</div><div class="dval" style="color:var(--bear)">${sellPct}%</div><div class="dsub" style="color:var(--bear)">${sellPct>=buyPct?"弱気の圧力が優勢":"買いに押され気味"}</div></div>
+    <div class="dash-gauge">
+      <svg width="64" height="42" viewBox="0 0 64 42"><path d="${arcBg}" fill="none" stroke="#1e3346" stroke-width="4"/><path d="${arcFg}" fill="none" stroke="${sCol}" stroke-width="4" stroke-linecap="round"/><circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="2.5" fill="${sCol}"/></svg>
+      <div class="gv" style="color:${sCol}">${sent}</div><div class="gl">市場センチメント</div><div class="gs" style="color:${sCol}">${sLbl}</div>
+    </div>
+    <div class="dash-side"><div class="dlbl" style="color:var(--bull)">買い優勢</div><div class="dval" style="color:var(--bull)">${buyPct}%</div><div class="dsub" style="color:var(--bull)">${buyPct>sellPct?"資金流入の兆し":"様子見"}</div></div>`;
+}
+// 統計バー(全通貨ビュー) — 本物のBinanceデータ
+function renderSwarmStats(){
+  const el=document.getElementById("swarmStats");if(!el)return;
+  const syms=SYMBOLS.map(o=>o.s).filter(s=>store[s]?.ticker?.price);
+  // BTC 24h変化(ドミナンスの代用・正直にBTC変化と表記)
+  const btcChg=store["BTCJPY"]?.ticker?.chg;
+  // 総取引量(全通貨のquote volume合計)
+  let totVol=0;syms.forEach(s=>{totVol+=store[s].ticker.vol||0;});
+  const volStr=totVol>=1e12?"¥"+(totVol/1e12).toFixed(1)+"兆":totVol>=1e8?"¥"+(totVol/1e8).toFixed(1)+"億":"¥"+(totVol/1e4).toFixed(0)+"万";
+  // 市場集中度(方向の偏り)
+  let L=0,S=0,N=0;SYMBOLS.forEach(o=>{const d=store[o.s]?.pa?.ai?.dir;if(d==="LONG")L++;else if(d==="SHORT")S++;else if(d)N++;});
+  const tot=L+S+N||1;const maxShare=Math.max(L,S,N)/tot;
+  const conc=maxShare>0.6?"High":maxShare>0.4?"Mid":"Low";const concCol=maxShare>0.6?"#ff4d6d":maxShare>0.4?"#ffc94d":"#2ee6a6";
+  // アルトシーズン指数(BTCより強いアルトの割合)
+  let altsOut=0,altsTot=0;SYMBOLS.forEach(o=>{if(o.s==="BTCJPY")return;const ch=store[o.s]?.ticker?.chg;if(ch!=null&&btcChg!=null){altsTot++;if(ch>btcChg)altsOut++;}});
+  const altIdx=altsTot>0?Math.round(altsOut/altsTot*100):0;
+  const altCol=altIdx>=75?"#2ee6a6":altIdx>=40?"#ffc94d":"#ff4d6d";
+  const cell=(k,v,vc,s,sc)=>`<div class="stat-cell"><span class="stat-k">${k}</span><span class="stat-v" style="color:${vc||'var(--txt-br)'}">${v}</span><span class="stat-s" style="color:${sc||'var(--txt-dim)'}">${s||''}</span></div>`;
+  el.innerHTML=
+    cell("BTC 24H変化",btcChg!=null?(btcChg>=0?"+":"")+btcChg.toFixed(1)+"%":"—",btcChg>=0?"#2ee6a6":"#ff4d6d","ドミナンス目安")+
+    cell("取引量 (24H)",volStr,null,"全"+syms.length+"通貨合計")+
+    cell("市場の集中度",conc,concCol,maxShare>0.6?"一方向に集中":"分散傾向")+
+    cell("アルトシーズン指数",altIdx+" /100",altCol,altIdx>=75?"アルト優勢":altIdx>=40?"拮抗":"BTC優勢");
+}
+
 function drawNeural(svg,nodes,links,W,H,clusters){
-  if(!nodes.length){svg.innerHTML='<text x="180" y="220" class="node-sub" style="font-size:11px">データ読み込み中…</text>';return;}
+  if(!nodes.length){svg.innerHTML='<text x="180" y="240" class="node-sub" style="font-size:11px">データ読み込み中…</text>';return;}
   nodes.forEach(n=>{if(!nodePos[n.id])nodePos[n.id]={x:n.fx,y:n.fy};nodePos[n.id].x+=(n.fx-nodePos[n.id].x)*0.16;nodePos[n.id].y+=(n.fy-nodePos[n.id].y)*0.16;n.x=nodePos[n.id].x;n.y=nodePos[n.id].y;});
   const pos={};nodes.forEach(n=>pos[n.id]=n);
+  const cx=W/2,cy=H*0.5;
   let s=`<defs>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="softglow" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="7"/></filter>
-    <radialGradient id="gLONG" cx="50%" cy="40%" r="62%"><stop offset="0%" stop-color="#bfffe8"/><stop offset="38%" stop-color="#2ee6a6"/><stop offset="100%" stop-color="#0a3526"/></radialGradient>
-    <radialGradient id="gSHORT" cx="50%" cy="40%" r="62%"><stop offset="0%" stop-color="#ffc9d4"/><stop offset="38%" stop-color="#ff4d6d"/><stop offset="100%" stop-color="#350f1a"/></radialGradient>
-    <radialGradient id="gNEU" cx="50%" cy="40%" r="62%"><stop offset="0%" stop-color="#fff0c8"/><stop offset="38%" stop-color="#ffc94d"/><stop offset="100%" stop-color="#352a11"/></radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="softglow" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="bigglow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="14"/></filter>
+    <radialGradient id="gLONG" cx="50%" cy="38%" r="65%"><stop offset="0%" stop-color="#d6fff0"/><stop offset="34%" stop-color="#2ee6a6"/><stop offset="100%" stop-color="#06251a"/></radialGradient>
+    <radialGradient id="gSHORT" cx="50%" cy="38%" r="65%"><stop offset="0%" stop-color="#ffd6df"/><stop offset="34%" stop-color="#ff4d6d"/><stop offset="100%" stop-color="#280b14"/></radialGradient>
+    <radialGradient id="gNEU" cx="50%" cy="38%" r="65%"><stop offset="0%" stop-color="#fff3d2"/><stop offset="34%" stop-color="#ffc94d"/><stop offset="100%" stop-color="#28200c"/></radialGradient>
+    <radialGradient id="vign" cx="50%" cy="50%" r="70%"><stop offset="55%" stop-color="rgba(6,9,14,0)"/><stop offset="100%" stop-color="rgba(6,9,14,0.55)"/></radialGradient>
   </defs>`;
+  // ===== レーダー背景 =====
+  s+=`<g opacity="0.5">`;
+  for(let i=1;i<=5;i++){const rr=i*42;s+=`<circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="#1e3346" stroke-width="0.6" opacity="${0.5-i*0.05}"/>`;}
+  for(let a=0;a<360;a+=30){const rad=a*Math.PI/180;s+=`<line x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(rad)*210).toFixed(1)}" y2="${(cy+Math.sin(rad)*210).toFixed(1)}" stroke="#16273600" stroke-width="0.5"/><line x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(rad)*210).toFixed(1)}" y2="${(cy+Math.sin(rad)*210).toFixed(1)}" stroke="#162736" stroke-width="0.5" opacity="0.35"/>`;}
+  s+=`</g>`;
+  // 回転スイープ線
+  s+=`<line x1="${cx}" y1="${cy}" x2="${cx+205}" y2="${cy}" stroke="#34e6e0" stroke-width="1" opacity="0.18"><animateTransform attributeName="transform" type="rotate" from="0 ${cx} ${cy}" to="360 ${cx} ${cy}" dur="8s" repeatCount="indefinite"/></line>`;
+  // 星
   starfield.forEach(st=>{s+=`<circle cx="${st.x}" cy="${st.y}" r="${st.r}" fill="#aebfce" opacity="${st.o}"><animate attributeName="opacity" values="${st.o};${st.o*2.2};${st.o}" dur="${st.tw}s" repeatCount="indefinite"/></circle>`;});
-  clusters.forEach(([lbl,ctr,col,cnt])=>{if(cnt>0){const rr=52+cnt*6;s+=`<circle cx="${ctr.x}" cy="${ctr.y}" r="${rr}" fill="${col}" opacity="0.045" filter="url(#softglow)"/>`;const ly=lbl==="中立"?ctr.y-rr-6:42;s+=`<text x="${ctr.x}" y="${ly}" class="cluster-label jp" fill="${col}" opacity="0.8">${lbl} (${cnt})</text>`;}});
-  links.forEach(l=>{const a=pos[l.a],b=pos[l.b];if(!a||!b)return;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-5;s+=`<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="${l.col}" stroke-width="${l.w}" opacity="${l.o}"/>`;});
-  // 微小ノード(指標)を先に
-  nodes.filter(n=>n.kind==="ind"||n.kind==="tf").forEach(n=>{s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.col}" opacity="${n.enough?0.5:0.16}"/>`;});
-  // 主要ノード
+  // クラスタ星雲
+  clusters.forEach(([lbl,ctr,col,cnt])=>{if(cnt>0){const rr=54+cnt*6;s+=`<circle cx="${ctr.x}" cy="${ctr.y}" r="${rr}" fill="${col}" opacity="0.05" filter="url(#bigglow)"/>`;const ly=lbl==="中立"?ctr.y-rr-4:34;s+=`<text x="${ctr.x}" y="${ly}" class="cluster-label jp" fill="${col}" opacity="0.85">${lbl} (${cnt})</text>`;}});
+  // ===== リンク(曲線フィラメント) =====
+  links.forEach(l=>{const a=pos[l.a],b=pos[l.b];if(!a||!b)return;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-6;s+=`<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="${l.col}" stroke-width="${l.w}" opacity="${l.o}"/>`;});
+  // ===== 微小ノード(時間軸・指標) =====
+  nodes.filter(n=>n.kind==="ind"||n.kind==="tf").forEach(n=>{s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.col}" opacity="${n.enough?0.55:0.16}"><animate attributeName="opacity" values="${n.enough?0.55:0.16};${n.enough?0.8:0.25};${n.enough?0.55:0.16}" dur="${2+Math.random()*2}s" repeatCount="indefinite"/></circle>`;});
+  // ===== 主要ノード(二重リング発光体) =====
   nodes.filter(n=>n.kind!=="ind"&&n.kind!=="tf").forEach(n=>{
-    const op=n.enough?(0.45+n.conf/100*0.55):0.3;
-    s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r*1.7}" fill="${n.col}" opacity="${(n.enough?0.06:0.02)+n.conf/100*0.08}" filter="url(#softglow)"/>`;
+    const op=n.enough?(0.5+n.conf/100*0.5):0.32;
     const clickable=(n.kind==="hub")?`onclick="selectSymbol('${n.sym}')" style="cursor:pointer"`:"";
+    // 外周グロー
+    s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r*1.9}" fill="${n.col}" opacity="${(n.enough?0.07:0.02)+n.conf/100*0.08}" filter="url(#bigglow)"/>`;
     s+=`<g ${clickable}>`;
     if(n.kind==="rel"){
       s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="none" stroke="${n.col}" stroke-width="1.5" opacity="0.8" ${n.relType==='COLLISION'?'stroke-dasharray="3 2"':''}><animate attributeName="r" values="${n.r};${n.r+3};${n.r}" dur="3s" repeatCount="indefinite"/></circle><circle cx="${n.x}" cy="${n.y}" r="${n.r*0.5}" fill="${n.col}" opacity="0.5" filter="url(#glow)"/><text x="${n.x}" y="${n.y+3}" class="node-label" style="font-size:10px" fill="${n.col}">${n.label}</text><text x="${n.x}" y="${n.y+n.r+9}" class="node-sub" style="font-size:7px" fill="${n.col}">${n.sub}</text>`;
     }else{
-      s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="url(#${gradOf(n.dir)})" opacity="${op}" filter="url(#glow)"/><circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="none" stroke="${n.col}" stroke-width="1" opacity="${n.enough?0.7:0.35}" ${n.enough?'':'stroke-dasharray="2 2"'}/><ellipse cx="${n.x}" cy="${n.y-n.r*0.35}" rx="${n.r*0.45}" ry="${n.r*0.26}" fill="#fff" opacity="${0.1+n.conf/100*0.12}"/>`;
-      const fs=Math.max(8,Math.min(12,n.r*0.5));
-      if(n.label)s+=`<text x="${n.x}" y="${n.y+fs*0.32}" class="node-label" style="font-size:${fs}px">${n.label}</text>`;
-      if(n.sub)s+=`<text x="${n.x}" y="${n.y+n.r+9}" class="node-sub" style="font-size:7px" fill="${n.col}">${n.sub}</text>`;
+      const R=n.r;const circ=2*Math.PI*(R+5);const fill=n.conf/100*circ;
+      // 外側の装飾リング(回転・破線)
+      s+=`<circle cx="${n.x}" cy="${n.y}" r="${R+7}" fill="none" stroke="${n.col}" stroke-width="0.6" opacity="0.25" stroke-dasharray="2 4"><animateTransform attributeName="transform" type="rotate" from="0 ${n.x} ${n.y}" to="360 ${n.x} ${n.y}" dur="${14+R}s" repeatCount="indefinite"/></circle>`;
+      // 確信度アーク(conf%だけ満ちるメーター・上から時計回り)
+      s+=`<circle cx="${n.x}" cy="${n.y}" r="${R+5}" fill="none" stroke="${n.col}" stroke-width="1.6" opacity="0.9" stroke-linecap="round" stroke-dasharray="${fill.toFixed(1)} ${(circ-fill).toFixed(1)}" transform="rotate(-90 ${n.x} ${n.y})"/>`;
+      // 本体(グラデ発光)
+      s+=`<circle cx="${n.x}" cy="${n.y}" r="${R}" fill="url(#${gradOf(n.dir)})" opacity="${op}" filter="url(#glow)"/>`;
+      s+=`<circle cx="${n.x}" cy="${n.y}" r="${R}" fill="none" stroke="${n.col}" stroke-width="1" opacity="${n.enough?0.8:0.4}" ${n.enough?'':'stroke-dasharray="2 2"'}/>`;
+      // ハイライト
+      s+=`<ellipse cx="${n.x}" cy="${n.y-R*0.4}" rx="${R*0.5}" ry="${R*0.28}" fill="#fff" opacity="${0.12+n.conf/100*0.13}"/>`;
+      s+=`<circle cx="${n.x-R*0.28}" cy="${n.y-R*0.32}" r="${R*0.12}" fill="#fff" opacity="0.5"/>`;
+      // ラベル
+      const fs=Math.max(9,Math.min(15,R*0.62));
+      if(n.label)s+=`<text x="${n.x}" y="${n.y+1}" class="node-label" style="font-size:${fs}px" fill="#fff">${n.label}</text>`;
+      if(n.sub)s+=`<text x="${n.x}" y="${n.y+fs*0.95}" class="node-sub" style="font-size:${(fs*0.55).toFixed(0)}px" fill="rgba(255,255,255,.8)">${n.sub}</text>`;
+      // スパークライン(ハブの足元)
+      if(n.kind==="hub"&&n.candles){const sw=R*1.6,sh=R*0.7;const sp=sparkPath(n.candles,sw,sh);if(sp)s+=`<g transform="translate(${n.x},${n.y+R+10})" opacity="0.8"><rect x="${-sw/2-3}" y="${-sh/2-2}" width="${sw+6}" height="${sh+4}" fill="rgba(6,9,14,0.5)" stroke="${n.col}" stroke-width="0.4" opacity="0.5" rx="1"/><path d="${sp}" fill="none" stroke="${n.col}" stroke-width="1" opacity="0.95"/></g>`;}
     }
     s+=`</g>`;
   });
+  // ビネット
+  s+=`<rect x="0" y="0" width="${W}" height="${H}" fill="url(#vign)" pointer-events="none"/>`;
   svg.innerHTML=s;
 }
-setInterval(()=>{if(activePage==="Swarm")renderSwarm();},600);
+
+setInterval(()=>{const pg=document.getElementById("pgSwarm");if(pg&&pg.classList.contains("on"))renderSwarm();},700);
 
 // ===== CYCLE =====
 const ES=[["01","Scan","BAR·TICK"],["02","Detect","PATTERN"],["03","Validate","TREND·RISK"],["04","Score","ALWAYS-IN"],["05","Signal","BIAS OUT"]];
@@ -849,6 +962,7 @@ setInterval(()=>{const d=new Date();document.getElementById("utcClock").textCont
   await Promise.allSettled(SYMBOLS.map(async o=>{try{const c=await loadHistory(o.s,TF);store[o.s]=store[o.s]||{candles:[],pa:null,ticker:{}};store[o.s].candles=c;store[o.s].pa=runPA(c);updateWLRow(o.s);}catch(e){}}));
   updateSummary();
   if(store["BTCJPY"]?.candles?.length){candleSeries.setData(store["BTCJPY"].candles);const pa=store["BTCJPY"].pa;renderAlwaysIn(pa);renderBreakdown(pa);renderTradeJudge(pa);renderFund("BTCJPY");document.getElementById("tjSym").textContent=fmtSym("BTCJPY");}
+  renderSwarm(); // 起動時に銀河(通貨ハブ)を即描画
   connectKlineWS("BTCJPY",TF);
 })();
 </script>
