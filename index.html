@@ -186,35 +186,30 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .set-slider{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--raised);outline:none;margin:4px 0;border:1px solid var(--border);}
 .set-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;background:var(--gold);cursor:pointer;border-radius:50%;box-shadow:0 0 6px rgba(255,201,77,.5);}
 .set-slider::-moz-range-thumb{width:16px;height:16px;background:var(--gold);cursor:pointer;border-radius:50%;border:none;}
-/* ===== 時間軸インテリジェンス: ダイバージングバー ===== */
+/* ===== 時間軸オービット(ラジアル主役) ===== */
 .tfi-sec{border-bottom:1px solid var(--border);}
-.tfi-note{padding:9px 12px;font-size:9px;line-height:1.7;color:var(--txt);background:linear-gradient(180deg,rgba(77,166,255,.04),transparent);border-bottom:1px solid var(--border);}
-.tfi-note b{color:var(--gold);font-weight:600;}
-.tfi-note .tag{display:inline-block;font-size:7px;letter-spacing:.12em;color:var(--cyan);border:1px solid rgba(52,230,224,.3);padding:0 5px;margin-right:6px;vertical-align:1px;}
-.dvb-wrap{padding:12px 12px 14px;}
-.dvb-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.dvb-tf{width:38px;flex-shrink:0;font-size:9px;font-weight:700;text-align:right;letter-spacing:.02em;}
-.dvb-track{flex:1;height:16px;position:relative;background:linear-gradient(90deg,rgba(255,45,111,.05),rgba(255,255,255,.02) 50%,rgba(0,245,212,.05));border:1px solid var(--border);overflow:hidden;}
-.dvb-mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border2);z-index:2;}
-.dvb-fill{position:absolute;top:1px;bottom:1px;z-index:1;transition:width .5s cubic-bezier(.4,0,.2,1),left .5s cubic-bezier(.4,0,.2,1);}
-.dvb-val{width:42px;flex-shrink:0;font-size:9px;font-weight:600;text-align:left;}
-.dvb-scale{display:flex;justify-content:space-between;padding:0 46px 0 46px;font-size:7.5px;color:var(--txt-dim);margin-bottom:6px;}
-/* 帯域ラベル */
-.dvb-band{font-size:7px;letter-spacing:.14em;color:var(--txt-faint);padding:6px 0 3px 46px;text-transform:uppercase;}
-/* ===== ヒートマップ ===== */
-.hm-wrap{padding:12px;overflow-x:auto;}
-.hm-grid{display:grid;gap:2px;min-width:330px;}
-.hm-corner{font-size:7px;color:var(--txt-dim);display:flex;align-items:flex-end;padding-bottom:3px;}
-.hm-colh{font-size:7.5px;font-weight:700;text-align:center;padding-bottom:3px;letter-spacing:.02em;}
-.hm-rowh{font-size:8px;color:var(--txt-mid);display:flex;align-items:center;padding-right:6px;white-space:nowrap;}
-.hm-cell{aspect-ratio:1;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:600;position:relative;transition:background .4s;min-height:26px;}
-.hm-cell span{position:relative;z-index:1;color:rgba(255,255,255,.85);}
-/* サマリー(方向一致/不一致) */
-.tfi-summary{margin:0 12px 14px;padding:10px 12px;border:1px solid;display:flex;align-items:center;gap:10px;}
-.tfi-summary .ic{font-size:18px;}
-.tfi-summary .tx{flex:1;}
-.tfi-summary .t1{font-size:11px;font-weight:700;margin-bottom:2px;}
-.tfi-summary .t2{font-size:8.5px;color:var(--txt-mid);line-height:1.5;}
+.tfi-radial{padding:6px 12px 4px;background:radial-gradient(ellipse at 50% 50%,rgba(52,82,110,.08),transparent 70%);}
+.tfi-chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 12px 12px;justify-content:center;}
+.tfi-chip{font-size:9px;font-weight:700;letter-spacing:.04em;padding:3px 10px;border:1px solid;border-radius:2px;background:rgba(6,9,14,.5);white-space:nowrap;}
+.tfi-minibars{padding:4px 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;}
+.mb-row{display:flex;align-items:center;gap:6px;}
+.mb-tf{width:30px;flex-shrink:0;font-size:8px;font-weight:600;text-align:right;}
+.mb-track{flex:1;height:6px;position:relative;background:linear-gradient(90deg,rgba(255,45,111,.06),rgba(255,255,255,.02) 50%,rgba(0,245,212,.06));border:1px solid var(--border);}
+.mb-mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border2);}
+.mb-fill{position:absolute;top:0;bottom:0;transition:width .5s,left .5s;}
+/* 折りたたみヒートマップ(発光ガラスタイル) */
+.tfi-details{border-top:1px solid var(--border);}
+.tfi-details summary{padding:9px 12px;font-size:9px;letter-spacing:.1em;color:var(--txt-mid);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;}
+.tfi-details summary::-webkit-details-marker{display:none;}
+.tfi-details summary::before{content:'▸';color:var(--gold);transition:transform .2s;}
+.tfi-details[open] summary::before{transform:rotate(90deg);}
+.hm-wrap{padding:4px 12px 14px;overflow-x:auto;}
+.hm-grid{display:grid;gap:3px;min-width:300px;}
+.hm-corner{font-size:7px;}
+.hm-colh{font-size:7.5px;font-weight:700;text-align:center;padding-bottom:3px;}
+.hm-rowh{font-size:8px;color:var(--txt-mid);display:flex;align-items:center;padding-right:4px;white-space:nowrap;}
+.hm-cell{aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:600;min-height:22px;transition:background .4s,box-shadow .4s;backdrop-filter:blur(2px);}
+.hm-cell span{color:rgba(255,255,255,.9);}
 #swarmSvg{display:block;width:100%;height:480px;}
 /* 市場ダッシュボード */
 .swarm-dash{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--panel2),var(--bg));}
@@ -911,89 +906,132 @@ function tfColor(val,band){
   return `rgb(${r},${g},${b})`;
 }
 // 個別通貨の時間軸インテリジェンスを描画
+// 個別通貨の時間軸インテリジェンス(主役=ラジアルリング)
 function renderTFIntel(sym){
   const el=document.getElementById("tfIntel");if(!el)return;
   if(swarmMode==="all"){el.innerHTML="";return;}
   const m=mtfStore[sym];
   if(!m){el.innerHTML=`<div class="tfi-note jp" style="text-align:center;color:var(--txt-dim)">時間軸データを取得中…</div>`;return;}
-  // データ収集
-  const rows=TFS.map(tf=>{const d=m[tf];if(!d||!d.enough)return{tf,enough:false};const ai=d.ai,pa=d.pa;
-    const val=ai.val;const buyEdge=val>0?val:0,sellEdge=val<0?-val:0;
-    const trend=pa?Math.abs(pa.ai.parts.struct)/35*100:0; // トレンド強度(構造スコア)
-    const vola=pa&&pa.atrPct!=null?pa.atrPct:0;
-    const sigQ=pa?pa.score*10:0; // シグナル品質(0-100)
-    return{tf,enough:true,val,buyEdge,sellEdge,trend,vola,sigQ,band:TF_BAND[tf]};
+  const rows=TFS.map(tf=>{const d=m[tf];if(!d||!d.enough)return{tf,enough:false,band:TF_BAND[tf]};const ai=d.ai,pa=d.pa;
+    const val=ai.val;const trend=pa?Math.abs(pa.ai.parts.struct)/35*100:0;const vola=pa&&pa.atrPct!=null?pa.atrPct:0;const sigQ=pa?pa.score*10:0;
+    return{tf,enough:true,val,conf:ai.conf,buyEdge:val>0?val:0,sellEdge:val<0?-val:0,trend,vola,sigQ,band:TF_BAND[tf]};
   });
   const valid=rows.filter(r=>r.enough);
+  const maxVola=Math.max(...valid.map(r=>r.vola),0.1);
 
-  // ===== ① ダイバージングバー =====
-  let html=`<div class="tfi-sec">
-    <div class="ph">時間軸インテリジェンス · ダイバージングバー <span class="ph-right">${fmtSym(sym)}</span></div>
-    <div class="tfi-note jp"><span class="tag">見方</span>各時間軸が<b>買い・売りどちらに傾いているか</b>を一覧。中央が中立、右に伸びれば買い優勢、左なら売り優勢。<b>全部が同じ側に揃えば強いトレンド</b>、バラバラなら方向感なし。短期(1分)から長期(月足)まで縦に並ぶ。</div>
-    <div class="dvb-wrap">
-      <div class="dvb-scale"><span style="color:var(--bear)">◀ 売り 100</span><span>中立</span><span style="color:var(--bull)">買い 100 ▶</span></div>`;
-  let lastBand="";
-  rows.forEach(r=>{
-    if(r.band&&r.band!==lastBand){html+=`<div class="dvb-band">${BAND_LABEL[r.band]}</div>`;lastBand=r.band;}
-    if(!r.enough){html+=`<div class="dvb-row"><div class="dvb-tf" style="color:var(--txt-faint)">${TF_SHORT[r.tf]}</div><div class="dvb-track"><div class="dvb-mid"></div></div><div class="dvb-val" style="color:var(--txt-faint)">蓄積中</div></div>`;return;}
-    const col=tfColor(r.val,r.band);
-    const half=Math.abs(r.val)/100*50;const left=r.val>=0?50:50-half;
-    const lbl=r.val>15?`買 +${r.val}`:r.val<-15?`売 ${r.val}`:`中立 ${r.val}`;
-    html+=`<div class="dvb-row"><div class="dvb-tf" style="color:${col}">${TF_SHORT[r.tf]}</div><div class="dvb-track"><div class="dvb-mid"></div><div class="dvb-fill" style="left:${left}%;width:${half}%;background:${col};box-shadow:0 0 6px ${col}"></div></div><div class="dvb-val" style="color:${col}">${lbl}</div></div>`;
-  });
-  html+=`</div>`;
+  // ===== 総合バイアス(全時間軸の確信度加重平均) =====
+  let wSum=0,vSum=0;valid.forEach(r=>{wSum+=r.val*r.conf;vSum+=r.conf;});
+  const bias=vSum>0?Math.round(wSum/vSum):0;
+  const biasCol=bias>15?"#2ee6a6":bias<-15?"#ff2d6f":"#facc15";
+  const biasLbl=bias>15?"買い優勢":bias<-15?"売り優勢":"中立";
 
-  // ===== サマリー: 短期 vs 上位足の方向一致 =====
-  const shortVals=valid.filter(r=>r.band==="s").map(r=>r.val);
-  const longVals=valid.filter(r=>r.band==="l").map(r=>r.val);
+  // ===== 方向一致サマリー(短い言葉) =====
   const avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
-  const sAvg=avg(shortVals),lAvg=avg(longVals);
+  const sAvg=avg(valid.filter(r=>r.band==="s").map(r=>r.val)),lAvg=avg(valid.filter(r=>r.band==="l").map(r=>r.val));
   const sDir=sAvg>15?1:sAvg<-15?-1:0,lDir=lAvg>15?1:lAvg<-15?-1:0;
-  let sumIc,sumCol,sumT1,sumT2;
-  if(sDir!==0&&lDir!==0&&sDir===lDir){sumIc=sDir>0?"▲":"▼";sumCol=sDir>0?"var(--bull)":"var(--bear)";sumT1="方向一致 — "+(sDir>0?"買い":"売り")+"で短期・上位足が揃う";sumT2="短期と上位足が同じ方向。トレンドに乗りやすい局面。順張りが機能しやすい。";}
-  else if(sDir!==0&&lDir!==0&&sDir!==lDir){sumIc="⚠";sumCol="var(--gold)";sumT1="時間軸不一致 — 短期と上位足が逆行";sumT2="短期は"+(sDir>0?"買い":"売り")+"、上位足は"+(lDir>0?"買い":"売り")+"。だましや急反転に注意。上位足の方向を優先するのが基本。";}
-  else{sumIc="◆";sumCol="var(--gold)";sumT1="方向感なし — レンジ／中立優勢";sumT2="どの帯域も明確な傾きが弱い。レンジ両端の逆張りのみ、中央は様子見。";}
-  html+=`<div class="tfi-summary" style="border-color:${sumCol}55;background:linear-gradient(90deg,${sumCol}12,transparent)"><div class="ic" style="color:${sumCol}">${sumIc}</div><div class="tx"><div class="t1" style="color:${sumCol}">${sumT1}</div><div class="t2 jp">${sumT2}</div></div></div>`;
-  html+=`</div>`;
+  let chip,chipCol;
+  if(sDir!==0&&lDir!==0&&sDir===lDir){chipCol=sDir>0?"#2ee6a6":"#ff2d6f";chip=(sDir>0?"▲ ":"▼ ")+"時間軸一致 · "+(sDir>0?"買い":"売り");}
+  else if(sDir!==0&&lDir!==0){chipCol="#facc15";chip="⚠ 時間軸不一致 · 短期"+(sDir>0?"買":"売")+"／上位"+(lDir>0?"買":"売");}
+  else{chipCol="#facc15";chip="◆ 方向感なし · レンジ";}
+  const maxVolaRow=valid.reduce((a,b)=>(b.vola>a.vola?b:a),valid[0]||{vola:0,tf:""});
+  const maxEdgeRow=valid.reduce((a,b)=>(Math.abs(b.val)>Math.abs(a.val)?b:a),valid[0]||{val:0,tf:""});
 
-  // ===== ② ヒートマップ =====
-  const metrics=[["ボラ","vola"],["買い優位","buyEdge"],["売り優位","sellEdge"],["トレンド強度","trend"],["シグナル品質","sigQ"]];
-  // 各指標の最大値で正規化(ボラは特に通貨で幅があるため)
+  // ===== ラジアルリング SVG =====
+  const W=360,H=360,cx=W/2,cy=H/2;
+  const rings=valid.length?valid:rows; // データ無くても枠は出す
+  const r0=46,rMax=168;const step=(rMax-r0)/Math.max(1,rows.length-1);
+  const tfCol=(v,band)=>tfColor(v,band);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+    <defs>
+      <radialGradient id="tfiCore" cx="50%" cy="45%" r="60%"><stop offset="0%" stop-color="${biasCol}" stop-opacity="0.9"/><stop offset="60%" stop-color="${biasCol}" stop-opacity="0.25"/><stop offset="100%" stop-color="${biasCol}" stop-opacity="0"/></radialGradient>
+      <filter id="tfiGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="3"/></filter>
+      <filter id="tfiSoft" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="8"/></filter>
+    </defs>`;
+  // 背景: 極細グリッド円 + 放射線
+  svg+=`<g opacity="0.4">`;
+  for(let i=0;i<rows.length;i++){const rr=r0+step*i;svg+=`<circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="#1e3346" stroke-width="0.5" opacity="0.5"/>`;}
+  for(let a=0;a<360;a+=15){const rad=a*Math.PI/180;svg+=`<line x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(rad)*rMax).toFixed(1)}" y2="${(cy+Math.sin(rad)*rMax).toFixed(1)}" stroke="#16273a" stroke-width="0.4" opacity="0.3"/>`;}
+  svg+=`</g>`;
+  // 回転スイープ
+  svg+=`<line x1="${cx}" y1="${cy}" x2="${cx+rMax}" y2="${cy}" stroke="${biasCol}" stroke-width="1" opacity="0.15"><animateTransform attributeName="transform" type="rotate" from="0 ${cx} ${cy}" to="360 ${cx} ${cy}" dur="12s" repeatCount="indefinite"/></line>`;
+
+  // 各時間軸リング(内→外: 短期→上位足)
+  rows.forEach((r,i)=>{
+    const rr=r0+step*i;
+    const bandW=r.band==="s"?2:r.band==="m"?3.4:5; // 帯域で基本太さ
+    if(!r.enough){
+      svg+=`<circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="#2a3a4a" stroke-width="1.5" stroke-dasharray="3 5" opacity="0.4"/>`;
+      svg+=`<text x="${cx+rr+3}" y="${cy+3}" style="font-size:8px;font-family:'JetBrains Mono'" fill="#56697c">${TF_SHORT[r.tf]}</text>`;
+      return;
+    }
+    const col=tfCol(r.val,r.band);
+    // ボラで太さ・発光を変える
+    const volaN=Math.min(1,r.vola/maxVola);
+    const thick=bandW+volaN*4;
+    const glow=r.band==="l"?"url(#tfiSoft)":"url(#tfiGlow)"; // 上位足は重いグロー
+    // 優位性の偏り: 買いなら上半分、売りなら下半分を強く描く
+    // リング全体を薄く描き、優位方向の弧を濃く重ねる
+    svg+=`<circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${col}" stroke-width="${thick}" opacity="${0.12+volaN*0.1}" filter="${glow}"/>`;
+    // 優位方向の弧(確信度ぶんの長さ)
+    const circ=2*Math.PI*rr;const arcLen=circ*(r.conf/100)*0.5;
+    // 買い=上(-90度中心)、売り=下(90度中心)、中立=右
+    const center=r.val>15?-90:r.val<-15?90:0;
+    const startA=center-(arcLen/circ*360)/2;
+    svg+=`<circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${col}" stroke-width="${thick}" opacity="${0.6+volaN*0.4}" stroke-linecap="round" stroke-dasharray="${arcLen.toFixed(1)} ${(circ-arcLen).toFixed(1)}" transform="rotate(${startA.toFixed(1)} ${cx} ${cy})" filter="${glow}"><animate attributeName="opacity" values="${0.6+volaN*0.4};${0.85+volaN*0.15};${0.6+volaN*0.4}" dur="${3+i*0.3}s" repeatCount="indefinite"/></circle>`;
+    // 高ボラの粒子(リング上にドット)
+    if(volaN>0.5){const pc=Math.round(volaN*5);for(let p=0;p<pc;p++){const pa=(p/pc)*Math.PI*2+i;const px=cx+Math.cos(pa)*rr,py=cy+Math.sin(pa)*rr;svg+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.3" fill="${col}" opacity="0.9"><animate attributeName="opacity" values="0.9;0.3;0.9" dur="${1.5+Math.random()}s" repeatCount="indefinite"/></circle>`;}}
+    // ラベル(右側に時間軸名)
+    const lx=cx+rr+4;
+    svg+=`<text x="${lx}" y="${cy-1}" style="font-size:${r.band==='s'?7.5:r.band==='m'?8.5:9.5}px;font-family:'JetBrains Mono';font-weight:${r.band==='l'?700:500}" fill="${col}">${TF_SHORT[r.tf]}</text>`;
+  });
+  // 中央コア(総合バイアス)
+  svg+=`<circle cx="${cx}" cy="${cy}" r="40" fill="url(#tfiCore)"><animate attributeName="r" values="40;44;40" dur="4s" repeatCount="indefinite"/></circle>`;
+  svg+=`<circle cx="${cx}" cy="${cy}" r="32" fill="rgba(6,9,14,0.7)" stroke="${biasCol}" stroke-width="1.5" opacity="0.9"/>`;
+  svg+=`<text x="${cx}" y="${cy-4}" text-anchor="middle" style="font-size:20px;font-weight:800;font-family:'JetBrains Mono'" fill="${biasCol}">${bias>0?"+"+bias:bias}</text>`;
+  svg+=`<text x="${cx}" y="${cy+10}" text-anchor="middle" class="jp" style="font-size:8.5px;font-weight:700" fill="${biasCol}">${biasLbl}</text>`;
+  svg+=`<text x="${cx}" y="${cy+21}" text-anchor="middle" style="font-size:6.5px;letter-spacing:1px;font-family:'JetBrains Mono'" fill="#6f879b">TOTAL BIAS</text>`;
+  svg+=`</svg>`;
+
+  // ===== 組み立て: リング主役 + 短いステータス + 小バー + 折りたたみヒートマップ =====
+  let html=`<div class="tfi-sec">
+    <div class="ph">時間軸オービット <span class="ph-right">${fmtSym(sym)}</span></div>
+    <div class="tfi-radial">${svg}</div>
+    <div class="tfi-chips">
+      <span class="tfi-chip" style="color:${chipCol};border-color:${chipCol}55">${chip}</span>
+      ${maxVolaRow.tf?`<span class="tfi-chip" style="color:#8c7dff;border-color:#8c7dff55">${TF_SHORT[maxVolaRow.tf]} ボラ拡大</span>`:""}
+      ${maxEdgeRow.tf?`<span class="tfi-chip" style="color:${tfCol(maxEdgeRow.val,maxEdgeRow.band)};border-color:${tfCol(maxEdgeRow.val,maxEdgeRow.band)}55">${TF_SHORT[maxEdgeRow.tf]}に優位集中</span>`:""}
+    </div>`;
+
+  // 小さなダイバージングバー(補助・薄い)
+  html+=`<div class="tfi-minibars">`;
+  rows.forEach(r=>{
+    if(!r.enough){html+=`<div class="mb-row"><span class="mb-tf" style="color:#56697c">${TF_SHORT[r.tf]}</span><div class="mb-track"><div class="mb-mid"></div></div></div>`;return;}
+    const col=tfCol(r.val,r.band);const half=Math.abs(r.val)/100*50;const left=r.val>=0?50:50-half;
+    html+=`<div class="mb-row"><span class="mb-tf" style="color:${col}">${TF_SHORT[r.tf]}</span><div class="mb-track"><div class="mb-mid"></div><div class="mb-fill" style="left:${left}%;width:${half}%;background:${col};box-shadow:0 0 4px ${col}"></div></div></div>`;
+  });
+  html+=`</div></div>`;
+
+  // ヒートマップ(折りたたみ・発光タイル)
+  const metrics=[["ボラ","vola"],["買い優位","buyEdge"],["売り優位","sellEdge"],["トレンド","trend"],["品質","sigQ"]];
   const maxOf={};metrics.forEach(([_,k])=>{maxOf[k]=Math.max(...valid.map(r=>r[k]),1);});
-  html+=`<div class="tfi-sec">
-    <div class="ph">時間軸インテリジェンス · ヒートマップ</div>
-    <div class="tfi-note jp"><span class="tag">見方</span><b>5つの指標を時間軸ごとに格子で比較</b>。色が明るいほど数値が高い。どの時間軸に<b>優位性が集中</b>しているか、どこが<b>荒れている(ボラ高)</b>かが一目で分かる。縦=指標、横=時間軸。</div>
-    <div class="hm-wrap"><div class="hm-grid" style="grid-template-columns:64px repeat(${TFS.length},1fr)">`;
-  // ヘッダ行
-  html+=`<div class="hm-corner">指標＼足</div>`;
+  html+=`<details class="tfi-details"><summary>詳細ヒートマップ · 5指標 × 時間軸</summary><div class="hm-wrap"><div class="hm-grid" style="grid-template-columns:52px repeat(${TFS.length},1fr)">`;
+  html+=`<div class="hm-corner"></div>`;
   TFS.forEach(tf=>{const b=TF_BAND[tf];const bc=b==="s"?"var(--cyan)":b==="m"?"var(--txt-mid)":"var(--txt-dim)";html+=`<div class="hm-colh" style="color:${bc}">${TF_SHORT[tf]}</div>`;});
-  // 各指標行
   metrics.forEach(([label,key])=>{
     html+=`<div class="hm-rowh">${label}</div>`;
     rows.forEach(r=>{
-      if(!r.enough){html+=`<div class="hm-cell" style="background:rgba(255,255,255,.02)"></div>`;return;}
+      if(!r.enough){html+=`<div class="hm-cell" style="background:rgba(255,255,255,.015)"></div>`;return;}
       const v=r[key];const norm=Math.min(1,v/maxOf[key]);
-      // 色: 指標ごとに色相を変える(ボラ=紫, 買い=緑, 売り=赤, トレンド=シアン, 品質=金)
-      let base;
-      if(key==="vola")base=[140,125,255];
-      else if(key==="buyEdge")base=[46,230,166];
-      else if(key==="sellEdge")base=[255,77,109];
-      else if(key==="trend")base=[52,230,224];
-      else base=[255,201,77];
-      const a=0.08+norm*0.85;
-      const showVal=key==="vola"?(v?v.toFixed(1):""):Math.round(v);
-      html+=`<div class="hm-cell" style="background:rgba(${base[0]},${base[1]},${base[2]},${a.toFixed(2)});${norm>0.6?`box-shadow:0 0 8px rgba(${base[0]},${base[1]},${base[2]},.5)`:''}"><span>${norm>0.25?showVal:""}</span></div>`;
+      let base;if(key==="vola")base=[140,125,255];else if(key==="buyEdge")base=[46,230,166];else if(key==="sellEdge")base=[255,45,111];else if(key==="trend")base=[52,230,224];else base=[250,204,21];
+      const a=0.05+norm*0.8;const showVal=key==="vola"?(v?v.toFixed(1):""):Math.round(v);
+      html+=`<div class="hm-cell" style="background:rgba(${base[0]},${base[1]},${base[2]},${a.toFixed(2)});${norm>0.55?`box-shadow:0 0 8px rgba(${base[0]},${base[1]},${base[2]},.55)`:''}"><span>${norm>0.3?showVal:""}</span></div>`;
     });
   });
-  html+=`</div></div>`;
-  // 優位性集中の指摘
-  const maxEdgeRow=valid.reduce((a,b)=>(Math.abs(b.val)>Math.abs(a.val)?b:a),valid[0]||{val:0});
-  const maxVolaRow=valid.reduce((a,b)=>(b.vola>a.vola?b:a),valid[0]||{vola:0});
-  if(maxEdgeRow&&maxEdgeRow.tf){html+=`<div class="tfi-note jp" style="border-top:1px solid var(--border)"><b>${TF_LABEL[maxEdgeRow.tf]}</b>に優位性が集中(${maxEdgeRow.val>0?"買い":"売り"} ${Math.abs(maxEdgeRow.val)})。ボラが最も高いのは<b>${TF_LABEL[maxVolaRow.tf]}</b>(${maxVolaRow.vola?maxVolaRow.vola.toFixed(2):0}%)— この時間軸が最も荒れている。</div>`;}
-  html+=`</div>`;
+  html+=`</div></div></details>`;
 
   el.innerHTML=html;
 }
+
 
 function renderSwarmDash(hubGroups){
   const el=document.getElementById("swarmDash");if(!el)return;
