@@ -127,6 +127,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .sig-name{font-size:11px;font-weight:600;margin-bottom:3px;}
 .sig-desc{font-size:9.5px;color:var(--txt);line-height:1.6;}
 .sig-action{font-size:9px;color:var(--cyan);margin-top:4px;line-height:1.5;}
+.sig-bolman{font-size:9px;color:var(--violet);margin-top:4px;line-height:1.5;opacity:.92;}
 .sig-str{font-size:8px;color:var(--txt-dim);}
 .ind-grid{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;border-bottom:1px solid var(--border);}
 .ind-item{display:flex;justify-content:space-between;}
@@ -161,10 +162,46 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .conf-box{padding:12px;border-bottom:1px solid var(--border);}
 .conf-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;}
 
-.vp-wrap{padding:12px;}
-.vp-row{display:flex;align-items:center;gap:6px;height:14px;margin-bottom:2px;}
-.vp-price{font-size:8px;color:var(--txt-mid);width:80px;text-align:right;}
-.vp-bar{height:9px;}
+/* ===== 時間軸サマリー(ANALYSIS) ===== */
+.mts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+/* ===== サイクル分析 ===== */
+.cyc-grid{display:flex;flex-direction:column;gap:1px;background:var(--border);}
+.cyc-cell{background:var(--panel2);padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
+/* サイクル説明図(折りたたみ) */
+.cyc-explain{border-top:1px solid var(--border);background:var(--panel2);}
+.cyc-explain summary{padding:9px 12px;font-size:9px;letter-spacing:.08em;color:var(--txt-mid);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;}
+.cyc-explain summary::-webkit-details-marker{display:none;}
+.cyc-explain summary::before{content:'▸';color:var(--gold);transition:transform .2s;}
+.cyc-explain[open] summary::before{transform:rotate(90deg);}
+.cyc-diagram{padding:6px 12px 14px;}
+.cyc-head{display:flex;align-items:center;justify-content:space-between;}
+.cyc-tf{font-size:11px;font-weight:700;color:var(--txt-br);}
+.cyc-phase{font-size:9px;font-weight:700;}
+.cyc-stat{font-size:9px;}
+.cyc-bar-track{height:14px;position:relative;background:var(--raised);border:1px solid var(--border);overflow:hidden;}
+.cyc-bar-fill{position:absolute;left:0;top:0;bottom:0;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.cyc-bar-pct{position:absolute;right:5px;top:0;bottom:0;display:flex;align-items:center;font-size:8px;font-weight:700;color:var(--txt-br);z-index:2;}
+.cyc-detail{font-size:8px;color:var(--txt-dim);}
+.cyc-explain{border-top:1px solid var(--border);}
+.cyc-explain summary{padding:9px 12px;font-size:9px;letter-spacing:.08em;color:var(--txt-mid);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;}
+.cyc-explain summary::-webkit-details-marker{display:none;}
+.cyc-explain summary::before{content:'▸';color:var(--gold);transition:transform .2s;}
+.cyc-explain[open] summary::before{transform:rotate(90deg);}
+.cyc-explain-body{padding:4px 12px 14px;}
+.cyc-explain-note{font-size:9px;line-height:1.6;color:var(--txt);margin-bottom:8px;}
+.cyc-explain-note b{color:var(--gold);}
+.cyc-explain-legend{display:flex;flex-direction:column;gap:4px;margin-top:8px;}
+.cyc-explain-legend span{font-size:8.5px;color:var(--txt-mid);display:flex;align-items:center;gap:6px;}
+.cyc-explain-legend i{width:14px;height:4px;flex-shrink:0;display:inline-block;}
+.mts-cell{background:var(--panel2);padding:10px 12px;display:flex;flex-direction:column;gap:5px;}
+.mts-tf{font-size:11px;font-weight:700;color:var(--txt-br);display:flex;align-items:center;gap:6px;}
+.mts-band{font-size:7px;letter-spacing:.1em;color:var(--txt-faint);border:1px solid var(--border2);padding:0 4px;font-weight:500;}
+.mts-dir{font-size:11px;font-weight:700;}
+.mts-meter{height:6px;position:relative;background:linear-gradient(90deg,rgba(255,77,109,.06),rgba(255,255,255,.02) 50%,rgba(46,230,166,.06));border:1px solid var(--border);}
+.mts-mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border2);}
+.mts-fill{position:absolute;top:0;bottom:0;transition:width .5s,left .5s;}
+.mts-vola{font-size:8px;color:var(--txt-dim);}
+.mts-summary{grid-column:1/3;padding:9px 12px;font-size:10px;font-weight:700;border:1px solid;text-align:center;letter-spacing:.02em;}
 
 /* ===== NEURAL SWARM ===== */
 .swarm-wrap{position:relative;border-bottom:1px solid var(--border);overflow:hidden;background:radial-gradient(ellipse at 50% 42%,rgba(52,82,110,.12),rgba(6,9,14,0) 62%),#06090e;}
@@ -407,8 +444,26 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
     <div class="note jp"><span class="tag">補助</span>これは<b>長期保有の判断を補助する参考値</b>に過ぎず、短期売買には使わない。Binanceのデータから「資金の勢い・BTC比の相対強弱・出来高の厚み」を集計したもの。</div>
     <div class="ind-grid" id="fundGrid" style="border:none;"></div>
 
-    <div class="ph">VOLUME PROFILE · 価格帯別出来高 · <span id="vpSym">—</span></div>
-    <div class="vp-wrap" id="vpWrap"></div>
+    <div class="ph">時間軸サマリー · MULTI-TIMEFRAME <span class="ph-right" id="mtsSym">—</span></div>
+    <div class="note jp"><span class="tag">概要</span>主要な時間軸(5分・1時間・日足・週足)の<b>Always-In方向</b>を一覧。短期と上位足が揃えば強いトレンド、バラつけば方向感が弱い。詳細は主導権マップで。</div>
+    <div id="mtsGrid" class="mts-grid"></div>
+
+    <div class="ph">サイクル分析 · CYCLE <span class="ph-right" id="cycSym">—</span></div>
+    <div class="note jp"><span class="tag">概要</span>ダウ理論のスイング(高値・安値の更新)から各時間軸の<b>平均サイクル長</b>を測り、<b>今が波のどの位置か</b>を示す中長期の目安。安値からの経過が長いほど次の転換が近づく。あくまで過去の実測に基づく目安で、予言ではない。</div>
+    <div id="cycGrid" class="cyc-grid"></div>
+    <details class="cyc-explain"><summary>サイクルの見方 · 説明図(模擬データ) HOW TO READ</summary><div id="cycDiagram" class="cyc-diagram"></div></details>
+    <details class="cyc-explain">
+      <summary>サイクルの見方 · How to read（説明図）</summary>
+      <div class="cyc-explain-body">
+        <div class="cyc-explain-note jp">下は<b>説明用の模式図</b>です（実データではありません）。ダウ理論のスイング安値から次の安値までを1サイクルとし、今が波のどの位置かを見ます。</div>
+        <svg id="cycDiagram" viewBox="0 0 320 150" style="width:100%;height:auto;display:block"></svg>
+        <div class="cyc-explain-legend jp">
+          <span><i style="background:var(--bull)"></i>前半 Early — 安値から上昇、押し目買い向き</span>
+          <span><i style="background:var(--gold)"></i>中盤 Mid — トレンド進行</span>
+          <span><i style="background:var(--bear)"></i>後半 Late — 高値圏、次の転換が近づく</span>
+        </div>
+      </div>
+    </details>
 
     <div class="ph">PRICE STATISTICS · 24時間統計</div>
     <div class="ind-grid" id="statsGrid" style="border:none;"></div>
@@ -434,7 +489,7 @@ const REST_HOSTS=["https://api.binance.com/api/v3","https://data-api.binance.vis
 const WS_HOSTS=["wss://stream.binance.com:9443/stream","wss://stream.binance.com:443/stream","wss://data-stream.binance.vision/stream"];
 let TF="5m", activeSymbol="BTCJPY", activePage="Scan", cycleNum=0, scanMode="ai", swarmMode="all";
 let chart,candleSeries,volSeries,ema20Series,ema50Series;
-const store={}, mtfStore={};
+const store={}, mtfStore={}, mtfCandles={};
 const fmtSym=s=>s.replace("JPY","/JPY");
 const shortSym=s=>s.replace("JPY","");
 
@@ -484,25 +539,43 @@ function runPA(c){
   if(trendDir==="bull")adj.push(1.5);else if(trendDir==="bear")adj.push(-1.5);
   if(last.close>ma20)adj.push(.5);else adj.push(-.5);
   if(ma50&&last.close>ma50)adj.push(.5);else if(ma50)adj.push(-.5);
-  // A(name, dir, strength, desc=何が起きたか, action=Always-In流の対応)
-  const A=(name,dir,str,desc,action)=>sig.push({name,dir,str,desc,action});
-  if(!isB(prev)&&isB(last)&&body(last)>aB*1.3&&dnW(last)<body(last)*.25){A("Bull Reversal Bar","bull",3,"陰線の直後に、下髭が短く実体の大きい陽線。売りを呑み込み買いが主導権を奪った形。","次バーがこの高値を上抜けたら、買い手が確認された合図。ストップは反転バーの安値下。");adj.push(1.5);}
-  if(isB(prev)&&!isB(last)&&body(last)>aB*1.3&&upW(last)<body(last)*.25){A("Bear Reversal Bar","bear",3,"陽線の直後に、上髭が短く実体の大きい陰線。買いを呑み込み売りが主導権を奪った形。","次バーがこの安値を下抜けたら売り確認。ストップは反転バーの高値上。");adj.push(-1.5);}
-  if(last.high<=prev.high&&last.low>=prev.low)A("Inside Bar","neutral",2,"前バーの値幅に完全に収まった小バー。買い手と売り手が一旦休戦し、力を溜めている状態。","どちらかにブレイクした方向へ追随。レンジ内では手を出さない。");
-  if(prev.high<=p2?.high&&prev.low>=p2?.low&&last.high<=prev.high&&last.low>=prev.low)A("ii Pattern","neutral",3,"インサイドバーが2本連続。収縮が極まり、次に強い一方向の動きが出やすい圧縮状態。","ブレイク方向に仕掛け、逆側にストップ。だましも多いので実体での確定を待つ。");
-  if(last.high>prev.high&&last.low<prev.low){const d=last.close>(last.high+last.low)/2?"bull":"bear";A("Outside Bar",d,2,`前バーを完全に包む大バー。クローズが${d==="bull"?"上半分→買いが押し切った":"下半分→売りが押し切った"}。`,`クローズした側の方向が優勢。ただし値幅が大きく、次バーで反転だましもあるため確認重視。`);adj.push(d==="bull"?1:-1);}
-  if(bR(last)<.15&&rng(last)>0)A("Doji","neutral",1,"実体が極小で、買いと売りが完全に拮抗。方向感の喪失か、転換の予兆。","単独では判断しない。トレンドの天底に出れば転換注意、レンジ中なら無視。");
+  // A(name, dir, strength, desc=何が起きたか, action=ブルックス的対応, bolman=ボルマン的視点)
+  const A=(name,dir,str,desc,action,bolman)=>sig.push({name,dir,str,desc,action,bolman});
+  if(!isB(prev)&&isB(last)&&body(last)>aB*1.3&&dnW(last)<body(last)*.25){A("Bull Reversal Bar","bull",3,"陰線の直後に、下髭が短く実体の大きい陽線。売りを呑み込み買いが主導権を奪った形。","次バーがこの高値を上抜けたら、買い手が確認された合図。ストップは反転バーの安値下。","ボルマン視点: 髭が短く実体主導なら『ダブルプレッシャー』が買い方向。次バーで高値を抜く明確なトリガーが出るまで待ち、曖昧なら見送る。");adj.push(1.5);}
+  if(isB(prev)&&!isB(last)&&body(last)>aB*1.3&&upW(last)<body(last)*.25){A("Bear Reversal Bar","bear",3,"陽線の直後に、上髭が短く実体の大きい陰線。買いを呑み込み売りが主導権を奪った形。","次バーがこの安値を下抜けたら売り確認。ストップは反転バーの高値上。","ボルマン視点: 上髭が短い実体主導の陰線は売り圧力が明確。安値ブレイクの明快なトリガーを待つ。");adj.push(-1.5);}
+  if(last.high<=prev.high&&last.low>=prev.low)A("Inside Bar","neutral",2,"前バーの値幅に完全に収まった小バー。買い手と売り手が一旦休戦し、力を溜めている状態。","どちらかにブレイクした方向へ追随。レンジ内では手を出さない。","ボルマン視点: 単独のインサイドバーは弱いセットアップ。ブレイクの方向と勢いを確認してからのみ参加。");
+  if(prev.high<=p2?.high&&prev.low>=p2?.low&&last.high<=prev.high&&last.low>=prev.low)A("ii Pattern","neutral",3,"インサイドバーが2本連続。収縮が極まり、次に強い一方向の動きが出やすい圧縮状態。","ブレイク方向に仕掛け、逆側にストップ。だましも多いので実体での確定を待つ。","ボルマン視点: 圧縮は格好のセットアップ。ただしブレイクが節目(ラウンドナンバー)に近いと反転しやすいので注意。");
+  if(last.high>prev.high&&last.low<prev.low){const d=last.close>(last.high+last.low)/2?"bull":"bear";A("Outside Bar",d,2,`前バーを完全に包む大バー。クローズが${d==="bull"?"上半分→買いが押し切った":"下半分→売りが押し切った"}。`,`クローズした側の方向が優勢。ただし値幅が大きく、次バーで反転だましもあるため確認重視。`,"ボルマン視点: 大きな値幅は両側の攻防の激しさ。髭が長ければ方向不明瞭として評価を下げる。");adj.push(d==="bull"?1:-1);}
+  if(bR(last)<.15&&rng(last)>0)A("Doji","neutral",1,"実体が極小で、買いと売りが完全に拮抗。方向感の喪失か、転換の予兆。","単独では判断しない。トレンドの天底に出れば転換注意、レンジ中なら無視。","ボルマン視点: 迷いのバー。明瞭なセットアップではないので、これ単体では取引しない。");
   const s6=c.slice(-7,-1),tight=s6.every(x=>rng(x)<aR*.75),bc=s6.filter(x=>!isB(x)).length,uc=s6.filter(x=>isB(x)).length;
-  if(trendDir==="bull"&&bc>=3&&tight){A("Bull Flag","bull",3,"上昇の後、小さく浅い押し。買い手が利確しつつも、売り手は主導権を奪えていない。","高値ブレイクで順張りロング。押しの安値割れはフラッグ崩れで撤退。トレンド継続を狙う一番素直な形。");adj.push(1.5);}
-  if(trendDir==="bear"&&uc>=3&&tight){A("Bear Flag","bear",3,"下降の後、小さく浅い戻し。売り手が一服しているが、買い手は反撃できていない。","安値ブレイクで順張りショート。戻り高値超えは崩れで撤退。下降継続を狙う形。");adj.push(-1.5);}
+  if(trendDir==="bull"&&bc>=3&&tight){A("Bull Flag","bull",3,"上昇の後、小さく浅い押し。買い手が利確しつつも、売り手は主導権を奪えていない。","高値ブレイクで順張りロング。押しの安値割れはフラッグ崩れで撤退。トレンド継続を狙う一番素直な形。","ボルマン視点: 浅く整った押しは高品質セットアップ。ブレイク時に実体が伴えば信頼度が高い。");adj.push(1.5);}
+  if(trendDir==="bear"&&uc>=3&&tight){A("Bear Flag","bear",3,"下降の後、小さく浅い戻し。売り手が一服しているが、買い手は反撃できていない。","安値ブレイクで順張りショート。戻り高値超えは崩れで撤退。下降継続を狙う形。","ボルマン視点: 整った戻しは好機。戻りが節目で止まれば一層強い売りシグナル。");adj.push(-1.5);}
   const h20=Math.max(...c.slice(-21,-1).map(x=>x.high)),l20=Math.min(...c.slice(-21,-1).map(x=>x.low));
-  if(last.close>h20){A("Breakout (20-bar High)","bull",3,"直近20本の高値を実体で上抜け。買い手がレンジ上限を突破し、新たな主導権を握った。","フォロースルー(続伸)を確認して順張り。ブレイク後の押しが浅いほど本物。だまし注意。");adj.push(1.5);}
-  if(last.close<l20){A("Breakdown (20-bar Low)","bear",3,"直近20本の安値を実体で下抜け。売り手がレンジ下限を割り、下降が加速しやすい。","戻りを売る。割れた水準が抵抗に変わる。急落後の自律反発に注意。");adj.push(-1.5);}
-  if(c[n-2]?.high>c[n-3]?.high&&!isB(last)&&last.close<prev.open){A("Bull Trap","bear",3,"高値更新の直後に急反落し、買い手を上で捕まえた。ブレイクのだまし。","逆張り売りの好機だが、トレンドが強いと痛手。確実な反転バーを待つ。");adj.push(-2);}
-  if(rng(last)>aR*2.5){A("Climax Bar",isB(last)?"bear":"bull",2,"通常の2.5倍を超える特大バー。一方向に行き過ぎたクライマックス(消尽)で、反転や急な調整が起きやすい。","飛び乗らない。クライマックス後はレンジ化か逆行が多い。利確と逆張りの両にらみ。");adj.push(isB(last)?-1:1);}
-  if(e50&&cl.length>=51){const pe20=ema(cl.slice(-21,-1),20),pe50=ema(cl.slice(-51,-1),50);if(pe20<pe50&&e20>e50){A("EMA Cross (Bull)","bull",3,"EMA20がEMA50を上抜け。中期の勢いが買いに転換。","押し目を待って順張り。クロス直後は値動きが荒いことがある。");adj.push(1.5);}if(pe20>pe50&&e20<e50){A("EMA Cross (Bear)","bear",3,"EMA20がEMA50を下抜け。中期の勢いが売りに転換。","戻りを待って順張り売り。");adj.push(-1.5);}}
+  if(last.close>h20){A("Breakout (20-bar High)","bull",3,"直近20本の高値を実体で上抜け。買い手がレンジ上限を突破し、新たな主導権を握った。","フォロースルー(続伸)を確認して順張り。ブレイク後の押しが浅いほど本物。だまし注意。","ボルマン視点: 節目を超えるブレイクは強い。ただし直上にラウンドナンバーがあると跳ね返されやすい。");adj.push(1.5);}
+  if(last.close<l20){A("Breakdown (20-bar Low)","bear",3,"直近20本の安値を実体で下抜け。売り手がレンジ下限を割り、下降が加速しやすい。","戻りを売る。割れた水準が抵抗に変わる。急落後の自律反発に注意。","ボルマン視点: 節目割れは加速しやすい。実体で明確に割れたかを重視する。");adj.push(-1.5);}
+  if(c[n-2]?.high>c[n-3]?.high&&!isB(last)&&last.close<prev.open){A("Bull Trap","bear",3,"高値更新の直後に急反落し、買い手を上で捕まえた。ブレイクのだまし。","逆張り売りの好機だが、トレンドが強いと痛手。確実な反転バーを待つ。","ボルマン視点: 節目での失敗ブレイクは『ダマシ』の典型。逆方向への勢いが出やすい。");adj.push(-2);}
+  if(rng(last)>aR*2.5){A("Climax Bar",isB(last)?"bear":"bull",2,"通常の2.5倍を超える特大バー。一方向に行き過ぎたクライマックス(消尽)で、反転や急な調整が起きやすい。","飛び乗らない。クライマックス後はレンジ化か逆行が多い。利確と逆張りの両にらみ。","ボルマン視点: 行き過ぎは消尽。新規追随は避け、セットアップの再構築を待つ。");adj.push(isB(last)?-1:1);}
+  if(e50&&cl.length>=51){const pe20=ema(cl.slice(-21,-1),20),pe50=ema(cl.slice(-51,-1),50);if(pe20<pe50&&e20>e50){A("EMA Cross (Bull)","bull",3,"EMA20がEMA50を上抜け。中期の勢いが買いに転換。","押し目を待って順張り。クロス直後は値動きが荒いことがある。","ボルマン視点: クロス自体より、その後の押しで買い圧力が確認できるかを重視。");adj.push(1.5);}if(pe20>pe50&&e20<e50){A("EMA Cross (Bear)","bear",3,"EMA20がEMA50を下抜け。中期の勢いが売りに転換。","戻りを待って順張り売り。","ボルマン視点: クロス後の戻りで売り圧力が再確認できれば信頼度が高い。");adj.push(-1.5);}}
   const aV=c.slice(-20).map(x=>x.volume).filter(v=>v>0).reduce((s,v)=>s+v,0)/20,vR=aV>0?+(last.volume/aV).toFixed(1):1;
   if(vR>1.8&&isB(last))adj.push(.5); if(vR>1.8&&!isB(last))adj.push(-.5);
+  // ===== ボルマン視点レイヤー =====
+  // ① ラウンドナンバー(キリのいい価格)= 支持/抵抗。価格の桁から節目を推定し近接度を測る
+  const price=last.close;
+  const mag=Math.pow(10,Math.floor(Math.log10(price)));const roundStep=mag/2; // 価格帯に応じた節目間隔
+  const nearestRound=Math.round(price/roundStep)*roundStep;
+  const roundDist=Math.abs(price-nearestRound)/price; // 節目までの距離(割合)
+  const nearRound=roundDist<0.0015; // 節目に非常に近い
+  // ② ダブルプレッシャー(両側からの圧力)= 上下の髭がともに短い実体主導のバー = 一方向の強い意志
+  const totalWick=upW(last)+dnW(last),wickRatio=rng(last)>0?totalWick/rng(last):1;
+  const doublePressure=wickRatio<0.3&&body(last)>aB; // 髭が少なく実体が大きい=圧力が一方向
+  if(doublePressure){if(isB(last))adj.push(0.5);else adj.push(-0.5);}
+  // ③ セットアップの明瞭性(ボルマンは曖昧なバーを嫌う)= 髭が長く方向不明なバーは減点
+  const messyBar=wickRatio>0.65&&body(last)<aB*0.6; // 髭だらけで実体が小さい=曖昧
+  // ④ ラウンドナンバー近接時、ブレイク方向を後押し/逆張りを警戒
+  let bolmanNote="";
+  if(nearRound){bolmanNote=`節目 ¥${fmt(nearestRound)} 付近`;}
+  // ボルマン式・総合品質(0-100): 明瞭なら高い、曖昧なら低い
+  const setupClarity=Math.max(0,Math.min(100,Math.round((doublePressure?70:45)+(messyBar?-30:0)+(wickRatio<0.4?15:0)+(body(last)>aB*1.3?15:0))));
   // RSIはスコアに反映しない(参考表示のみ)
   const score=Math.max(0,Math.min(10,+(5+adj.reduce((s,v)=>s+v,0)).toFixed(1)));
   const sd=score>=6.5?"bull":score<=3.5?"bear":"neutral";
@@ -518,7 +591,7 @@ function runPA(c){
   const BINS=24,step=(rHi-rLo)/BINS||1,vbin=new Array(BINS).fill(0);
   recent.forEach(x=>{const mid=(x.high+x.low)/2;let bi=Math.floor((mid-rLo)/step);if(bi<0)bi=0;if(bi>=BINS)bi=BINS-1;vbin[bi]+=x.volume;});
   const pocIdx=vbin.indexOf(Math.max(...vbin)),poc=rLo+step*(pocIdx+.5);
-  return{score,signalDir:sd,trendDir,trendLabel,signals:sig.sort((a,b)=>b.str-a.str),ma20:+ma20.toFixed(2),ma50:ma50?+ma50.toFixed(2):null,e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,rsi,volRatio:vR,highVol:vR>1.8,aboveMA20:last.close>ma20,aboveMA50:ma50?last.close>ma50:null,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai:alwaysIn(c),atr14,atrPct,atrHot,rangePos,rHi,rLo,poc:+poc.toFixed(2)};
+  return{score,signalDir:sd,trendDir,trendLabel,signals:sig.sort((a,b)=>b.str-a.str),ma20:+ma20.toFixed(2),ma50:ma50?+ma50.toFixed(2):null,e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,rsi,volRatio:vR,highVol:vR>1.8,aboveMA20:last.close>ma20,aboveMA50:ma50?last.close>ma50:null,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai:alwaysIn(c),atr14,atrPct,atrHot,rangePos,rHi,rLo,poc:+poc.toFixed(2),nearestRound:+nearestRound.toFixed(2),nearRound,bolmanNote,doublePressure,setupClarity,messyBar};
 }
 
 // ===== DATA =====
@@ -531,7 +604,7 @@ async function loadHistory(symbol,tf){
 async function loadMTF(symbol){
   mtfStore[symbol]=mtfStore[symbol]||{};
   await Promise.allSettled(TFS.map(async tf=>{
-    try{const c=await loadHistory(symbol,tf);const pa=runPA(c);mtfStore[symbol][tf]={ai:alwaysIn(c),pa,bars:c.length,enough:c.length>=25};}
+    try{const c=await loadHistory(symbol,tf);const pa=runPA(c);mtfStore[symbol][tf]={ai:alwaysIn(c),pa,bars:c.length,enough:c.length>=25};mtfCandles[symbol]=mtfCandles[symbol]||{};mtfCandles[symbol][tf]=c;}
     catch(e){mtfStore[symbol][tf]={ai:{val:0,dir:"中立",conf:0},pa:null,bars:0,enough:false};}
   }));
 }
@@ -540,7 +613,7 @@ function loadAllMTF(onEach){
   SYMBOLS.forEach(o=>{
     mtfStore[o.s]=mtfStore[o.s]||{};
     TFS.forEach(async tf=>{
-      try{const c=await loadHistory(o.s,tf);const pa=runPA(c);mtfStore[o.s][tf]={ai:alwaysIn(c),pa,bars:c.length,enough:c.length>=25};}
+      try{const c=await loadHistory(o.s,tf);const pa=runPA(c);mtfStore[o.s][tf]={ai:alwaysIn(c),pa,bars:c.length,enough:c.length>=25};mtfCandles[o.s]=mtfCandles[o.s]||{};mtfCandles[o.s][tf]=c;}
       catch(e){mtfStore[o.s][tf]={ai:{val:0,dir:"中立",conf:0},pa:null,bars:0,enough:false};}
       if(onEach)onEach();
     });
@@ -582,7 +655,6 @@ let flowWs=null,buyVol=0,sellVol=0,tradeBuf=[];
 function connectFlowWS(symbol){
   disconnectFlowWS();
   document.getElementById("flowSym").textContent=fmtSym(symbol);
-  document.getElementById("vpSym").textContent=fmtSym(symbol);
   buyVol=0;sellVol=0;tradeBuf=[];
   const streams=`${symbol.toLowerCase()}@depth20@100ms/${symbol.toLowerCase()}@aggTrade`;
   try{flowWs=new WebSocket(`${WS_HOSTS[0]}?streams=${streams}`);}catch(e){document.getElementById("flowConn").textContent="接続失敗";return;}
@@ -627,7 +699,7 @@ function onLiveBar(symbol,bar,closed){
   st.pa=runPA(a);st.aiHist=st.aiHist||[];
   if(symbol===activeSymbol){
     renderAlwaysIn(st.pa);renderBreakdown(st.pa);renderSignals(st.pa);renderGauge(st.pa);renderInd(st.pa);updateChartHead();renderNarrative(st.pa);renderTradeJudge(st.pa);renderFund(symbol);
-    if(closed&&bar.time!==lastClosed){lastClosed=bar.time;st.aiHist.push(st.pa.ai.val);if(st.aiHist.length>40)st.aiHist.shift();renderHeat(st.aiHist);pulseExec();checkVoiceAlert(symbol,st.pa);if(activePage==="Ana")renderVP(a);}
+    if(closed&&bar.time!==lastClosed){lastClosed=bar.time;st.aiHist.push(st.pa.ai.val);if(st.aiHist.length>40)st.aiHist.shift();renderHeat(st.aiHist);pulseExec();checkVoiceAlert(symbol,st.pa);if(activePage==="Ana"){renderMTS(symbol);renderCycle(symbol);}}
   }
   updateWLRow(symbol);updateSummary();
 }
@@ -637,7 +709,7 @@ function initChart(){
   chart=LightweightCharts.createChart(el,{layout:{background:{color:"transparent"},textColor:"#90a7bc",fontFamily:"JetBrains Mono",fontSize:10},grid:{vertLines:{color:"#101822"},horzLines:{color:"#101822"}},rightPriceScale:{borderColor:"#1a2533",scaleMargins:{top:.08,bottom:.28}},timeScale:{borderColor:"#1a2533",timeVisible:true,secondsVisible:false},crosshair:{mode:LightweightCharts.CrosshairMode.Normal}});
   candleSeries=chart.addCandlestickSeries({upColor:"#2ee6a6",downColor:"#ff4d6d",borderUpColor:"#2ee6a6",borderDownColor:"#ff4d6d",wickUpColor:"#1aa87a",wickDownColor:"#cc3a54"});
   volSeries=chart.addHistogramSeries({priceFormat:{type:"volume"},priceScaleId:"vol"});
-  chart.priceScale("vol").applyOptions({scaleMargins:{top:.82,bottom:0}});
+  chart.priceScale("vol").applyOptions({scaleMargins:{top:.74,bottom:0}});
   ema20Series=chart.addLineSeries({color:"#ffc94d",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
   ema50Series=chart.addLineSeries({color:"#8c7dff",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
   new ResizeObserver(()=>chart.applyOptions({width:el.clientWidth,height:el.clientHeight})).observe(el);
@@ -654,7 +726,7 @@ async function loadChart(symbol,tf){
     chart.timeScale().fitContent();
     const pa=runPA(c);store[symbol].pa=pa;
     store[symbol].aiHist=[];for(let i=Math.max(25,c.length-40);i<c.length;i++){store[symbol].aiHist.push(alwaysIn(c.slice(0,i+1)).val);}
-    renderAlwaysIn(pa);renderBreakdown(pa);renderHeat(store[symbol].aiHist);renderSignals(pa);renderGauge(pa);renderInd(pa);renderVP(c);renderNarrative(pa);renderTradeJudge(pa);renderFund(symbol);
+    renderAlwaysIn(pa);renderBreakdown(pa);renderHeat(store[symbol].aiHist);renderSignals(pa);renderGauge(pa);renderInd(pa);renderNarrative(pa);renderTradeJudge(pa);renderFund(symbol);
     connectKlineWS(symbol,tf);
   }catch(e){setConn("ERROR",false);}
 }
@@ -737,19 +809,146 @@ document.getElementById("scanModeBtn").addEventListener("click",()=>{
 });
 
 function renderGauge(pa){const num=document.getElementById("gaugeNum");if(!pa){num.textContent="—";return;}const c=dc(pa.signalDir);num.textContent=pa.score.toFixed(1);num.style.color=c;document.getElementById("gaugeBias").innerHTML=`<span class="gauge-bias" style="color:${c};background:${db(pa.signalDir)};border-color:${c}55">${pa.signalDir==="bull"?"▲ BUY BIAS":pa.signalDir==="bear"?"▼ SELL BIAS":"◆ NEUTRAL"}</span>`;document.getElementById("gaugeBars").innerHTML=[...Array(10)].map((_,i)=>`<div class="gauge-bar" style="background:${i<Math.round(pa.score)?c:"var(--border2)"}"></div>`).join("");}
-function renderSignals(pa){const f=document.getElementById("sigFeed");document.getElementById("sigCount").textContent=pa?pa.signals.length:0;if(!pa||!pa.signals.length){f.innerHTML=`<div style="padding:14px;text-align:center;color:var(--txt-dim)">パターン未検出</div>`;return;}f.innerHTML=pa.signals.map(s=>{const c=dc(s.dir);return `<div class="sig-card"><div class="sig-icon" style="background:${c};box-shadow:0 0 5px ${c}"></div><div style="flex:1"><div class="sig-name" style="color:${c}">${s.name}</div><div class="sig-desc jp">${s.desc}</div>${s.action?`<div class="sig-action jp">→ ${s.action}</div>`:''}</div><div class="sig-str">${"●".repeat(s.str)}${"○".repeat(3-s.str)}</div></div>`;}).join("");}
+function renderSignals(pa){const f=document.getElementById("sigFeed");document.getElementById("sigCount").textContent=pa?pa.signals.length:0;if(!pa||!pa.signals.length){f.innerHTML=`<div style="padding:14px;text-align:center;color:var(--txt-dim)">パターン未検出</div>`;return;}f.innerHTML=pa.signals.map(s=>{const c=dc(s.dir);return `<div class="sig-card"><div class="sig-icon" style="background:${c};box-shadow:0 0 5px ${c}"></div><div style="flex:1"><div class="sig-name" style="color:${c}">${s.name}</div><div class="sig-desc jp">${s.desc}</div>${s.action?`<div class="sig-action jp">→ ${s.action}</div>`:''}${s.bolman?`<div class="sig-bolman jp">◇ ${s.bolman}</div>`:''}</div><div class="sig-str">${"●".repeat(s.str)}${"○".repeat(3-s.str)}</div></div>`;}).join("");}
 function renderInd(pa){if(!pa)return;document.getElementById("indGrid").innerHTML=[["Always-In 主導権",pa.ai.dir+" "+pa.ai.conf+"%",pa.ai.dir==="LONG"?"bull":pa.ai.dir==="SHORT"?"bear":"neutral"],["Trend トレンド",pa.trendLabel,pa.trendDir],["RSI(14) 参考",pa.rsi??"—",null],["Vol Ratio 出来高比",pa.volRatio+"x",pa.highVol?"bull":null],["EMA20 短期線","¥"+fmt(pa.e20),null],["EMA50 中期線",pa.e50?"¥"+fmt(pa.e50):"—",null],["ATR% 変動幅",pa.atrPct?pa.atrPct+"%":"—",pa.atrHot?"bull":null],["Range位置 レンジ",pa.rangePos+"%",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");}
 function updateChartHead(){const st=store[activeSymbol];if(!st)return;document.getElementById("chartSym").textContent=fmtSym(activeSymbol);const t=st.ticker;if(t.price){document.getElementById("chartPrice").textContent="¥"+fmt(t.price);document.getElementById("chartPrice").style.color=t.chg>=0?"var(--bull)":"var(--bear)";const ch=document.getElementById("chartChg");ch.textContent=(t.chg>=0?"+":"")+t.chg.toFixed(2)+"%";ch.style.color=t.chg>=0?"var(--bull)":"var(--bear)";}if(t.high){document.getElementById("statsGrid").innerHTML=[["24h High 高値","¥"+fmt(t.high),"bull"],["24h Low 安値","¥"+fmt(t.low),"bear"],["24h Open 始値","¥"+fmt(t.open),null],["24h Vol 出来高","¥"+(t.vol/1e8).toFixed(1)+"億",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");}}
 function updateTape(){document.getElementById("tape").innerHTML=(()=>{const h=SYMBOLS.map(o=>{const t=store[o.s]?.ticker;if(!t||!t.price)return"";const c=t.chg>=0?"var(--bull)":"var(--bear)";return `<span style="font-size:9px"><span style="color:var(--txt-br)">${shortSym(o.s)}</span> <span style="color:${c}">¥${fmt(t.price)} ${t.chg>=0?"+":""}${t.chg.toFixed(2)}%</span></span>`;}).filter(Boolean).join("");return h+h;})();}
 function updateSummary(){let b=0,s=0,n=0;SYMBOLS.forEach(o=>{const pa=store[o.s]?.pa;if(!pa)return;if(pa.ai.dir==="LONG")b++;else if(pa.ai.dir==="SHORT")s++;else n++;});document.getElementById("sigSummary").innerHTML=`<span style="color:var(--bull)">▲${b}</span> <span style="color:var(--bear)">▼${s}</span> <span style="color:var(--gold)">◆${n}</span>`;}
-function renderVP(candles){
-  const c=candles.slice(-150);if(!c.length)return;
-  const hi=Math.max(...c.map(x=>x.high)),lo=Math.min(...c.map(x=>x.low));
-  const BINS=24,step=(hi-lo)/BINS||1;const vol=new Array(BINS).fill(0);
-  c.forEach(x=>{const mid=(x.high+x.low)/2;let bi=Math.floor((mid-lo)/step);if(bi<0)bi=0;if(bi>=BINS)bi=BINS-1;vol[bi]+=x.volume;});
-  const maxV=Math.max(...vol),poc=vol.indexOf(maxV);
-  let html="";for(let i=BINS-1;i>=0;i--){const p=lo+step*(i+.5),w=maxV>0?vol[i]/maxV*100:0,isPoc=i===poc;html+=`<div class="vp-row"><span class="vp-price">¥${fmt(p)}</span><div class="vp-bar" style="width:${w}%;background:${isPoc?"var(--gold)":"var(--border2)"}"></div>${isPoc?'<span style="font-size:8px;color:var(--gold)">POC</span>':''}</div>`;}
-  document.getElementById("vpWrap").innerHTML=html;
+// ════════ サイクル分析(ダウ理論スイング基準) ════════
+// 各時間軸の安値スイング間隔から平均サイクル長を測り、今の波の位置を出す
+function detectSwingLows(candles){
+  // フラクタル安値(前後3本より安い)をダウ理論的スイング安値とする
+  const lows=[];const n=candles.length;
+  for(let i=3;i<n-3;i++){if([1,2,3].every(k=>candles[i].low<candles[i-k].low&&candles[i].low<candles[i+k].low))lows.push({idx:i,price:candles[i].low});}
+  return lows;
+}
+// 説明用サイクル模式図(模擬データ・実データとは別物)
+// サイクル説明図(模擬データ・あくまで見方の説明。実データとは別物)
+function renderCycleDiagram(){
+  const el=document.getElementById("cycDiagram");if(!el)return;
+  if(el.dataset.drawn)return; // 一度描けば固定(模擬データなので再描画不要)
+  const W=336,H=150,padL=8,padR=8,padT=14,padB=24;
+  const x0=padL,x1=W-padR,y0=padT,y1=H-padB;
+  // 模擬サイクル波形: 安値→上昇→高値→下降→安値 を1.6周期ぶん
+  const pts=[];const N=120;
+  for(let i=0;i<=N;i++){const t=i/N;const x=x0+(x1-x0)*t;
+    // 安値起点のサイン波(下が安値) + ゆるい上昇トレンド
+    const wave=-Math.cos(t*Math.PI*2*1.0); // 1周期(-1=安値, +1=高値)
+    const y=(y0+y1)/2 - wave*((y1-y0)/2-6);
+    pts.push([x,y]);}
+  const path=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1)).join("");
+  // スイング安値(波形の谷)= t=0 と t=1.0 付近
+  const lowIdx0=0,lowIdx1=N; // 両端が安値
+  const midHighIdx=Math.round(N*0.5); // 中央が高値
+  // 「今ここ」= 後半(t=0.72)に置いて「後半・転換警戒」を例示
+  const nowIdx=Math.round(N*0.72);
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+    <defs><linearGradient id="cycPhase" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2ee6a6" stop-opacity="0.16"/><stop offset="40%" stop-color="#2ee6a6" stop-opacity="0.16"/>
+      <stop offset="40%" stop-color="#facc15" stop-opacity="0.14"/><stop offset="70%" stop-color="#facc15" stop-opacity="0.14"/>
+      <stop offset="70%" stop-color="#ff4d6d" stop-opacity="0.16"/><stop offset="100%" stop-color="#ff4d6d" stop-opacity="0.16"/>
+    </linearGradient></defs>`;
+  // 位置の色帯(前半=緑/中盤=金/後半=赤)
+  s+=`<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" fill="url(#cycPhase)" rx="3"/>`;
+  // 帯ラベル
+  s+=`<text x="${x0+(x1-x0)*0.2}" y="${y1+14}" text-anchor="middle" class="jp" style="font-size:8px;font-weight:700" fill="#2ee6a6">前半 Early</text>`;
+  s+=`<text x="${x0+(x1-x0)*0.55}" y="${y1+14}" text-anchor="middle" class="jp" style="font-size:8px;font-weight:700" fill="#facc15">中盤 Mid</text>`;
+  s+=`<text x="${x0+(x1-x0)*0.85}" y="${y1+14}" text-anchor="middle" class="jp" style="font-size:8px;font-weight:700" fill="#ff4d6d">後半 Late</text>`;
+  // 区切り線(40%, 70%)
+  [0.4,0.7].forEach(f=>{const xx=x0+(x1-x0)*f;s+=`<line x1="${xx}" y1="${y0}" x2="${xx}" y2="${y1}" stroke="#26384c" stroke-width="0.5" stroke-dasharray="2 3"/>`;});
+  // 波形
+  s+=`<path d="${path}" fill="none" stroke="#4da6ff" stroke-width="2" opacity="0.9" filter="none"/>`;
+  // スイング安値の点(谷)
+  [pts[lowIdx0],pts[lowIdx1]].forEach(p=>{s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="#2ee6a6" stroke="#06090e" stroke-width="1.5"/>`;});
+  s+=`<text x="${pts[lowIdx0][0]+2}" y="${pts[lowIdx0][1]+14}" style="font-size:7px" class="jp" fill="#2ee6a6">安値(起点)</text>`;
+  s+=`<text x="${pts[lowIdx1][0]-6}" y="${pts[lowIdx1][1]+14}" text-anchor="end" style="font-size:7px" class="jp" fill="#2ee6a6">次の安値</text>`;
+  // 高値の点
+  s+=`<circle cx="${pts[midHighIdx][0].toFixed(1)}" cy="${pts[midHighIdx][1].toFixed(1)}" r="3.5" fill="#ff4d6d" stroke="#06090e" stroke-width="1.5"/>`;
+  s+=`<text x="${pts[midHighIdx][0]}" y="${pts[midHighIdx][1]-6}" text-anchor="middle" style="font-size:7px" class="jp" fill="#ff7a9e">高値</text>`;
+  // 「今ここ」マーカー
+  const np=pts[nowIdx];
+  s+=`<line x1="${np[0].toFixed(1)}" y1="${y0}" x2="${np[0].toFixed(1)}" y2="${y1}" stroke="#ffc94d" stroke-width="1.5"/>`;
+  s+=`<circle cx="${np[0].toFixed(1)}" cy="${np[1].toFixed(1)}" r="5" fill="#ffc94d" filter="none"><animate attributeName="r" values="5;7;5" dur="2s" repeatCount="indefinite"/></circle>`;
+  s+=`<circle cx="${np[0].toFixed(1)}" cy="${np[1].toFixed(1)}" r="2.5" fill="#06090e"/>`;
+  s+=`<text x="${np[0].toFixed(1)}" y="${y0-3}" text-anchor="middle" style="font-size:8px;font-weight:700" class="jp" fill="#ffc94d">今ここ</text>`;
+  s+=`</svg>`;
+  // 説明文
+  s+=`<div style="font-size:9px;line-height:1.7;color:var(--txt);margin-top:8px" class="jp">
+    <b style="color:var(--gold)">ダウ理論のスイング安値</b>(緑の点)から次の安値までを<b>1サイクル</b>とし、その平均の長さを過去から測ります。今の価格がそのサイクルの<b style="color:#2ee6a6">前半</b>か<b style="color:#facc15">中盤</b>か<b style="color:#ff4d6d">後半</b>かで、次の転換の近さを推し量る目安です。<br>※ この図は<b>模擬データ</b>。上のセルは各時間軸の<b>実データ</b>から計算しています。
+  </div>`;
+  el.innerHTML=s;
+  el.dataset.drawn="1";
+}
+
+function renderCycle(sym){
+  const el=document.getElementById("cycGrid");if(!el)return;
+  const cs=document.getElementById("cycSym");if(cs)cs.textContent=fmtSym(sym);
+  // 中長期: 1時間・4時間・日足・週足・月足
+  const cycTfs=[["1h","1時間 1H"],["4h","4時間 4H"],["1d","日足 1D"],["1w","週足 1W"],["1M","月足 1M"]];
+  const m=mtfStore[sym];
+  if(!m){el.innerHTML=`<div style="padding:14px;text-align:center;color:var(--txt-dim);font-size:9px" class="jp">主導権マップ(SWARM)を開くと時間軸データを取得します</div>`;return;}
+  let html="";
+  cycTfs.forEach(([tf,lbl])=>{
+    const cndl=mtfCandles[sym]&&mtfCandles[sym][tf];
+    if(!cndl||cndl.length<30){html+=`<div class="cyc-cell"><div class="cyc-tf">${lbl}</div><div class="cyc-stat" style="color:var(--txt-faint)">蓄積中 Collecting</div></div>`;return;}
+    const lows=detectSwingLows(cndl);
+    if(lows.length<3){html+=`<div class="cyc-cell"><div class="cyc-tf">${lbl}</div><div class="cyc-stat" style="color:var(--txt-faint)">スイング不足 Insufficient</div></div>`;return;}
+    // 平均サイクル長(安値から安値の平均間隔)
+    const gaps=[];for(let i=1;i<lows.length;i++)gaps.push(lows[i].idx-lows[i-1].idx);
+    const avgCycle=Math.round(gaps.reduce((s,v)=>s+v,0)/gaps.length);
+    // 直近安値からの経過
+    const lastLow=lows[lows.length-1];const elapsed=(cndl.length-1)-lastLow.idx;
+    const pct=Math.min(150,Math.round(elapsed/avgCycle*100));
+    const remain=Math.max(0,avgCycle-elapsed);
+    // 位置判定
+    let phase,pcol;
+    if(pct<40){phase="前半 Early";pcol="var(--bull)";}
+    else if(pct<70){phase="中盤 Mid";pcol="var(--gold)";}
+    else if(pct<100){phase="後半 Late";pcol="var(--bear)";}
+    else{phase="延長・転換警戒 Overdue";pcol="var(--bear)";}
+    // バー(0-100%、100超は赤点滅域)
+    const barW=Math.min(100,pct);
+    const barCol=pct<40?"var(--bull)":pct<70?"var(--gold)":"var(--bear)";
+    html+=`<div class="cyc-cell">
+      <div class="cyc-head"><span class="cyc-tf">${lbl}</span><span class="cyc-phase" style="color:${pcol}">${phase}</span></div>
+      <div class="cyc-bar-track"><div class="cyc-bar-fill" style="width:${barW}%;background:${barCol};box-shadow:0 0 6px ${barCol}"></div><div class="cyc-bar-pct">${pct}%</div></div>
+      <div class="cyc-detail">安値から ${elapsed}本経過 · 平均周期 ${avgCycle}本 · 転換目安 あと約${remain}本</div>
+    </div>`;
+  });
+  el.innerHTML=html||`<div style="padding:14px;text-align:center;color:var(--txt-dim);font-size:9px" class="jp">データ取得中</div>`;
+  renderCycleDiagram();
+}
+
+function renderMTS(sym){
+  const el=document.getElementById("mtsGrid");if(!el)return;
+  const ms=document.getElementById("mtsSym");if(ms)ms.textContent=fmtSym(sym);
+  // 主要4時間軸: 5分(短期)・1時間(中期)・日足/週足(上位足)
+  const keyTfs=[["5m","5分","短期"],["1h","1時間","中期"],["1d","日足","上位足"],["1w","週足","上位足"]];
+  const m=mtfStore[sym];
+  if(!m){el.innerHTML=`<div style="padding:14px;text-align:center;color:var(--txt-dim);font-size:9px" class="jp">主導権マップを開くと時間軸データを取得します</div>`;return;}
+  let html="";
+  keyTfs.forEach(([tf,lbl,band])=>{
+    const d=m[tf];
+    if(!d||!d.enough){html+=`<div class="mts-cell"><div class="mts-tf">${lbl}<span class="mts-band">${band}</span></div><div class="mts-dir" style="color:var(--txt-faint)">蓄積中</div><div class="mts-meter"><div class="mts-mid"></div></div></div>`;return;}
+    const ai=d.ai;const col=ai.dir==="LONG"?"var(--bull)":ai.dir==="SHORT"?"var(--bear)":"var(--gold)";
+    const dirLbl=ai.dir==="LONG"?"買い優勢":ai.dir==="SHORT"?"売り優勢":"中立";
+    const half=Math.abs(ai.val)/100*50;const left=ai.val>=0?50:50-half;
+    const vola=d.pa&&d.pa.atrPct!=null?d.pa.atrPct:null;
+    html+=`<div class="mts-cell"><div class="mts-tf">${lbl}<span class="mts-band">${band}</span></div><div class="mts-dir" style="color:${col}">${dirLbl} <span style="font-size:9px;opacity:.8">${ai.conf}%</span></div><div class="mts-meter"><div class="mts-mid"></div><div class="mts-fill" style="left:${left}%;width:${half}%;background:${col};box-shadow:0 0 5px ${col}"></div></div>${vola!=null?`<div class="mts-vola">ボラ ${vola}%${d.pa.atrHot?" 🔥":""}</div>`:""}</div>`;
+  });
+  // 一致サマリー
+  const vals=keyTfs.map(([tf])=>m[tf]?.enough?m[tf].ai.val:null).filter(v=>v!=null);
+  if(vals.length>=2){
+    const sV=m["5m"]?.enough?m["5m"].ai.val:0;
+    const lV=(m["1d"]?.enough?m["1d"].ai.val:0)+(m["1w"]?.enough?m["1w"].ai.val:0);
+    const sD=sV>15?1:sV<-15?-1:0,lD=lV>15?1:lV<-15?-1:0;
+    let txt,c;
+    if(sD!==0&&lD!==0&&sD===lD){c=sD>0?"var(--bull)":"var(--bear)";txt=(sD>0?"▲ ":"▼ ")+"短期・上位足ともに"+(sD>0?"買い優勢":"売り優勢")+" — 方向一致";}
+    else if(sD!==0&&lD!==0){c="var(--gold)";txt="⚠ 短期と上位足が逆行 — 時間軸不一致";}
+    else{c="var(--gold)";txt="◆ 明確な方向感なし — レンジ";}
+    html+=`<div class="mts-summary" style="color:${c};border-color:${c}55;background:linear-gradient(90deg,${c}12,transparent)">${txt}</div>`;
+  }
+  el.innerHTML=html;
 }
 function renderTradeJudge(pa){
   const box=document.getElementById("tjBox");if(!pa)return;
@@ -1181,7 +1380,7 @@ function drawNeural(svg,nodes,links,W,H,clusters){
 setInterval(()=>{const pg=document.getElementById("pgSwarm");if(pg&&pg.classList.contains("on"))renderSwarm();},700);
 
 // ===== CYCLE =====
-const ES=[["01","Scan","BAR·TICK"],["02","Detect","PATTERN"],["03","Validate","TREND·RISK"],["04","Score","ALWAYS-IN"],["05","Signal","BIAS OUT"]];
+const ES=[["01","Scan","足・ティック走査"],["02","Detect","パターン検出"],["03","Validate","トレンド・リスク検証"],["04","Score","Always-In採点"],["05","Signal","バイアス出力"]];
 function buildExec(){document.getElementById("execBar").innerHTML=ES.map(([n,nm,d],i)=>`<div class="exec-step" id="ex-${i}"><div class="exec-n">${n}</div><div class="exec-name">${nm}</div><div class="exec-detail">${d}</div><div class="exec-ms" id="ems-${i}"></div></div>`).join("");}
 function pulseExec(){cycleNum++;document.getElementById("cycleCount").textContent="#"+cycleNum;sfx("cycle");ES.forEach((_,i)=>setTimeout(()=>{const e=document.getElementById("ex-"+i);if(!e)return;e.classList.add("active");document.getElementById("ems-"+i).textContent=(Math.random()*180+40).toFixed(0)+"ms";setTimeout(()=>e.classList.remove("active"),400);},i*100));}
 
@@ -1194,7 +1393,7 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   document.getElementById("tabbarSym").style.display=(pg==="Swarm")?"flex":"none";
   if(pg==="Chart"&&chart)setTimeout(()=>chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300}),50);
   if(pg==="Flow")connectFlowWS(activeSymbol);else disconnectFlowWS();
-  if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderVP(st.candles);renderTradeJudge(st.pa);renderFund(activeSymbol);}}
+  if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderTradeJudge(st.pa);renderFund(activeSymbol);}renderMTS(activeSymbol);renderCycle(activeSymbol);}
   if(pg==="Swarm"){updateSwarmText();if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());if(!_mtfLoaded){_mtfLoaded=true;loadAllMTF(()=>{if(activePage==="Swarm")renderSwarm();});}renderSwarm();}
 });
 function selectSymbol(sym){activeSymbol=sym;document.querySelectorAll(".wl-row").forEach(r=>r.classList.toggle("sel",r.id==="wl-"+sym));document.querySelector('.tab-main[data-pg="Chart"]').click();loadChart(sym,TF);sfx("select");}
@@ -1331,6 +1530,8 @@ function toggleAudio(){
   }
 }
 document.getElementById("audioBtn").addEventListener("click",toggleAudio);
+// サイクル説明図: 折りたたみを開いたとき描画
+(function(){const d=document.querySelector(".cyc-explain");if(d)d.addEventListener("toggle",()=>{if(d.open)renderCycleDiagram();});})();
 
 // ════════ 音声アラート (SpeechSynthesis・女性音声) ════════
 let voiceOn=false,voiceRate=1.0,sigThreshold=8,jpVoice=null;
