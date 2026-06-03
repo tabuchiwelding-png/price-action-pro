@@ -106,6 +106,54 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .tab-main.on::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:30%;height:1px;background:var(--gold);opacity:.5;}
 .tabbar-sym{display:flex;overflow-x:auto;scrollbar-width:none;}
 .tabbar-sym::-webkit-scrollbar{display:none;}
+/* ===== TRADE (仮想取引) ===== */
+.tr-acct{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin-bottom:0;}
+/* ===== 中ジャンル(サブナビ) ===== */
+.subnav{display:flex;background:var(--bg);border-bottom:1px solid var(--border);}
+.subnav-item{flex:1;text-align:center;padding:8px 4px;font-size:9.5px;letter-spacing:.1em;font-weight:600;color:var(--txt-dim);cursor:pointer;user-select:none;display:flex;flex-direction:column;gap:1px;border-bottom:1.5px solid transparent;transition:color .2s,border-color .2s;}
+.subnav-item .jp{font-size:8px;opacity:.7;letter-spacing:0;}
+.subnav-item.on{color:var(--cyan);border-bottom-color:var(--cyan);}
+.tr-sec{display:none;}
+.tr-sec.on{display:block;}
+/* 下固定の中ジャンル(TRADEタブ時のみ) — 画面最下部にぴったり */
+.subnav-fixed{display:none;position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(46px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);background:linear-gradient(180deg,rgba(8,11,16,.97),var(--bg));border-top:1px solid var(--border2);backdrop-filter:blur(8px);align-items:stretch;}
+.subnav-fixed .subnav-item{padding-top:7px;padding-bottom:7px;}
+body.trade-active .subnav-fixed{display:flex;}
+body.trade-active #pgTrade{padding-bottom:calc(54px + env(safe-area-inset-bottom,0px));}
+.tr-acct-cell{background:var(--panel2);padding:10px 12px;}
+.tr-acct-k{font-size:8px;color:var(--txt-dim);letter-spacing:.08em;margin-bottom:3px;}
+.tr-acct-v{font-size:14px;font-weight:700;color:var(--txt-br);}
+.tr-order{background:var(--panel2);padding:14px 12px;border-bottom:1px solid var(--border);}
+.tr-px-row{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;}
+.tr-px-lbl{font-size:8px;color:var(--txt-dim);letter-spacing:.08em;margin-bottom:3px;}
+.tr-px{font-size:20px;font-weight:800;color:var(--gold);}
+.tr-qty{width:110px;background:var(--raised);border:1px solid var(--border2);color:var(--txt-br);font-family:'JetBrains Mono';font-size:15px;font-weight:700;padding:6px 10px;text-align:right;border-radius:2px;}
+.tr-qty-quick{display:flex;gap:6px;margin-bottom:12px;justify-content:flex-end;}
+.tr-qty-q{font-size:9px;padding:3px 9px;border:1px solid var(--border2);color:var(--txt-mid);cursor:pointer;border-radius:2px;user-select:none;}
+.tr-qty-q:active{background:var(--raised);}
+.tr-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.tr-btn{padding:14px;text-align:center;font-size:14px;font-weight:800;letter-spacing:.05em;cursor:pointer;border-radius:3px;user-select:none;display:flex;flex-direction:column;gap:2px;transition:all .15s;}
+.tr-btn .jp{font-size:9px;font-weight:600;opacity:.85;}
+.tr-btn.buy{background:linear-gradient(135deg,var(--bull-dim),rgba(46,230,166,.12));border:1px solid var(--bull);color:var(--bull);}
+.tr-btn.buy:active{background:var(--bull);color:#000;}
+.tr-btn.sell{background:linear-gradient(135deg,var(--bear-dim),rgba(255,77,109,.12));border:1px solid var(--bear);color:var(--bear);}
+.tr-btn.sell:active{background:var(--bear);color:#000;}
+.tr-cost{font-size:9px;color:var(--txt-dim);text-align:center;margin-top:8px;min-height:12px;}
+.tr-pos{background:var(--panel2);border-bottom:1px solid var(--border);padding:11px 12px;display:flex;align-items:center;gap:10px;}
+.tr-pos-side{font-size:11px;font-weight:800;width:46px;flex-shrink:0;}
+.tr-pos-mid{flex:1;min-width:0;}
+.tr-pos-sym{font-size:11px;font-weight:700;color:var(--txt-br);}
+.tr-pos-info{font-size:8.5px;color:var(--txt-dim);margin-top:2px;}
+.tr-pos-pnl{text-align:right;flex-shrink:0;}
+.tr-pos-pnl-v{font-size:13px;font-weight:800;}
+.tr-pos-pnl-pct{font-size:9px;margin-top:1px;}
+.tr-pos-close{font-size:9px;padding:5px 11px;border:1px solid var(--border2);color:var(--txt-mid);cursor:pointer;border-radius:2px;flex-shrink:0;user-select:none;}
+.tr-pos-close:active{background:var(--raised);}
+.tr-hist{background:var(--panel2);border-bottom:1px solid var(--border);padding:9px 12px;display:flex;align-items:center;gap:8px;font-size:9.5px;}
+.tr-hist-side{font-weight:800;width:38px;flex-shrink:0;}
+.tr-hist-sym{color:var(--txt-mid);flex:1;}
+.tr-hist-pnl{font-weight:700;}
+.tr-empty{padding:16px;text-align:center;color:var(--txt-dim);font-size:9px;}
 .tab-sym{flex-shrink:0;padding:7px 13px;font-size:10px;font-weight:600;color:var(--txt-dim);cursor:pointer;border-right:1px solid var(--border);border-bottom:2px solid transparent;white-space:nowrap;letter-spacing:.04em;}
 .tab-sym.on{color:var(--txt-br);border-bottom-color:var(--gold);background:rgba(255,201,77,.06);}
 .tab-sym.all{color:var(--violet);font-weight:700;}
@@ -394,6 +442,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
       <div class="tab-main" data-pg="Flow"><span class="ti">⇅</span><span class="tl">FLOW</span><span class="tn">フロー</span></div>
       <div class="tab-main" data-pg="Swarm"><span class="ti">🌌</span><span class="tl">SWARM</span><span class="tn">主導権マップ</span></div>
       <div class="tab-main" data-pg="Ana"><span class="ti">🧮</span><span class="tl">ANALYSIS</span><span class="tn">分析</span></div>
+      <div class="tab-main" data-pg="Trade"><span class="ti">💹</span><span class="tl">TRADE</span><span class="tn">仮想取引</span></div>
     </div>
     <div class="tabbar-sym" id="tabbarSym"></div>
   </div>
@@ -538,7 +587,45 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
     <div style="height:30px;"></div>
   </div>
 
+  <!-- TRADE (バーチャル投機・ブラウザ内保存) -->
+  <div class="page" id="pgTrade">
+    <!-- 口座サマリー(常時表示・中ジャンル切替の対象外) -->
+    <div class="tr-acct" id="trAcct"></div>
+    <!-- 発注 -->
+    <div class="tr-sec on" data-sec="order">
+      <div class="tr-order">
+        <div class="tr-px-row">
+          <div><div class="tr-px-lbl jp">現在価格</div><div class="tr-px" id="trPx">—</div></div>
+          <div style="text-align:right"><div class="tr-px-lbl jp">数量</div><input type="text" inputmode="decimal" id="trQty" class="tr-qty" value="0.01"></div>
+        </div>
+        <div class="tr-qty-quick" id="trQtyQuick"></div>
+        <div class="tr-btns">
+          <div class="tr-btn buy" id="trBuy">▲ LONG<span class="jp">買い建て</span></div>
+          <div class="tr-btn sell" id="trSell">▼ SHORT<span class="jp">売り建て</span></div>
+        </div>
+        <div class="tr-cost jp" id="trCost"></div>
+      </div>
+    </div>
+    <!-- 建玉 -->
+    <div class="tr-sec" data-sec="pos">
+      <div class="ph">POSITIONS · 保有中 <span class="ph-right" id="trPosCount">0</span></div>
+      <div id="trPositions"></div>
+    </div>
+    <!-- 履歴 -->
+    <div class="tr-sec" data-sec="hist">
+      <div class="ph">HISTORY · 約定履歴 <span class="ph-right" id="trResetBtn" style="cursor:pointer;color:var(--bear)">リセット</span></div>
+      <div id="trHistory"></div>
+    </div>
+    <div style="height:30px;"></div>
+  </div>
+  <div class="subnav subnav-fixed" id="trSubnav">
+    <div class="subnav-item on" data-sub="order">ORDER<span class="jp">発注</span></div>
+    <div class="subnav-item" data-sub="pos">POSITIONS<span class="jp">建玉</span></div>
+    <div class="subnav-item" data-sub="hist">HISTORY<span class="jp">履歴</span></div>
+  </div>
+
 </div>
+
 
 <script>
 const SYMBOLS=[
@@ -1464,6 +1551,106 @@ setInterval(()=>{const pg=document.getElementById("pgSwarm");if(pg&&pg.classList
 
 // ===== CYCLE =====
 const ES=[["01","Scan","足・ティック走査"],["02","Detect","パターン検出"],["03","Validate","トレンド・リスク検証"],["04","Score","Always-In採点"],["05","Signal","バイアス出力"]];
+// ════════ PAPER TRADE (仮想取引・ブラウザ内保存) ════════
+const TR_KEY="pa_paper_trade_v1";
+const TR_START=1000000; // 初期資金 100万円
+let trState={cash:TR_START,positions:[],history:[]};
+function trLoad(){try{const s=localStorage.getItem(TR_KEY);if(s)trState=JSON.parse(s);}catch(e){}}
+function trSave(){try{localStorage.setItem(TR_KEY,JSON.stringify(trState));}catch(e){}}
+function trPrice(sym){const st=store[sym];return st&&st.ticker&&st.ticker.price?st.ticker.price:null;}
+// 含み損益(ロング: 現在-建値, ショート: 建値-現在)
+function trPosPnl(p,px){if(px==null)return null;const diff=p.side==="long"?(px-p.entry):(p.entry-px);return diff*p.qty;}
+function trEquity(){let eq=trState.cash;trState.positions.forEach(p=>{const px=trPrice(p.sym);if(px!=null){const pnl=trPosPnl(p,px);eq+=p.entry*p.qty+(pnl||0);}else{eq+=p.entry*p.qty;}});return eq;}
+// 発注
+function trOpen(side){
+  const sym=activeSymbol;const px=trPrice(sym);
+  if(px==null){trCostMsg("価格取得待ち。チャートを一度開いてください。");return;}
+  const qty=parseFloat(document.getElementById("trQty").value);
+  if(!qty||qty<=0){trCostMsg("数量が不正です。");return;}
+  const cost=px*qty;
+  if(cost>trState.cash){trCostMsg(`証拠金不足。必要 ¥${fmt(Math.round(cost))} / 残高 ¥${fmt(Math.round(trState.cash))}`);return;}
+  trState.cash-=cost;
+  trState.positions.push({id:Date.now()+""+Math.floor(Math.random()*1000),sym,side,qty,entry:px,opened:Date.now()});
+  trSave();renderTrade();sfx(side==="long"?"signal-bull":"signal-bear");
+  trCostMsg(`${side==="long"?"買い":"売り"}建て ${qty} @ ¥${fmt(px)} 約定`);
+}
+// 決済
+function trClose(id){
+  const i=trState.positions.findIndex(p=>p.id===id);if(i<0)return;
+  const p=trState.positions[i];const px=trPrice(p.sym);
+  if(px==null){trCostMsg("価格取得待ち。");return;}
+  const pnl=trPosPnl(p,px)||0;
+  trState.cash+=p.entry*p.qty+pnl; // 証拠金を戻し、損益を反映
+  trState.history.unshift({sym:p.sym,side:p.side,qty:p.qty,entry:p.entry,exit:px,pnl,closed:Date.now()});
+  if(trState.history.length>50)trState.history.pop();
+  trState.positions.splice(i,1);
+  trSave();renderTrade();sfx("select");
+  trCostMsg(`決済 ${pnl>=0?"+":""}¥${fmt(Math.round(pnl))}`);
+}
+function trCostMsg(m){const el=document.getElementById("trCost");if(el)el.textContent=m;}
+function trReset(){
+  if(!confirm("仮想口座をリセットしますか？残高・建玉・履歴がすべて初期化されます。"))return;
+  trState={cash:TR_START,positions:[],history:[]};trSave();renderTrade();
+}
+// 描画
+function renderTrade(){
+  const sy=document.getElementById("trSym");if(sy)sy.textContent=fmtSym(activeSymbol);
+  const px=trPrice(activeSymbol);
+  const pxEl=document.getElementById("trPx");if(pxEl)pxEl.textContent=px!=null?"¥"+fmt(px):"—";
+  // 口座サマリー
+  const eq=trEquity();const totalPnl=eq-TR_START;const pnlPct=(totalPnl/TR_START*100);
+  const acct=document.getElementById("trAcct");
+  if(acct)acct.innerHTML=`
+    <div class="tr-acct-cell"><div class="tr-acct-k jp">残高(現金)</div><div class="tr-acct-v">¥${fmt(Math.round(trState.cash))}</div></div>
+    <div class="tr-acct-cell"><div class="tr-acct-k jp">純資産(評価額)</div><div class="tr-acct-v">¥${fmt(Math.round(eq))}</div></div>
+    <div class="tr-acct-cell"><div class="tr-acct-k jp">累計損益</div><div class="tr-acct-v" style="color:${totalPnl>=0?'var(--bull)':'var(--bear)'}">${totalPnl>=0?'+':''}¥${fmt(Math.round(totalPnl))}<span style="font-size:9px"> (${pnlPct>=0?'+':''}${pnlPct.toFixed(1)}%)</span></div></div>`;
+  // 数量クイック(価格に応じた目安)
+  const qq=document.getElementById("trQtyQuick");
+  if(qq&&!qq.dataset.built){const presets=[0.01,0.05,0.1,0.5,1];qq.innerHTML=presets.map(v=>`<span class="tr-qty-q" data-q="${v}">${v}</span>`).join("");qq.dataset.built="1";qq.querySelectorAll(".tr-qty-q").forEach(b=>b.addEventListener("click",()=>{document.getElementById("trQty").value=b.dataset.q;trUpdateCost();}));}
+  // ポジション
+  const pos=document.getElementById("trPositions");const pc=document.getElementById("trPosCount");
+  if(pc)pc.textContent=trState.positions.length;
+  if(pos){
+    if(!trState.positions.length){pos.innerHTML=`<div class="tr-empty jp">建玉なし。上のLONG/SHORTで仮想建て。</div>`;}
+    else{pos.innerHTML=trState.positions.map(p=>{
+      const cpx=trPrice(p.sym);const pnl=trPosPnl(p,cpx);const pnlPct=pnl!=null?(pnl/(p.entry*p.qty)*100):null;
+      const sc=p.side==="long"?"var(--bull)":"var(--bear)";
+      return `<div class="tr-pos">
+        <div class="tr-pos-side" style="color:${sc}">${p.side==="long"?"▲ L":"▼ S"}</div>
+        <div class="tr-pos-mid"><div class="tr-pos-sym">${fmtSym(p.sym)} <span style="color:var(--txt-dim);font-weight:400">${p.qty}</span></div><div class="tr-pos-info">建値 ¥${fmt(p.entry)} → 現在 ${cpx!=null?"¥"+fmt(cpx):"—"}</div></div>
+        <div class="tr-pos-pnl"><div class="tr-pos-pnl-v" style="color:${pnl!=null?(pnl>=0?'var(--bull)':'var(--bear)'):'var(--txt-dim)'}">${pnl!=null?(pnl>=0?'+':'')+'¥'+fmt(Math.round(pnl)):'—'}</div><div class="tr-pos-pnl-pct" style="color:${pnlPct!=null?(pnlPct>=0?'var(--bull)':'var(--bear)'):'var(--txt-dim)'}">${pnlPct!=null?(pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%':''}</div></div>
+        <div class="tr-pos-close" data-close="${p.id}">決済</div>
+      </div>`;}).join("");
+      pos.querySelectorAll(".tr-pos-close").forEach(b=>b.addEventListener("click",()=>trClose(b.dataset.close)));
+    }
+  }
+  // 履歴
+  const hist=document.getElementById("trHistory");
+  if(hist){
+    if(!trState.history.length){hist.innerHTML=`<div class="tr-empty jp">約定履歴なし。</div>`;}
+    else{hist.innerHTML=trState.history.map(h=>{
+      const sc=h.side==="long"?"var(--bull)":"var(--bear)";
+      return `<div class="tr-hist"><span class="tr-hist-side" style="color:${sc}">${h.side==="long"?"L":"S"}</span><span class="tr-hist-sym">${fmtSym(h.sym)} ${h.qty} · ¥${fmt(h.entry)}→¥${fmt(h.exit)}</span><span class="tr-hist-pnl" style="color:${h.pnl>=0?'var(--bull)':'var(--bear)'}">${h.pnl>=0?'+':''}¥${fmt(Math.round(h.pnl))}</span></div>`;}).join("");
+    }
+  }
+}
+function trUpdateCost(){const px=trPrice(activeSymbol);const qty=parseFloat(document.getElementById("trQty").value);if(px!=null&&qty>0)trCostMsg(`必要証拠金 ¥${fmt(Math.round(px*qty))}`);}
+// 配線
+trLoad();
+document.getElementById("trBuy").addEventListener("click",()=>trOpen("long"));
+document.getElementById("trSell").addEventListener("click",()=>trOpen("short"));
+document.getElementById("trResetBtn").addEventListener("click",trReset);
+// 中ジャンル(サブナビ)切替
+document.getElementById("trSubnav").addEventListener("click",e=>{
+  const it=e.target.closest(".subnav-item");if(!it)return;
+  const sub=it.dataset.sub;sfx("tab");
+  document.querySelectorAll("#trSubnav .subnav-item").forEach(x=>x.classList.toggle("on",x===it));
+  document.querySelectorAll("#pgTrade .tr-sec").forEach(s=>s.classList.toggle("on",s.dataset.sec===sub));
+});
+document.getElementById("trQty").addEventListener("input",trUpdateCost);
+// TRADEタブ表示中は1秒ごとに含み損益を更新
+setInterval(()=>{const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();},1000);
+
 function buildExec(){document.getElementById("execBar").innerHTML=ES.map(([n,nm,d],i)=>`<div class="exec-step" id="ex-${i}"><div class="exec-n">${n}</div><div class="exec-name">${nm}</div><div class="exec-detail">${d}</div><div class="exec-ms" id="ems-${i}"></div></div>`).join("");}
 function pulseExec(){cycleNum++;document.getElementById("cycleCount").textContent="#"+cycleNum;sfx("cycle");ES.forEach((_,i)=>setTimeout(()=>{const e=document.getElementById("ex-"+i);if(!e)return;e.classList.add("active");document.getElementById("ems-"+i).textContent=(Math.random()*180+40).toFixed(0)+"ms";setTimeout(()=>e.classList.remove("active"),400);},i*100));}
 
@@ -1478,6 +1665,8 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   if(pg==="Chart"&&chart)setTimeout(()=>chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300}),50);
   if(pg==="Flow")connectFlowWS(activeSymbol);else disconnectFlowWS();
   if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderTradeJudge(st.pa);renderFund(activeSymbol);}renderMTS(activeSymbol);renderCycle(activeSymbol);}
+  if(pg==="Trade")renderTrade();
+  document.body.classList.toggle("trade-active",pg==="Trade");
   if(pg==="Swarm"){updateSwarmText();if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());if(!_mtfLoaded){_mtfLoaded=true;loadAllMTF(()=>{if(activePage==="Swarm")renderSwarm();});}renderSwarm();}
 });
 function selectSymbol(sym){activeSymbol=sym;document.querySelectorAll(".wl-row").forEach(r=>r.classList.toggle("sel",r.id==="wl-"+sym));document.querySelector('.tab-main[data-pg="Chart"]').click();loadChart(sym,TF);sfx("select");}
