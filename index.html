@@ -16,6 +16,56 @@
   --blue:#4da6ff; --violet:#8c7dff; --cyan:#34e6e0;
   --txt:#aebfce; --txt-br:#ecf3f9; --txt-dim:#6f879b; --txt-mid:#90a7bc; --txt-faint:#56697c;
 }
+/* テーマ: ミッドナイト(深い青基調・文字コントラスト確保) */
+body.theme-midnight{
+  --bg:#070b16; --panel:#0c1326; --panel2:#101a33; --row:#0b1322; --raised:#152038;
+  --border:#1e2c4a; --border2:#2e4470; --borderAcc:#3d5a96; --grid:#111b30;
+  --bull:#3ee0c0; --bull-soft:#1fa890; --bull-dim:#0a3530; --bull-glow:#3ee0c0;
+  --bear:#ff5c8a; --bear-soft:#cc4a6e; --bear-dim:#3a1226; --bear-glow:#ff5c8a;
+  --gold:#ffd166; --gold-soft:#cca84f; --gold-dim:#3a2f15; --gold-glow:#ffd166;
+  --blue:#5cb3ff; --violet:#9d8cff; --cyan:#4ae0ec;
+  --txt:#b9c8e0; --txt-br:#eef4ff; --txt-dim:#7a90b8; --txt-mid:#9aaed0; --txt-faint:#5e7299;
+}
+/* テーマ: カーボン(無彩色グレー基調・シャープ) */
+body.theme-carbon{
+  --bg:#0a0b0d; --panel:#121316; --panel2:#16181c; --row:#101113; --raised:#1c1e22;
+  --border:#26282d; --border2:#3a3d44; --borderAcc:#52565f; --grid:#161719;
+  --bull:#4ade80; --bull-soft:#2fa85e; --bull-dim:#103021; --bull-glow:#4ade80;
+  --bear:#fb6f84; --bear-soft:#cc5868; --bear-dim:#341419; --bear-glow:#fb6f84;
+  --gold:#fbbf24; --gold-soft:#cc9a1d; --gold-dim:#332910; --gold-glow:#fbbf24;
+  --blue:#60a5fa; --violet:#a78bfa; --cyan:#22d3ee;
+  --txt:#c4c8d0; --txt-br:#f1f3f6; --txt-dim:#8a8f99; --txt-mid:#a8adb7; --txt-faint:#6a6f78;
+}
+/* テーマ: オーシャン(青緑基調・色覚配慮: 買い=青, 売り=橙) */
+body.theme-ocean{
+  --bg:#06100f; --panel:#0b1a1a; --panel2:#0f2424; --row:#0a1818; --raised:#13302f;
+  --border:#1c3a3a; --border2:#2a5656; --borderAcc:#3a7474; --grid:#0f2020;
+  --bull:#38bdf8; --bull-soft:#2090c4; --bull-dim:#0a2e3a; --bull-glow:#38bdf8;
+  --bear:#fb923c; --bear-soft:#cc7530; --bear-dim:#3a2410; --bear-glow:#fb923c;
+  --gold:#fde047; --gold-soft:#ccb33a; --gold-dim:#33300f; --gold-glow:#fde047;
+  --blue:#38bdf8; --violet:#a78bfa; --cyan:#2dd4bf;
+  --txt:#b0cccb; --txt-br:#eafaf8; --txt-dim:#76a09e; --txt-mid:#94bab8; --txt-faint:#5a8280;
+}
+/* テーマ: アンバー(琥珀・温かい暗褐色基調) */
+body.theme-amber{
+  --bg:#0e0a06; --panel:#1a130b; --panel2:#241a0f; --row:#18120a; --raised:#302513;
+  --border:#3a2c1a; --border2:#56412a; --borderAcc:#74573a; --grid:#201810;
+  --bull:#34e6a6; --bull-soft:#1fa878; --bull-dim:#0b3528; --bull-glow:#34e6a6;
+  --bear:#ff5c5c; --bear-soft:#cc4a4a; --bear-dim:#3a1414; --bear-glow:#ff5c5c;
+  --gold:#ffb01f; --gold-soft:#cc8c19; --gold-dim:#3a2a0c; --gold-glow:#ffb01f;
+  --blue:#5cb3ff; --violet:#c08cff; --cyan:#40e0d0;
+  --txt:#e0cba8; --txt-br:#fdf4e6; --txt-dim:#a08a6a; --txt-mid:#c0a880; --txt-faint:#82705a;
+}
+/* テーマ: バイオレット(紫基調・サイバー) */
+body.theme-violet{
+  --bg:#0a0814; --panel:#130f26; --panel2:#1a1433; --row:#120e22; --raised:#231b3a;
+  --border:#2c2247; --border2:#443470; --borderAcc:#5a4496; --grid:#181230;
+  --bull:#34e6c0; --bull-soft:#1fa890; --bull-dim:#0a3530; --bull-glow:#34e6c0;
+  --bear:#ff5c9a; --bear-soft:#cc4a7a; --bear-dim:#3a1226; --bear-glow:#ff5c9a;
+  --gold:#ffd166; --gold-soft:#cca84f; --gold-dim:#3a2f15; --gold-glow:#ffd166;
+  --blue:#7c9dff; --violet:#b88cff; --cyan:#4ae0ec;
+  --txt:#c8bce0; --txt-br:#f2ecff; --txt-dim:#8a7ab0; --txt-mid:#a89ad0; --txt-faint:#6e6299;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
 body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:12px;overflow:hidden;}
@@ -208,10 +258,14 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 /* ===== 設定パネル ===== */
 .settings-overlay{position:fixed;inset:0;z-index:10000;background:rgba(3,5,8,.7);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:flex-end;}
 .settings-overlay.on{display:flex;}
-.settings-panel{width:min(340px,86vw);max-height:100vh;overflow-y:auto;background:linear-gradient(180deg,var(--panel),var(--bg));border-left:1px solid var(--border2);box-shadow:-8px 0 30px rgba(0,0,0,.5);animation:slideIn .25s ease;}
+.settings-panel{width:min(400px,92vw);max-height:100vh;overflow-y:auto;background:linear-gradient(180deg,var(--panel),var(--bg));border-left:1px solid var(--border2);box-shadow:-8px 0 30px rgba(0,0,0,.5);animation:slideIn .25s ease;}
 @keyframes slideIn{from{transform:translateX(100%);}to{transform:translateX(0);}}
 .settings-head{display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border2);font-size:11px;letter-spacing:.14em;color:var(--txt-br);font-weight:700;}
 .settings-body{padding:14px;}
+.theme-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.theme-opt{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--border2);cursor:pointer;font-size:10px;color:var(--txt-mid);user-select:none;transition:all .2s;border-radius:2px;}
+.theme-opt.on{border-color:var(--gold);color:var(--txt-br);background:rgba(255,201,77,.08);box-shadow:0 0 10px rgba(255,201,77,.15) inset;}
+.theme-sw{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1px solid var(--border2);}
 .set-group-title{font-size:9px;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
 .set-desc{font-size:8.5px;line-height:1.6;color:var(--txt-dim);margin-bottom:8px;}
 .set-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
@@ -307,7 +361,17 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
     <div class="settings-panel">
       <div class="settings-head"><span>⚙ 設定 · SETTINGS</span><span id="settingsClose" style="cursor:pointer;font-size:16px;color:var(--txt-dim)">✕</span></div>
       <div class="settings-body">
-        <div class="set-group-title jp">サウンド</div>
+        <div class="set-group-title jp">カラーテーマ</div>
+        <div class="set-desc jp">配色を切り替えます。どのテーマも文字がはっきり読めるよう調整済み。オーシャンは色覚配慮(買い=青/売り=橙)。</div>
+        <div id="themeRow" class="theme-row">
+          <div class="theme-opt on" data-theme="dark"><span class="theme-sw" style="background:linear-gradient(135deg,#2ee6a6,#06090e 60%,#ff4d6d)"></span>ダーク</div>
+          <div class="theme-opt" data-theme="midnight"><span class="theme-sw" style="background:linear-gradient(135deg,#3ee0c0,#070b16 60%,#ff5c8a)"></span>ミッドナイト</div>
+          <div class="theme-opt" data-theme="carbon"><span class="theme-sw" style="background:linear-gradient(135deg,#4ade80,#0a0b0d 60%,#fb6f84)"></span>カーボン</div>
+          <div class="theme-opt" data-theme="ocean"><span class="theme-sw" style="background:linear-gradient(135deg,#38bdf8,#06100f 60%,#fb923c)"></span>オーシャン</div>
+          <div class="theme-opt" data-theme="amber"><span class="theme-sw" style="background:linear-gradient(135deg,#ffb01f,#0e0a06 60%,#ff5c5c)"></span>アンバー</div>
+          <div class="theme-opt" data-theme="violet"><span class="theme-sw" style="background:linear-gradient(135deg,#b88cff,#0a0814 60%,#ff5c9a)"></span>バイオレット</div>
+        </div>
+        <div class="set-group-title jp" style="margin-top:16px;">サウンド</div>
         <div class="set-row"><span class="set-label jp">効果音・環境音</span><span id="setSfxToggle" class="set-toggle">OFF</span></div>
         <div class="set-group-title jp" style="margin-top:14px;">音声アラート</div>
         <div class="set-desc jp">強いシグナルが出た通貨を、女性の音声で読み上げます。例:「ビットコイン、強い買いシグナル」</div>
@@ -1598,6 +1662,16 @@ document.getElementById("setRate").addEventListener("input",e=>{voiceRate=parseF
 document.getElementById("setVoiceTest").addEventListener("click",()=>{if(!voiceOn){voiceOn=true;const t=document.getElementById("setVoiceToggle");t.classList.add("on");t.textContent="ON";pickVoice();}speak("ビットコイン、強い買いシグナル。確信度78パーセント");});
 // シグナル感度
 document.getElementById("setSens").addEventListener("input",e=>{sigThreshold=parseInt(e.target.value);const lbl=sigThreshold>=9?"強(9以上)":sigThreshold>=8?"強(8以上)":"中(7以上)";document.getElementById("setSensVal").textContent=lbl;});
+// カラーテーマ切替
+document.getElementById("themeRow").addEventListener("click",e=>{
+  const opt=e.target.closest(".theme-opt");if(!opt)return;
+  const theme=opt.dataset.theme;
+  document.body.classList.remove("theme-midnight","theme-carbon","theme-ocean");
+  if(theme!=="dark")document.body.classList.add("theme-"+theme);
+  document.getElementById("themeRow").querySelectorAll(".theme-opt").forEach(o=>o.classList.toggle("on",o===opt));
+  // チャートの色も合わせて更新(次の確定足で反映、即時は再描画を促す)
+  if(typeof renderSwarm==="function"&&document.getElementById("pgSwarm")?.classList.contains("on"))renderSwarm();
+});
 document.getElementById("tfGroup").addEventListener("click",e=>{if(!e.target.dataset.tf)return;TF=e.target.dataset.tf;document.querySelectorAll(".tf-btn").forEach(b=>b.classList.toggle("on",b.dataset.tf===TF));loadChart(activeSymbol,TF);});
 function setConn(t,live){const e=document.getElementById("connStatus");e.textContent=t;e.style.color=live?"var(--bull)":t.includes("ERROR")?"var(--bear)":"var(--gold)";}
 setInterval(()=>{const d=new Date();document.getElementById("utcClock").textContent=`${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}:${String(d.getUTCSeconds()).padStart(2,"0")} UTC`;},1000);
