@@ -348,8 +348,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
     <div class="chip"><span class="chip-label">ALWAYS-IN</span><span class="chip-val" id="sigSummary">—</span></div>
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
       <span style="font-size:9px;color:var(--txt-dim)" id="utcClock">—</span>
-      <div id="audioBtn" style="cursor:pointer;font-size:13px;opacity:0.5;user-select:none;" title="サウンド ON/OFF">🔇</div>
-      <div id="settingsBtn" style="cursor:pointer;font-size:13px;opacity:0.6;user-select:none;" title="設定">⚙</div>
+      <div id="audioBtn" style="cursor:pointer;user-select:none;display:flex;flex-direction:column;align-items:center;gap:1px;opacity:0.6;" title="サウンド ON/OFF"><span style="font-size:19px;line-height:1">🔇</span><span style="font-size:7px;letter-spacing:.05em;color:var(--txt-dim)">スピーカー</span></div>
+      <div id="settingsBtn" style="cursor:pointer;user-select:none;display:flex;flex-direction:column;align-items:center;gap:1px;opacity:0.7;" title="設定"><span style="font-size:19px;line-height:1">⚙</span><span style="font-size:7px;letter-spacing:.05em;color:var(--txt-dim)">設定</span></div>
       <div style="width:6px;height:6px;border-radius:50%;background:var(--bull);box-shadow:0 0 6px var(--bull);animation:pulse 2s infinite"></div>
     </div>
   </div>
@@ -379,9 +379,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
         <div class="set-row"><span class="set-label jp">読み上げ速度</span><span id="setRateVal" style="color:var(--gold);font-size:11px;font-weight:600">1.0x</span></div>
         <input type="range" id="setRate" min="0.6" max="1.6" step="0.1" value="1.0" class="set-slider">
         <div class="set-row" style="margin-top:6px;"><span class="set-label jp">テスト再生</span><span id="setVoiceTest" class="set-btn">▶ 試す</span></div>
-        <div class="set-row" style="margin-top:14px;"><span class="set-label jp">シグナル感度</span><span id="setSensVal" style="color:var(--gold);font-size:10px;font-weight:600">強(8以上)</span></div>
-        <div class="set-desc jp">どれだけ強いシグナルで音声を出すか。「強」は頻度少なめ、「中」は多め。</div>
-        <input type="range" id="setSens" min="7" max="9" step="1" value="8" class="set-slider">
+        <div class="set-row" style="margin-top:14px;"><span class="set-label jp">シグナル感度</span><span id="setSensVal" style="color:var(--gold);font-size:11px;font-weight:600">80%</span></div>
+        <div class="set-desc jp">この強さ以上のシグナルで音声を出します。高いほど厳選(鳴る回数が減る)、低いほど敏感(増える)。</div>
+        <input type="range" id="setSens" min="55" max="95" step="5" value="80" class="set-slider">
         <div style="height:10px;"></div>
       </div>
     </div>
@@ -1045,12 +1045,30 @@ const gradOf=d=>d==="LONG"?"gLONG":d==="SHORT"?"gSHORT":"gNEU";
 
 function buildSymTabs(){
   const bar=document.getElementById("tabbarSym");
-  bar.innerHTML=`<div class="tab-sym all on" data-sm="all">🌌 全通貨</div>`+SYMBOLS.map(o=>`<div class="tab-sym" data-sm="${o.s}">${shortSym(o.s)}</div>`).join("");
+  // SWARMは「全通貨」を持つ。他タブは銘柄のみ(全通貨は無い)。
+  const onSwarm=activePage==="Swarm";
+  const cur=onSwarm?swarmMode:activeSymbol;
+  let html="";
+  if(onSwarm)html+=`<div class="tab-sym all${swarmMode==="all"?" on":""}" data-sm="all">🌌 全通貨</div>`;
+  html+=SYMBOLS.map(o=>`<div class="tab-sym${o.s===cur?" on":""}" data-sm="${o.s}">${shortSym(o.s)}</div>`).join("");
+  bar.innerHTML=html;
   bar.querySelectorAll(".tab-sym").forEach(t=>t.addEventListener("click",()=>{
-    swarmMode=t.dataset.sm;
+    const sm=t.dataset.sm;
     bar.querySelectorAll(".tab-sym").forEach(x=>x.classList.toggle("on",x===t));
-    if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());
-    renderSwarm();updateSwarmText();
+    sfx("select");
+    if(activePage==="Swarm"){
+      swarmMode=sm;
+      if(swarmMode!=="all"&&!mtfStore[swarmMode])loadMTF(swarmMode).then(()=>renderSwarm());
+      renderSwarm();updateSwarmText();
+    }else{
+      // CHART / FLOW / ANALYSIS: 銘柄を切り替えて全タブ連動
+      if(sm==="all")return;
+      activeSymbol=sm;
+      document.querySelectorAll(".wl-row").forEach(r=>r.classList.toggle("sel",r.id==="wl-"+sm));
+      if(activePage==="Chart")loadChart(sm,TF);
+      else if(activePage==="Flow"){connectFlowWS(sm);}
+      else if(activePage==="Ana"){const st=store[sm];if(st?.candles?.length){renderTradeJudge(st.pa);renderFund(sm);}renderMTS(sm);renderCycle(sm);loadAllMTF().then(()=>{renderMTS(sm);renderCycle(sm);});}
+    }
   }));
 }
 function updateSwarmText(){
@@ -1455,7 +1473,8 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   document.querySelectorAll(".tab-main").forEach(t=>t.classList.toggle("on",t===tab));
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("on"));
   document.getElementById("pg"+pg).classList.add("on");
-  document.getElementById("tabbarSym").style.display=(pg==="Swarm")?"flex":"none";
+  document.getElementById("tabbarSym").style.display=(pg==="Scan")?"none":"flex";
+  buildSymTabs();
   if(pg==="Chart"&&chart)setTimeout(()=>chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300}),50);
   if(pg==="Flow")connectFlowWS(activeSymbol);else disconnectFlowWS();
   if(pg==="Ana"){const st=store[activeSymbol];if(st?.candles?.length){renderTradeJudge(st.pa);renderFund(activeSymbol);}renderMTS(activeSymbol);renderCycle(activeSymbol);}
@@ -1661,7 +1680,7 @@ document.getElementById("setRate").addEventListener("input",e=>{voiceRate=parseF
 // テスト再生
 document.getElementById("setVoiceTest").addEventListener("click",()=>{if(!voiceOn){voiceOn=true;const t=document.getElementById("setVoiceToggle");t.classList.add("on");t.textContent="ON";pickVoice();}speak("ビットコイン、強い買いシグナル。確信度78パーセント");});
 // シグナル感度
-document.getElementById("setSens").addEventListener("input",e=>{sigThreshold=parseInt(e.target.value);const lbl=sigThreshold>=9?"強(9以上)":sigThreshold>=8?"強(8以上)":"中(7以上)";document.getElementById("setSensVal").textContent=lbl;});
+document.getElementById("setSens").addEventListener("input",e=>{sigThreshold=parseInt(e.target.value)/10;document.getElementById("setSensVal").textContent=e.target.value+"%";});
 // カラーテーマ切替
 document.getElementById("themeRow").addEventListener("click",e=>{
   const opt=e.target.closest(".theme-opt");if(!opt)return;
