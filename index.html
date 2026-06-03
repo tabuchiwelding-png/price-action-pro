@@ -360,7 +360,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
     </div>
     <div class="note jp"><span class="tag">価格分析</span><b>EMA20(金線)が上向きで価格がその上</b>なら買い手優勢、下なら売り手優勢。トレンド中は<b>EMAへの押し/戻りが絶好の順張り機会</b>。ローソクの実体が大きく髭が短いほど、その方向の意志が強い。下のメーターと内訳は、この読みを数値化したもの。</div>
     <div class="lscols">
-      <div><div id="chart"></div></div>
+      <div><div id="chart"></div>
+        <div class="ph">DETECTED PATTERNS · 検出パターン <span class="ph-right" id="sigCount">0</span></div>
+        <div id="sigFeed"></div>
+      </div>
       <div>
         <div class="ai-meter">
           <div class="ai-dir" id="aiDir" style="color:var(--txt-dim)">—</div>
@@ -384,8 +387,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
           <div id="gaugeBias"></div>
           <div class="gauge-bars" id="gaugeBars"></div>
         </div>
-        <div class="ph">DETECTED PATTERNS · 検出パターン <span class="ph-right" id="sigCount">0</span></div>
-        <div id="sigFeed"></div>
         <div class="ind-grid" id="indGrid"></div>
       </div>
     </div>
