@@ -115,11 +115,21 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .subnav-item.on{color:var(--cyan);border-bottom-color:var(--cyan);}
 .tr-sec{display:none;}
 .tr-sec.on{display:block;}
-/* 下固定の中ジャンル(TRADEタブ時のみ) — 画面最下部にぴったり */
-.subnav-fixed{display:none;position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(46px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);background:linear-gradient(180deg,rgba(8,11,16,.97),var(--bg));border-top:1px solid var(--border2);backdrop-filter:blur(8px);align-items:stretch;}
-.subnav-fixed .subnav-item{padding-top:7px;padding-bottom:7px;}
-body.trade-active .subnav-fixed{display:flex;}
-body.trade-active #pgTrade{padding-bottom:calc(54px + env(safe-area-inset-bottom,0px));}
+/* ===== 下部2段ナビ(大ジャンル/中ジャンル) ===== */
+#tabbarMain{display:none;}
+.botnav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:linear-gradient(180deg,rgba(8,11,16,.93),var(--bg) 70%);border-top:1px solid var(--border2);backdrop-filter:blur(12px);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -6px 24px rgba(0,0,0,.4);}
+.midnav{display:flex;border-bottom:1px solid var(--border);min-height:36px;overflow-x:auto;scrollbar-width:none;}
+.midnav::-webkit-scrollbar{display:none;}
+.midnav .mid-item{flex:1;min-width:62px;text-align:center;padding:7px 3px 6px;font-size:9px;letter-spacing:.07em;font-weight:600;color:var(--txt-dim);cursor:pointer;user-select:none;border-bottom:1.5px solid transparent;transition:color .2s,border-color .2s;display:flex;flex-direction:column;gap:1px;align-items:center;justify-content:center;}
+.midnav .mid-item .jp{font-size:7px;opacity:.6;letter-spacing:0;}
+.midnav .mid-item.on{color:var(--cyan);border-bottom-color:var(--cyan);}
+.genrenav{display:flex;}
+.genrenav .genre-item{flex:1;text-align:center;padding:10px 4px 11px;font-size:11.5px;letter-spacing:.14em;font-weight:700;color:var(--txt-faint);cursor:pointer;user-select:none;display:flex;flex-direction:column;gap:2px;align-items:center;border-top:2px solid transparent;transition:all .2s;}
+.genrenav .genre-item .jp{font-size:8.5px;opacity:.8;letter-spacing:.02em;font-weight:600;}
+.genrenav .genre-item.on{color:var(--gold);border-top-color:var(--gold);background:linear-gradient(180deg,rgba(255,201,77,.1),transparent);}
+.genrenav .genre-item:not(.on):active{color:var(--txt-mid);}
+/* 全ページ: 下部ナビぶんの余白を確保 */
+.page{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));}
 .tr-acct-cell{background:var(--panel2);padding:10px 12px;}
 .tr-acct-k{font-size:8px;color:var(--txt-dim);letter-spacing:.08em;margin-bottom:3px;}
 .tr-acct-v{font-size:14px;font-weight:700;color:var(--txt-br);}
@@ -618,10 +628,13 @@ body.trade-active #pgTrade{padding-bottom:calc(54px + env(safe-area-inset-bottom
     </div>
     <div style="height:30px;"></div>
   </div>
-  <div class="subnav subnav-fixed" id="trSubnav">
-    <div class="subnav-item on" data-sub="order">ORDER<span class="jp">発注</span></div>
-    <div class="subnav-item" data-sub="pos">POSITIONS<span class="jp">建玉</span></div>
-    <div class="subnav-item" data-sub="hist">HISTORY<span class="jp">履歴</span></div>
+  <!-- 下部ナビ: 中ジャンル(上段) + 大ジャンル(下段)・常時固定 -->
+  <div class="botnav">
+    <div class="midnav" id="midNav"></div>
+    <div class="genrenav" id="genreNav">
+      <div class="genre-item on" data-genre="analysis">ANALYSIS<span class="jp">分析</span></div>
+      <div class="genre-item" data-genre="trade">TRADE<span class="jp">取引</span></div>
+    </div>
   </div>
 
 </div>
@@ -1654,15 +1667,49 @@ trLoad();
 document.getElementById("trBuy").addEventListener("click",()=>trOpen("long"));
 document.getElementById("trSell").addEventListener("click",()=>trOpen("short"));
 document.getElementById("trResetBtn").addEventListener("click",trReset);
-// 中ジャンル(サブナビ)切替
-document.getElementById("trSubnav").addEventListener("click",e=>{
-  const it=e.target.closest(".subnav-item");if(!it)return;
-  const sub=it.dataset.sub;sfx("tab");
-  document.querySelectorAll("#trSubnav .subnav-item").forEach(x=>x.classList.toggle("on",x===it));
-  document.querySelectorAll("#pgTrade .tr-sec").forEach(s=>s.classList.toggle("on",s.dataset.sec===sub));
+// ===== 下部2段ナビ(大ジャンル/中ジャンル) =====
+const MIDNAV_SETS={
+  analysis:[["Scan","SCAN","スキャナー"],["Chart","CHART","チャート"],["Flow","FLOW","フロー"],["Swarm","SWARM","主導権マップ"],["Ana","ANALYSIS","分析"]],
+  trade:[["order","ORDER","発注"],["pos","POSITIONS","建玉"],["hist","HISTORY","履歴"]]
+};
+let curGenre="analysis",lastAnalysisPg="Scan";
+function buildMidNav(genre){
+  const mn=document.getElementById("midNav");if(!mn)return;
+  if(genre==="analysis"){
+    mn.innerHTML=MIDNAV_SETS.analysis.map(x=>{const on=document.querySelector('.tab-main[data-pg="'+x[0]+'"]').classList.contains('on');return `<div class="mid-item${on?' on':''}" data-pg="${x[0]}">${x[1]}<span class="jp">${x[2]}</span></div>`;}).join("");
+  }else{
+    const cur=document.querySelector("#pgTrade .tr-sec.on");const curSec=cur?cur.dataset.sec:"order";
+    mn.innerHTML=MIDNAV_SETS.trade.map(x=>`<div class="mid-item${x[0]===curSec?' on':''}" data-sub="${x[0]}">${x[1]}<span class="jp">${x[2]}</span></div>`).join("");
+  }
+}
+function showTradeSec(sub){document.querySelectorAll("#pgTrade .tr-sec").forEach(s=>s.classList.toggle("on",s.dataset.sec===sub));}
+// 大ジャンル切替
+document.getElementById("genreNav").addEventListener("click",e=>{
+  const g=e.target.closest(".genre-item");if(!g)return;const genre=g.dataset.genre;sfx("tab");
+  curGenre=genre;
+  document.querySelectorAll("#genreNav .genre-item").forEach(x=>x.classList.toggle("on",x===g));
+  if(genre==="analysis"){
+    document.querySelector('.tab-main[data-pg="'+(lastAnalysisPg||"Scan")+'"]').click();
+  }else{
+    document.querySelector('.tab-main[data-pg="Trade"]').click();
+    showTradeSec("order");
+  }
+  buildMidNav(genre);
+});
+// 中ジャンル切替
+document.getElementById("midNav").addEventListener("click",e=>{
+  const it=e.target.closest(".mid-item");if(!it)return;
+  if(it.dataset.pg){
+    lastAnalysisPg=it.dataset.pg;
+    document.querySelector('.tab-main[data-pg="'+it.dataset.pg+'"]').click();
+    document.querySelectorAll("#midNav .mid-item").forEach(x=>x.classList.toggle("on",x===it));
+  }else if(it.dataset.sub){
+    showTradeSec(it.dataset.sub);sfx("tab");
+    document.querySelectorAll("#midNav .mid-item").forEach(x=>x.classList.toggle("on",x===it));
+  }
 });
 document.getElementById("trQty").addEventListener("input",trUpdateCost);
-// TRADEタブ表示中は1秒ごとに含み損益を更新
+// TRADEセクション表示中は1秒ごとに含み損益を更新
 setInterval(()=>{const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();},1000);
 
 function buildExec(){document.getElementById("execBar").innerHTML=ES.map(([n,nm,d],i)=>`<div class="exec-step" id="ex-${i}"><div class="exec-n">${n}</div><div class="exec-name">${nm}</div><div class="exec-detail">${d}</div><div class="exec-ms" id="ems-${i}"></div></div>`).join("");}
@@ -1900,7 +1947,7 @@ setInterval(()=>{const d=new Date();document.getElementById("utcClock").textCont
 
 // ===== BOOT =====
 (async function(){
-  buildWL();buildExec();buildSymTabs();initChart();connectTickerWS();updateSwarmText();
+  buildWL();buildExec();buildSymTabs();buildMidNav("analysis");initChart();connectTickerWS();updateSwarmText();
   document.getElementById("tabbarSym").style.display="none";
   await Promise.allSettled(SYMBOLS.map(async o=>{try{const c=await loadHistory(o.s,TF);store[o.s]=store[o.s]||{candles:[],pa:null,ticker:{}};store[o.s].candles=c;store[o.s].pa=runPA(c);updateWLRow(o.s);}catch(e){}}));
   updateSummary();
