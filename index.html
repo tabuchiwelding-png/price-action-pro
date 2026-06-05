@@ -82,6 +82,9 @@ body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospac
 @keyframes livePulse{0%,100%{opacity:.55;box-shadow:0 0 5px var(--bull);}50%{opacity:1;box-shadow:0 0 12px var(--bull),0 0 4px var(--bull);}}
 @keyframes liveRing{0%{transform:scale(.7);opacity:.7;}80%,100%{transform:scale(2.2);opacity:0;}}
 @media (prefers-reduced-motion:reduce){.live-pulse,.live-pulse::after{animation:none;}.live-pulse{opacity:.9;}}
+/* 自動決済の通知トースト */
+#trToast{position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-120%);z-index:10001;background:linear-gradient(180deg,rgba(8,11,16,.97),var(--panel));border:1px solid var(--border2);border-top:none;padding:11px 20px;font-size:11px;font-weight:700;letter-spacing:.03em;border-radius:0 0 8px 8px;box-shadow:0 6px 24px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.2,.9,.3,1.2);white-space:nowrap;font-family:'JetBrains Mono',monospace;text-shadow:0 0 8px currentColor;}
+#trToast.show{transform:translateX(-50%) translateY(0);}
 /* 起動ブートシーケンス */
 #bootSeq{position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:bootFade .6s ease 2.1s forwards;}
 #bootSeq .boot-inner{font-family:'JetBrains Mono',monospace;text-align:left;}
@@ -197,6 +200,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .tr-hist-side{font-weight:800;width:38px;flex-shrink:0;}
 .tr-hist-sym{color:var(--txt-mid);flex:1;}
 .tr-hist-pnl{font-weight:700;}
+.tr-hist-tag{font-size:7px;border:1px solid;padding:0 3px;border-radius:2px;margin-left:3px;letter-spacing:.05em;vertical-align:1px;}
 /* 成績パネル */
 .tr-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
 .tr-stat{background:var(--panel2);padding:10px 12px;}
@@ -1695,17 +1699,54 @@ function trOpen(side){
   trCostMsg(`${side==="long"?"買い":"売り"}建て ${qty} @ ¥${fmt(px)} 約定${sl?` · SL ¥${fmt(Math.round(sl))}`:""}${tp?` · TP ¥${fmt(Math.round(tp))}`:""}`);
 }
 // 決済
+// 共通の決済処理(手動・自動どちらも使用)。pnlを返す
+function trSettle(p,exitPx,reason){
+  const pnl=trPosPnl(p,exitPx)||0;
+  trState.cash+=p.entry*p.qty+pnl; // 証拠金を戻し、損益を反映
+  trState.history.unshift({sym:p.sym,side:p.side,qty:p.qty,entry:p.entry,exit:exitPx,pnl,closed:Date.now(),reason});
+  if(trState.history.length>50)trState.history.pop();
+  return pnl;
+}
 function trClose(id){
   const i=trState.positions.findIndex(p=>p.id===id);if(i<0)return;
   const p=trState.positions[i];const px=trPrice(p.sym);
   if(px==null){trCostMsg("価格取得待ち。");return;}
-  const pnl=trPosPnl(p,px)||0;
-  trState.cash+=p.entry*p.qty+pnl; // 証拠金を戻し、損益を反映
-  trState.history.unshift({sym:p.sym,side:p.side,qty:p.qty,entry:p.entry,exit:px,pnl,closed:Date.now()});
-  if(trState.history.length>50)trState.history.pop();
+  const pnl=trSettle(p,px,"manual");
   trState.positions.splice(i,1);
   trSave();renderTrade();sfx("select");
   trCostMsg(`決済 ${pnl>=0?"+":""}¥${fmt(Math.round(pnl))}`);
+}
+// SL/TP 自動決済の監視(全ページで常時動作。価格がSL/TPに達したら執行)
+function trCheckSLTP(){
+  if(!trState.positions.length)return;let changed=false;
+  for(let i=trState.positions.length-1;i>=0;i--){
+    const p=trState.positions[i];const px=trPrice(p.sym);if(px==null)continue;
+    let hit=null,exitPx=null;
+    if(p.side==="long"){
+      if(p.sl!=null&&px<=p.sl){hit="sl";exitPx=p.sl;}
+      else if(p.tp!=null&&px>=p.tp){hit="tp";exitPx=p.tp;}
+    }else{
+      if(p.sl!=null&&px>=p.sl){hit="sl";exitPx=p.sl;}
+      else if(p.tp!=null&&px<=p.tp){hit="tp";exitPx=p.tp;}
+    }
+    if(hit){
+      const pnl=trSettle(p,exitPx,hit);
+      trState.positions.splice(i,1);changed=true;
+      if(hit==="tp"){sfx("signal-bull");showTrToast(`✅ TP 利確  ${fmtSym(p.sym)}  +¥${fmt(Math.round(pnl))}`,"var(--bull)");}
+      else{sfx("signal-bear");showTrToast(`● SL 損切り  ${fmtSym(p.sym)}  ${pnl>=0?"+":""}¥${fmt(Math.round(pnl))}`,"var(--bear)");}
+    }
+  }
+  if(changed){trSave();const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();}
+}
+// 自動決済の通知トースト(別タブ閲覧中でも気づけるように)
+let trToastTimer=null;
+function showTrToast(text,color){
+  let el=document.getElementById("trToast");
+  if(!el){el=document.createElement("div");el.id="trToast";document.body.appendChild(el);}
+  el.textContent=text;el.style.borderColor=color;el.style.color=color;
+  el.classList.add("show");
+  if(trToastTimer)clearTimeout(trToastTimer);
+  trToastTimer=setTimeout(()=>el.classList.remove("show"),4500);
 }
 function trCostMsg(m){const el=document.getElementById("trCost");if(el)el.textContent=m;}
 function trReset(){
@@ -1757,7 +1798,8 @@ function renderTrade(){
     if(!trState.history.length){hist.innerHTML=`<div class="tr-empty jp">約定履歴なし。</div>`;}
     else{hist.innerHTML=trState.history.map(h=>{
       const sc=h.side==="long"?"var(--bull)":"var(--bear)";
-      return `<div class="tr-hist"><span class="tr-hist-side" style="color:${sc}">${h.side==="long"?"L":"S"}</span><span class="tr-hist-sym">${fmtSym(h.sym)} ${h.qty} · ¥${fmt(h.entry)}→¥${fmt(h.exit)}</span><span class="tr-hist-pnl" style="color:${h.pnl>=0?'var(--bull)':'var(--bear)'}">${h.pnl>=0?'+':''}¥${fmt(Math.round(h.pnl))}</span></div>`;}).join("");
+      const rtag=h.reason==="tp"?`<span class="tr-hist-tag" style="color:var(--bull);border-color:var(--bull)">TP</span>`:h.reason==="sl"?`<span class="tr-hist-tag" style="color:var(--bear);border-color:var(--bear)">SL</span>`:h.reason==="manual"?`<span class="tr-hist-tag" style="color:var(--txt-dim);border-color:var(--border2)">手動</span>`:"";
+      return `<div class="tr-hist"><span class="tr-hist-side" style="color:${sc}">${h.side==="long"?"L":"S"}</span><span class="tr-hist-sym">${fmtSym(h.sym)} ${h.qty} · ¥${fmt(h.entry)}→¥${fmt(h.exit)} ${rtag}</span><span class="tr-hist-pnl" style="color:${h.pnl>=0?'var(--bull)':'var(--bear)'}">${h.pnl>=0?'+':''}¥${fmt(Math.round(h.pnl))}</span></div>`;}).join("");
     }
   }
   renderTradeStats();
@@ -1835,7 +1877,7 @@ document.getElementById("trQty").addEventListener("input",trUpdateCost);
 document.getElementById("trSL").addEventListener("input",trUpdateCost);
 document.getElementById("trTP").addEventListener("input",trUpdateCost);
 // TRADEセクション表示中は1秒ごとに含み損益を更新
-setInterval(()=>{const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();},1000);
+setInterval(()=>{trCheckSLTP();const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();},1000);
 
 function buildExec(){document.getElementById("execBar").innerHTML=ES.map(([n,nm,d],i)=>`<div class="exec-step" id="ex-${i}"><div class="exec-n">${n}</div><div class="exec-name">${nm}</div><div class="exec-detail">${d}</div><div class="exec-ms" id="ems-${i}"></div></div>`).join("");}
 function pulseExec(){cycleNum++;document.getElementById("cycleCount").textContent="#"+cycleNum;sfx("cycle");ES.forEach((_,i)=>setTimeout(()=>{const e=document.getElementById("ex-"+i);if(!e)return;e.classList.add("active");document.getElementById("ems-"+i).textContent=(Math.random()*180+40).toFixed(0)+"ms";setTimeout(()=>e.classList.remove("active"),400);},i*100));}
