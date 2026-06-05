@@ -85,6 +85,15 @@ body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospac
 /* 自動決済の通知トースト */
 #trToast{position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-120%);z-index:10001;background:linear-gradient(180deg,rgba(8,11,16,.97),var(--panel));border:1px solid var(--border2);border-top:none;padding:11px 20px;font-size:11px;font-weight:700;letter-spacing:.03em;border-radius:0 0 8px 8px;box-shadow:0 6px 24px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.2,.9,.3,1.2);white-space:nowrap;font-family:'JetBrains Mono',monospace;text-shadow:0 0 8px currentColor;}
 #trToast.show{transform:translateX(-50%) translateY(0);}
+/* チャート上の建玉マーカー(点・線ではない) */
+#chart{position:relative;}
+#chartMarkers{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5;}
+.cm-marker{position:absolute;right:4px;transform:translateY(-50%);display:flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;white-space:nowrap;}
+.cm-lbl{padding:1px 5px;border-radius:3px;background:rgba(5,8,12,.82);border:1px solid;letter-spacing:.03em;}
+.cm-dot{width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;border:1.5px solid;background:rgba(5,8,12,.65);flex-shrink:0;box-shadow:0 0 7px currentColor;}
+.cm-in .cm-lbl,.cm-in .cm-dot{color:var(--cyan);border-color:var(--cyan);}
+.cm-sl .cm-lbl,.cm-sl .cm-dot{color:var(--bear);border-color:var(--bear);}
+.cm-tp .cm-lbl,.cm-tp .cm-dot{color:var(--bull);border-color:var(--bull);}
 /* 起動ブートシーケンス */
 #bootSeq{position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:bootFade .6s ease 2.1s forwards;}
 #bootSeq .boot-inner{font-family:'JetBrains Mono',monospace;text-align:left;}
@@ -945,7 +954,7 @@ let lastClosed=0;
 function onLiveBar(symbol,bar,closed){
   const st=store[symbol];if(!st)return;const a=st.candles;
   if(a.length&&a[a.length-1].time===bar.time)a[a.length-1]=bar;else{a.push(bar);if(a.length>300)a.shift();}
-  if(symbol===activeSymbol&&candleSeries){candleSeries.update(bar);volSeries.update({time:bar.time,value:bar.volume,color:bar.close>=bar.open?"rgba(46,230,166,.4)":"rgba(255,77,109,.4)"});}
+  if(symbol===activeSymbol&&candleSeries){candleSeries.update(bar);volSeries.update({time:bar.time,value:bar.volume,color:bar.close>=bar.open?"rgba(46,230,166,.4)":"rgba(255,77,109,.4)"});renderChartMarkers();}
   st.pa=runPA(a);st.aiHist=st.aiHist||[];
   if(symbol===activeSymbol){
     renderAlwaysIn(st.pa);renderBreakdown(st.pa);renderSignals(st.pa);renderGauge(st.pa);renderInd(st.pa);updateChartHead();renderNarrative(st.pa);renderTradeJudge(st.pa);renderFund(symbol);
@@ -962,7 +971,30 @@ function initChart(){
   chart.priceScale("vol").applyOptions({scaleMargins:{top:.74,bottom:0}});
   ema20Series=chart.addLineSeries({color:"#22d3bf",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
   ema50Series=chart.addLineSeries({color:"#8c7dff",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
-  new ResizeObserver(()=>chart.applyOptions({width:el.clientWidth,height:el.clientHeight})).observe(el);
+  new ResizeObserver(()=>{chart.applyOptions({width:el.clientWidth,height:el.clientHeight});renderChartMarkers();}).observe(el);
+  // 建玉マーカー用オーバーレイ
+  const mk=document.createElement("div");mk.id="chartMarkers";el.appendChild(mk);
+  chart.timeScale().subscribeVisibleLogicalRangeChange(renderChartMarkers);
+}
+// チャート上に建玉のエントリー/SL/TPを点で表示(価格→画面位置を計算)
+function renderChartMarkers(){
+  if(!chart||!candleSeries)return;
+  const ov=document.getElementById("chartMarkers");if(!ov)return;
+  const h=document.getElementById("chart").clientHeight||0;
+  const ps=trState.positions.filter(p=>p.sym===activeSymbol);
+  if(!ps.length){ov.innerHTML="";return;}
+  const items=[];
+  ps.forEach(p=>{
+    items.push({price:p.entry,cls:"cm-in",glyph:"●",lbl:"IN"});
+    if(p.sl)items.push({price:p.sl,cls:"cm-sl",glyph:"✕",lbl:"SL"});
+    if(p.tp)items.push({price:p.tp,cls:"cm-tp",glyph:"✓",lbl:"TP"});
+  });
+  ov.innerHTML=items.map(it=>{
+    let y=candleSeries.priceToCoordinate(it.price);
+    if(y==null)return "";
+    y=Math.max(8,Math.min(h-32,y)); // 時間軸の上に収める
+    return `<div class="cm-marker ${it.cls}" style="top:${y}px"><span class="cm-lbl">${it.lbl} ¥${fmt(Math.round(it.price))}</span><span class="cm-dot">${it.glyph}</span></div>`;
+  }).join("");
 }
 function emaArr(c,p){const k=2/(p+1);const o=[];let v=c[0].close;c.forEach((x,i)=>{v=i===0?x.close:x.close*k+v*(1-k);o.push({time:x.time,value:+v.toFixed(2)});});return o;}
 async function loadChart(symbol,tf){
@@ -973,6 +1005,7 @@ async function loadChart(symbol,tf){
     candleSeries.setData(c);volSeries.setData(c.map(x=>({time:x.time,value:x.volume,color:x.close>=x.open?"rgba(46,230,166,.4)":"rgba(255,77,109,.4)"})));
     if(c.length>=20)ema20Series.setData(emaArr(c,20).slice(19));
     if(c.length>=50)ema50Series.setData(emaArr(c,50).slice(49));
+    renderChartMarkers();
     chart.timeScale().fitContent();
     const pa=runPA(c);store[symbol].pa=pa;
     store[symbol].aiHist=[];for(let i=Math.max(25,c.length-40);i<c.length;i++){store[symbol].aiHist.push(alwaysIn(c.slice(0,i+1)).val);}
@@ -1695,7 +1728,7 @@ function trOpen(side){
   if(tpPct>0)tp=side==="long"?px*(1+tpPct/100):px*(1-tpPct/100);
   trState.cash-=cost;
   trState.positions.push({id:Date.now()+""+Math.floor(Math.random()*1000),sym,side,qty,entry:px,opened:Date.now(),sl,tp});
-  trSave();renderTrade();sfx(side==="long"?"signal-bull":"signal-bear");
+  trSave();renderTrade();renderChartMarkers();sfx(side==="long"?"signal-bull":"signal-bear");
   trCostMsg(`${side==="long"?"買い":"売り"}建て ${qty} @ ¥${fmt(px)} 約定${sl?` · SL ¥${fmt(Math.round(sl))}`:""}${tp?` · TP ¥${fmt(Math.round(tp))}`:""}`);
 }
 // 決済
@@ -1713,7 +1746,7 @@ function trClose(id){
   if(px==null){trCostMsg("価格取得待ち。");return;}
   const pnl=trSettle(p,px,"manual");
   trState.positions.splice(i,1);
-  trSave();renderTrade();sfx("select");
+  trSave();renderTrade();renderChartMarkers();sfx("select");
   trCostMsg(`決済 ${pnl>=0?"+":""}¥${fmt(Math.round(pnl))}`);
 }
 // SL/TP 自動決済の監視(全ページで常時動作。価格がSL/TPに達したら執行)
@@ -1736,7 +1769,7 @@ function trCheckSLTP(){
       else{sfx("signal-bear");showTrToast(`● SL 損切り  ${fmtSym(p.sym)}  ${pnl>=0?"+":""}¥${fmt(Math.round(pnl))}`,"var(--bear)");}
     }
   }
-  if(changed){trSave();const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();}
+  if(changed){trSave();renderChartMarkers();const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();}
 }
 // 自動決済の通知トースト(別タブ閲覧中でも気づけるように)
 let trToastTimer=null;
