@@ -111,7 +111,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .topbar{flex-shrink:0;border-bottom:1px solid var(--border2);background:linear-gradient(180deg,var(--panel),var(--bg));display:flex;align-items:center;gap:12px;padding:7px 14px;flex-wrap:wrap;position:relative;}
 .topbar::after{content:'';position:absolute;left:0;bottom:-1px;width:60px;height:1px;background:var(--gold);box-shadow:0 0 8px var(--gold);}
 .brand-mark{width:24px;height:24px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:800;font-size:13px;box-shadow:0 0 10px rgba(34,211,191,.2) inset,0 0 12px rgba(34,211,191,.35);text-shadow:0 0 8px var(--gold);clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%);}
-.brand-name{font-size:12px;font-weight:800;color:var(--txt-br);letter-spacing:.16em;text-shadow:0 0 10px rgba(120,200,255,.3);}
+.brand-name{font-size:12px;font-weight:800;color:var(--txt-br);letter-spacing:.16em;text-shadow:0 0 10px rgba(120,200,255,.3);animation:brandGlitch 9s steps(1) infinite;}
+@keyframes brandGlitch{0%,95.5%,100%{text-shadow:0 0 10px rgba(120,200,255,.3);transform:translateX(0);}96%{text-shadow:-1.5px 0 var(--bear),1.5px 0 var(--cyan),0 0 10px rgba(120,200,255,.3);transform:translateX(1px);}96.6%{text-shadow:1.5px 0 var(--bear),-1.5px 0 var(--cyan);transform:translateX(-1px);}97.2%{text-shadow:0 0 10px rgba(120,200,255,.3);transform:translateX(0);}}
+@media (prefers-reduced-motion:reduce){.brand-name{animation:none;}}
 .brand-sub{font-size:8px;color:var(--txt-dim);letter-spacing:.18em;}
 .chip{display:flex;flex-direction:column;gap:1px;}
 .chip-label{font-size:8px;color:var(--txt-dim);letter-spacing:.12em;}
