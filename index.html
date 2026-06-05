@@ -87,10 +87,12 @@ body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospac
 #trToast.show{transform:translateX(-50%) translateY(0);}
 /* チャート上の建玉マーカー(点・線ではない) */
 #chart{position:relative;}
-#chartMarkers{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:100;}
-.cm-marker{position:absolute;right:4px;transform:translateY(-50%);display:flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;white-space:nowrap;}
-.cm-lbl{padding:1px 5px;border-radius:3px;background:rgba(5,8,12,.82);border:1px solid;letter-spacing:.03em;}
-.cm-dot{width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;border:1.5px solid;background:rgba(5,8,12,.65);flex-shrink:0;box-shadow:0 0 7px currentColor;}
+#chartMarkers{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:100;font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;}
+.cm-marker{position:absolute;transform:translate(-50%,-50%);}
+.cm-lbl{position:absolute;top:50%;transform:translateY(-50%);white-space:nowrap;padding:1px 5px;border-radius:3px;background:rgba(5,8,12,.85);border:1px solid;letter-spacing:.03em;}
+.cm-lbl.r{left:13px;}
+.cm-lbl.l{right:13px;}
+.cm-dot{width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;border:1.5px solid;background:rgba(5,8,12,.72);box-shadow:0 0 8px currentColor;}
 .cm-in .cm-lbl,.cm-in .cm-dot{color:var(--cyan);border-color:var(--cyan);}
 .cm-sl .cm-lbl,.cm-sl .cm-dot{color:var(--bear);border-color:var(--bear);}
 .cm-tp .cm-lbl,.cm-tp .cm-dot{color:var(--bull);border-color:var(--bull);}
@@ -977,33 +979,41 @@ function initChart(){
   chart.timeScale().subscribeVisibleLogicalRangeChange(renderChartMarkers);
 }
 // チャート上に建玉のエントリー/SL/TPを点で表示(価格→画面位置を計算)
-function renderChartMarkers(){
+function drawChartMarkers(){
   if(!chart||!candleSeries)return;
   let ov=document.getElementById("chartMarkers");
   if(!ov){const host=document.getElementById("chart");if(!host)return;ov=document.createElement("div");ov.id="chartMarkers";host.appendChild(ov);}
-  const h=document.getElementById("chart").clientHeight||0;
-  const ps=trState.positions.filter(p=>p.sym===activeSymbol);
-  if(!ps.length){ov.innerHTML="";return;}
-  const items=[];
-  ps.forEach(p=>{
-    items.push({price:p.entry,cls:"cm-in",glyph:"●",lbl:"IN"});
-    if(p.sl)items.push({price:p.sl,cls:"cm-sl",glyph:"✕",lbl:"SL"});
-    if(p.tp)items.push({price:p.tp,cls:"cm-tp",glyph:"✓",lbl:"TP"});
-  });
+  const host=document.getElementById("chart");const h=host.clientHeight||0,w=host.clientWidth||0;
   const cndl=store[activeSymbol]&&store[activeSymbol].candles;
-  const lastClose=(cndl&&cndl.length)?cndl[cndl.length-1].close:null;
-  ov.innerHTML=items.map(it=>{
-    let y=candleSeries.priceToCoordinate(it.price);
-    if(y==null){
-      // 画面外: 現在値より上なら上端、下なら下端に留めて見せる
-      if(lastClose==null||h<=0)return "";
-      y=it.price>lastClose?8:h-32;
-    }else{
-      y=Math.max(8,Math.min(h-32,y)); // 時間軸の上に収める
-    }
-    return `<div class="cm-marker ${it.cls}" style="top:${y}px"><span class="cm-lbl">${it.lbl} ¥${fmt(Math.round(it.price))}</span><span class="cm-dot">${it.glyph}</span></div>`;
-  }).join("");
+  const ps=(cndl&&cndl.length)?trState.positions.filter(p=>p.sym===activeSymbol):[];
+  if(!ps.length){if(ov.innerHTML)ov.innerHTML="";return;}
+  const ts=chart.timeScale();const lastClose=cndl[cndl.length-1].close;const firstT=cndl[0].time;
+  let vr=null;try{vr=ts.getVisibleRange();}catch(e){}
+  // エントリー時刻を直近のバーにスナップ → そのバーのx座標(画面外は左右端にクランプ)
+  function barX(openedMs){
+    const sec=Math.floor(openedMs/1000);let bt=firstT;
+    for(let i=cndl.length-1;i>=0;i--){if(cndl[i].time<=sec){bt=cndl[i].time;break;}}
+    let x=ts.timeToCoordinate(bt);
+    if(x==null){x=(vr&&bt<vr.from)?3:w-3;}
+    return x;
+  }
+  // 価格 → y座標(画面外は上下端にクランプ)
+  function yOf(price){let y=candleSeries.priceToCoordinate(price);if(y==null){y=price>lastClose?8:h-32;}else{y=Math.max(8,Math.min(h-32,y));}return y;}
+  const html=[];
+  ps.forEach(p=>{
+    const x=barX(p.opened);const side=(x>w-110)?"l":"r";
+    const pts=[{price:p.entry,cls:"cm-in",glyph:"●",lbl:"IN"}];
+    if(p.sl)pts.push({price:p.sl,cls:"cm-sl",glyph:"✕",lbl:"SL"});
+    if(p.tp)pts.push({price:p.tp,cls:"cm-tp",glyph:"✓",lbl:"TP"});
+    pts.forEach(it=>{const y=yOf(it.price);html.push(`<div class="cm-marker ${it.cls}" style="left:${x}px;top:${y}px"><span class="cm-dot">${it.glyph}</span><span class="cm-lbl ${side}">${it.lbl} ¥${fmt(Math.round(it.price))}</span></div>`);});
+  });
+  ov.innerHTML=html.join("");
 }
+// CHARTページ表示中かつ建玉ありの間は毎フレーム再配置(パン・ズームでズレないように)。離れたら停止
+let markerLoopId=null;
+function markerActive(){const pg=document.getElementById("pgChart");return pg&&pg.classList.contains("on")&&chart&&candleSeries&&trState.positions.some(p=>p.sym===activeSymbol);}
+function markerLoop(){drawChartMarkers();markerLoopId=markerActive()?requestAnimationFrame(markerLoop):null;}
+function renderChartMarkers(){drawChartMarkers();if(markerLoopId==null&&markerActive())markerLoopId=requestAnimationFrame(markerLoop);}
 function emaArr(c,p){const k=2/(p+1);const o=[];let v=c[0].close;c.forEach((x,i)=>{v=i===0?x.close:x.close*k+v*(1-k);o.push({time:x.time,value:+v.toFixed(2)});});return o;}
 async function loadChart(symbol,tf){
   setConn("LOADING…",false);document.getElementById("tjSym").textContent=fmtSym(symbol);
@@ -1932,7 +1942,7 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   document.getElementById("tabbarSym").style.display=(pg==="Scan")?"none":"flex";
   buildMidNav(pg);
   buildSymTabs();
-  if(pg==="Chart"&&chart)setTimeout(()=>chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300}),50);
+  if(pg==="Chart"&&chart)setTimeout(()=>{chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300});renderChartMarkers();},50);
   if(pg==="Flow")connectFlowWS(activeSymbol);else disconnectFlowWS();
   if(pg==="Ana"){
     const st=store[activeSymbol];if(st?.candles?.length){renderTradeJudge(st.pa);renderFund(activeSymbol);}
