@@ -76,10 +76,12 @@ body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospac
 #fxScan{position:fixed;inset:0;pointer-events:none;z-index:9990;background:repeating-linear-gradient(0deg,rgba(0,0,0,.055),rgba(0,0,0,.055) 1px,transparent 1px,transparent 3px);}
 /* ビネット: 四隅をわずかに落としてブラウン管の丸み */
 #fxVignette{position:fixed;inset:0;pointer-events:none;z-index:9989;background:radial-gradient(ellipse 120% 120% at center,transparent 58%,rgba(0,0,0,.38) 100%);}
-/* 走査ビーム(段階3): 上から下へゆっくり走る光。CRTのリフレッシュ感。極薄 */
-#fxBeam{position:fixed;left:0;right:0;height:140px;top:-140px;pointer-events:none;z-index:9991;background:linear-gradient(to bottom,transparent 0%,rgba(52,230,224,.035) 70%,rgba(52,230,224,.085) 100%);box-shadow:0 1px 0 rgba(52,230,224,.14);animation:beamFall 7.5s linear infinite;will-change:top;}
-@keyframes beamFall{0%{top:-140px;}100%{top:100%;}}
-@media (prefers-reduced-motion:reduce){#fxBeam{display:none;}}
+/* 通電インジケータ: 心拍のように呼吸するドット(走査ビームの代替) */
+.live-pulse{position:relative;width:7px;height:7px;border-radius:50%;background:var(--bull);box-shadow:0 0 8px var(--bull);animation:livePulse 2.4s ease-in-out infinite;}
+.live-pulse::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1px solid var(--bull);opacity:0;animation:liveRing 2.4s ease-out infinite;}
+@keyframes livePulse{0%,100%{opacity:.55;box-shadow:0 0 5px var(--bull);}50%{opacity:1;box-shadow:0 0 12px var(--bull),0 0 4px var(--bull);}}
+@keyframes liveRing{0%{transform:scale(.7);opacity:.7;}80%,100%{transform:scale(2.2);opacity:0;}}
+@media (prefers-reduced-motion:reduce){.live-pulse,.live-pulse::after{animation:none;}.live-pulse{opacity:.9;}}
 /* 起動ブートシーケンス */
 #bootSeq{position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:bootFade .6s ease 2.1s forwards;}
 #bootSeq .boot-inner{font-family:'JetBrains Mono',monospace;text-align:left;}
@@ -442,7 +444,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 <!-- サイバー世界観: 全画面テクスチャ(グリッド/走査線/ビネット)・操作は透過 -->
 <div id="fxGrid"></div>
 <div id="fxScan"></div>
-<div id="fxBeam"></div>
 <div id="fxVignette"></div>
 <div id="app">
 
@@ -456,7 +457,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
       <span style="font-size:9px;color:var(--txt-dim)" id="utcClock">—</span>
       <div id="audioBtn" style="cursor:pointer;user-select:none;display:flex;flex-direction:column;align-items:center;gap:1px;opacity:0.6;" title="サウンド ON/OFF"><span style="font-size:19px;line-height:1">🔇</span><span style="font-size:7px;letter-spacing:.05em;color:var(--txt-dim)">スピーカー</span></div>
       <div id="settingsBtn" style="cursor:pointer;user-select:none;display:flex;flex-direction:column;align-items:center;gap:1px;opacity:0.7;" title="設定"><span style="font-size:19px;line-height:1">⚙</span><span style="font-size:7px;letter-spacing:.05em;color:var(--txt-dim)">設定</span></div>
-      <div style="width:6px;height:6px;border-radius:50%;background:var(--bull);box-shadow:0 0 6px var(--bull);animation:pulse 2s infinite"></div>
+      <div class="live-pulse" title="通電中 LIVE"></div>
     </div>
   </div>
 
