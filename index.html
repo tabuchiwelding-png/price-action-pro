@@ -87,12 +87,11 @@ body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospac
 #trToast.show{transform:translateX(-50%) translateY(0);}
 /* チャート上の建玉マーカー(点・線ではない) */
 #chart{position:relative;}
-#chartMarkers{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:100;font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;}
+#chartMarkers{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:100;}
 .cm-marker{position:absolute;transform:translate(-50%,-50%);}
-.cm-lbl{position:absolute;top:50%;transform:translateY(-50%);white-space:nowrap;padding:1px 5px;border-radius:3px;background:rgba(5,8,12,.85);border:1px solid;letter-spacing:.03em;}
-.cm-lbl.r{left:13px;}
-.cm-lbl.l{right:13px;}
 .cm-dot{width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;border:1.5px solid;background:rgba(5,8,12,.72);box-shadow:0 0 8px currentColor;}
+.cm-exit{font-size:15px;line-height:1;filter:drop-shadow(0 0 3px rgba(0,0,0,.9));}
+.cm-done .cm-dot{opacity:.55;width:12px;height:12px;font-size:7px;}
 .cm-in .cm-lbl,.cm-in .cm-dot{color:var(--cyan);border-color:var(--cyan);}
 .cm-sl .cm-lbl,.cm-sl .cm-dot{color:var(--bear);border-color:var(--bear);}
 .cm-tp .cm-lbl,.cm-tp .cm-dot{color:var(--bull);border-color:var(--bull);}
@@ -982,31 +981,34 @@ function initChart(){
 function drawChartMarkers(){
   if(!chart||!candleSeries)return;
   let ov=document.getElementById("chartMarkers");
-  if(!ov){const host=document.getElementById("chart");if(!host)return;ov=document.createElement("div");ov.id="chartMarkers";host.appendChild(ov);}
+  if(!ov){const host0=document.getElementById("chart");if(!host0)return;ov=document.createElement("div");ov.id="chartMarkers";host0.appendChild(ov);}
   const host=document.getElementById("chart");const h=host.clientHeight||0,w=host.clientWidth||0;
   const cndl=store[activeSymbol]&&store[activeSymbol].candles;
-  const ps=(cndl&&cndl.length)?trState.positions.filter(p=>p.sym===activeSymbol):[];
-  if(!ps.length){if(ov.innerHTML)ov.innerHTML="";return;}
+  if(!cndl||!cndl.length){if(ov.innerHTML)ov.innerHTML="";return;}
   const ts=chart.timeScale();const lastClose=cndl[cndl.length-1].close;const firstT=cndl[0].time;
   let vr=null;try{vr=ts.getVisibleRange();}catch(e){}
-  // エントリー時刻を直近のバーにスナップ → そのバーのx座標(画面外は左右端にクランプ)
-  function barX(openedMs){
-    const sec=Math.floor(openedMs/1000);let bt=firstT;
-    for(let i=cndl.length-1;i>=0;i--){if(cndl[i].time<=sec){bt=cndl[i].time;break;}}
-    let x=ts.timeToCoordinate(bt);
-    if(x==null){x=(vr&&bt<vr.from)?3:w-3;}
-    return x;
-  }
-  // 価格 → y座標(画面外は上下端にクランプ)
+  // エントリー/決済の時刻を直近バーにスナップ → x座標(画面外は左右端へ)
+  function barX(ms){const sec=Math.floor(ms/1000);let bt=firstT;for(let i=cndl.length-1;i>=0;i--){if(cndl[i].time<=sec){bt=cndl[i].time;break;}}let x=ts.timeToCoordinate(bt);if(x==null){x=(vr&&bt<vr.from)?3:w-3;}return x;}
+  // 価格 → y座標(画面外は上下端へ)
   function yOf(price){let y=candleSeries.priceToCoordinate(price);if(y==null){y=price>lastClose?8:h-32;}else{y=Math.max(8,Math.min(h-32,y));}return y;}
+  const dot=(cls,x,y,g)=>`<div class="cm-marker ${cls}" style="left:${x}px;top:${y}px"><span class="cm-dot">${g}</span></div>`;
+  const exit=(x,y,g)=>`<div class="cm-marker cm-exit" style="left:${x}px;top:${y}px">${g}</div>`;
   const html=[];
-  ps.forEach(p=>{
-    const x=barX(p.opened);const side=(x>w-110)?"l":"r";
-    const pts=[{price:p.entry,cls:"cm-in",glyph:"●",lbl:"IN"}];
-    if(p.sl)pts.push({price:p.sl,cls:"cm-sl",glyph:"✕",lbl:"SL"});
-    if(p.tp)pts.push({price:p.tp,cls:"cm-tp",glyph:"✓",lbl:"TP"});
-    pts.forEach(it=>{const y=yOf(it.price);html.push(`<div class="cm-marker ${it.cls}" style="left:${x}px;top:${y}px"><span class="cm-dot">${it.glyph}</span><span class="cm-lbl ${side}">${it.lbl} ¥${fmt(Math.round(it.price))}</span></div>`);});
+  // 保有中: エントリー● + 予定SL✕ / TP✓(点のみ・ラベルなし)
+  trState.positions.filter(p=>p.sym===activeSymbol).forEach(p=>{
+    const x=barX(p.opened);
+    html.push(dot("cm-in",x,yOf(p.entry),"●"));
+    if(p.sl)html.push(dot("cm-sl",x,yOf(p.sl),"✕"));
+    if(p.tp)html.push(dot("cm-tp",x,yOf(p.tp),"✓"));
   });
+  // 決済済み(直近・読込範囲内): エントリー●はそのまま + 決済地点に 利確✅ / 損切り❌
+  let shown=0;
+  for(const t of trState.history){
+    if(t.sym!==activeSymbol||t.opened==null||t.opened/1000<firstT)continue;
+    html.push(dot("cm-in cm-done",barX(t.opened),yOf(t.entry),"●"));
+    html.push(exit(barX(t.closed),yOf(t.exit),t.pnl>=0?"✅":"❌"));
+    if(++shown>=12)break;
+  }
   ov.innerHTML=html.join("");
 }
 // CHARTページ表示中かつ建玉ありの間は毎フレーム再配置(パン・ズームでズレないように)。離れたら停止
@@ -1754,7 +1756,7 @@ function trOpen(side){
 function trSettle(p,exitPx,reason){
   const pnl=trPosPnl(p,exitPx)||0;
   trState.cash+=p.entry*p.qty+pnl; // 証拠金を戻し、損益を反映
-  trState.history.unshift({sym:p.sym,side:p.side,qty:p.qty,entry:p.entry,exit:exitPx,pnl,closed:Date.now(),reason});
+  trState.history.unshift({sym:p.sym,side:p.side,qty:p.qty,entry:p.entry,exit:exitPx,pnl,closed:Date.now(),opened:p.opened,reason});
   if(trState.history.length>50)trState.history.pop();
   return pnl;
 }
