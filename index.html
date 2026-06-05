@@ -358,6 +358,14 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .theme-opt{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--border2);cursor:pointer;font-size:10px;color:var(--txt-mid);user-select:none;transition:all .2s;border-radius:2px;}
 .theme-opt.on{border-color:var(--gold);color:var(--txt-br);background:rgba(34,211,191,.08);box-shadow:0 0 10px rgba(34,211,191,.15) inset;}
 .theme-sw{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1px solid var(--border2);}
+/* 文字サイズ選択 + 全体拡大 */
+.font-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.font-opt{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 6px;border:1px solid var(--border2);cursor:pointer;font-size:10px;color:var(--txt-mid);user-select:none;transition:all .2s;border-radius:2px;}
+.font-opt .font-eg{color:var(--txt-dim);font-weight:700;line-height:1;}
+.font-opt.on{border-color:var(--cyan);color:var(--txt-br);background:rgba(52,230,224,.08);box-shadow:0 0 10px rgba(52,230,224,.15) inset;}
+.font-opt.on .font-eg{color:var(--cyan);text-shadow:0 0 6px var(--cyan);}
+body.fs-large #app{zoom:1.12;}
+body.fs-xlarge #app{zoom:1.24;}
 .set-group-title{font-size:9px;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
 .set-desc{font-size:8.5px;line-height:1.6;color:var(--txt-dim);margin-bottom:8px;}
 .set-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
@@ -489,6 +497,13 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
         <div class="set-row" style="margin-top:14px;"><span class="set-label jp">シグナル感度</span><span id="setSensVal" style="color:var(--gold);font-size:11px;font-weight:600">80%</span></div>
         <div class="set-desc jp">この強さ以上のシグナルで音声を出します。高いほど厳選(鳴る回数が減る)、低いほど敏感(増える)。</div>
         <input type="range" id="setSens" min="55" max="95" step="5" value="80" class="set-slider">
+        <div class="set-group-title jp" style="margin-top:16px;">文字サイズ</div>
+        <div class="set-desc jp">画面全体の文字と表示を拡大します。小さくて見にくいときに。</div>
+        <div id="fontRow" class="font-row">
+          <div class="font-opt on" data-fs="normal">標準<span class="font-eg" style="font-size:11px">Aa</span></div>
+          <div class="font-opt" data-fs="large">大<span class="font-eg" style="font-size:13px">Aa</span></div>
+          <div class="font-opt" data-fs="xlarge">特大<span class="font-eg" style="font-size:15px">Aa</span></div>
+        </div>
         <div style="height:10px;"></div>
       </div>
     </div>
@@ -1997,12 +2012,29 @@ document.getElementById("themeRow").addEventListener("click",e=>{
   if(typeof renderSwarm==="function"&&document.getElementById("pgSwarm")?.classList.contains("on"))renderSwarm();
 });
 document.getElementById("tfGroup").addEventListener("click",e=>{if(!e.target.dataset.tf)return;TF=e.target.dataset.tf;document.querySelectorAll(".tf-btn").forEach(b=>b.classList.toggle("on",b.dataset.tf===TF));loadChart(activeSymbol,TF);});
+// ===== 文字サイズ(全体拡大)・localStorageで保存 =====
+const FS_KEY="pa_font_size_v1";
+function applyFontSize(fs){
+  document.body.classList.remove("fs-large","fs-xlarge");
+  if(fs==="large")document.body.classList.add("fs-large");
+  else if(fs==="xlarge")document.body.classList.add("fs-xlarge");
+  const row=document.getElementById("fontRow");
+  if(row)row.querySelectorAll(".font-opt").forEach(o=>o.classList.toggle("on",o.dataset.fs===fs));
+  // チャートが開いていれば拡大に合わせて再フィット
+  if(chart&&document.getElementById("pgChart")?.classList.contains("on")){setTimeout(()=>{try{chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300});}catch(e){}},60);}
+}
+document.getElementById("fontRow").addEventListener("click",e=>{
+  const opt=e.target.closest(".font-opt");if(!opt)return;sfx("tab");
+  const fs=opt.dataset.fs;applyFontSize(fs);
+  try{localStorage.setItem(FS_KEY,fs);}catch(e){}
+});
 function setConn(t,live){const e=document.getElementById("connStatus");e.textContent=t;e.style.color=live?"var(--bull)":t.includes("ERROR")?"var(--bear)":"var(--gold)";}
 setInterval(()=>{const d=new Date();document.getElementById("utcClock").textContent=`${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}:${String(d.getUTCSeconds()).padStart(2,"0")} UTC`;},1000);
 
 // ===== BOOT =====
 (async function(){
   buildWL();buildExec();buildSymTabs();buildMidNav("Scan");initChart();connectTickerWS();updateSwarmText();
+  try{const savedFs=localStorage.getItem(FS_KEY);if(savedFs)applyFontSize(savedFs);}catch(e){}
   document.getElementById("tabbarSym").style.display="none";
   await Promise.allSettled(SYMBOLS.map(async o=>{try{const c=await loadHistory(o.s,TF);store[o.s]=store[o.s]||{candles:[],pa:null,ticker:{}};store[o.s].candles=c;store[o.s].pa=runPA(c);updateWLRow(o.s);}catch(e){}}));
   updateSummary();
