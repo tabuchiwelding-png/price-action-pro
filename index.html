@@ -366,6 +366,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .font-opt.on .font-eg{color:var(--cyan);text-shadow:0 0 6px var(--cyan);}
 body.fs-large #app{zoom:1.12;}
 body.fs-xlarge #app{zoom:1.24;}
+/* 設定パネルは拡大を打ち消し、画面内に収めてスクロール可能に保つ */
+body.fs-large .settings-overlay{zoom:0.8929;}
+body.fs-xlarge .settings-overlay{zoom:0.8065;}
 .set-group-title{font-size:9px;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
 .set-desc{font-size:8.5px;line-height:1.6;color:var(--txt-dim);margin-bottom:8px;}
 .set-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
@@ -497,6 +500,13 @@ body.fs-xlarge #app{zoom:1.24;}
         <div class="set-row" style="margin-top:14px;"><span class="set-label jp">シグナル感度</span><span id="setSensVal" style="color:var(--gold);font-size:11px;font-weight:600">80%</span></div>
         <div class="set-desc jp">この強さ以上のシグナルで音声を出します。高いほど厳選(鳴る回数が減る)、低いほど敏感(増える)。</div>
         <input type="range" id="setSens" min="55" max="95" step="5" value="80" class="set-slider">
+        <div class="set-group-title jp" style="margin-top:16px;">BGM音響</div>
+        <div class="set-desc jp">作業中に流す音の空間(合成・著作権フリー)。サウンドがONのとき鳴ります。</div>
+        <div id="bgmRow" class="font-row">
+          <div class="font-opt on" data-bgm="focus">集中<span class="font-eg jp" style="font-size:7px;font-weight:400">標準</span></div>
+          <div class="font-opt" data-bgm="deep">ディープ<span class="font-eg jp" style="font-size:7px;font-weight:400">低く深い</span></div>
+          <div class="font-opt" data-bgm="warm">ウォーム<span class="font-eg jp" style="font-size:7px;font-weight:400">温かい</span></div>
+        </div>
         <div class="set-group-title jp" style="margin-top:16px;">文字サイズ</div>
         <div class="set-desc jp">画面全体の文字と表示を拡大します。小さくて見にくいときに。</div>
         <div id="fontRow" class="font-row">
@@ -1856,63 +1866,80 @@ function sfx(type){
   }
 }
 // アンビエント(宇宙の持続音ドローン + 遠いパルス)
-// 集中音響: ゆっくり移ろう協和音 + 呼吸する強弱 + きらめき + 40Hzうねり(メロディなし)
+// ===== 音響テーマ(合成・ファイル不要・著作権フリー) =====
+let bgmTheme="focus"; // focus / deep / warm
 function startAmbient(){
   if(!AC||ambientNodes||reduceMotion||!bgmOn)return;
-  const t=AC.currentTime;
-  const nodes={osc:[],timers:[]};
-  // --- 全体を通すやわらかいフィルタ(耳に刺さる帯域を削る) ---
-  const tone=AC.createBiquadFilter();tone.type="lowpass";tone.frequency.value=1400;tone.Q.value=0.5;
-  tone.connect(bgmBus);
-  // --- 呼吸する強弱(約11秒周期=深呼吸のテンポ) ---
+  if(bgmTheme==="deep")ambientNodes=buildDeep();
+  else if(bgmTheme==="warm")ambientNodes=buildWarm();
+  else ambientNodes=buildFocus();
+}
+// ホワイトノイズのバッファ(端末の空気・静電気感に使う)
+function makeNoise(){
+  const len=AC.sampleRate*2;const buf=AC.createBuffer(1,len,AC.sampleRate);const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+  const src=AC.createBufferSource();src.buffer=buf;src.loop=true;return src;
+}
+// --- 集中: ゆっくり移ろう協和音 + 呼吸 + きらめき + 40Hzうねり ---
+function buildFocus(){
+  const t=AC.currentTime;const nodes={osc:[],timers:[]};
+  const tone=AC.createBiquadFilter();tone.type="lowpass";tone.frequency.value=1400;tone.Q.value=0.5;tone.connect(bgmBus);
   const breath=AC.createGain();breath.gain.value=0.5;breath.connect(tone);
   const lfo=AC.createOscillator(),lfoG=AC.createGain();lfo.frequency.value=1/11;lfoG.gain.value=0.32;
-  lfo.connect(lfoG);lfoG.connect(breath.gain);lfo.start(t);
-  nodes.osc.push(lfo);
-  // --- 協和音のパッド(ルート+5度+オクターブ+10度=美しい和音) ---
-  // 和音の基音を、数十秒かけてゆっくり移ろわせる(単調さを消す)
-  const chordRoots=[110,98,123.47,87.31]; // A2, G2, B2, F2 — 協和的に移ろう
-  const voices=[1,1.5,2,3.01]; // ルート, 5度, オクターブ, 12度
-  const padGains=[];
+  lfo.connect(lfoG);lfoG.connect(breath.gain);lfo.start(t);nodes.osc.push(lfo);
+  const chordRoots=[110,98,123.47,87.31];const voices=[1,1.5,2,3.01];const padGains=[];
   voices.forEach((mult,i)=>{
-    const o=AC.createOscillator(),g=AC.createGain();
-    o.type=i<2?"sine":"triangle";
-    o.frequency.value=chordRoots[0]*mult;
-    g.gain.value=[0.12,0.08,0.06,0.03][i];
-    // 各声部をわずかにデチューンした2つ目で厚み(コーラス効果)
+    const o=AC.createOscillator(),g=AC.createGain();o.type=i<2?"sine":"triangle";o.frequency.value=chordRoots[0]*mult;g.gain.value=[0.12,0.08,0.06,0.03][i];
     const o2=AC.createOscillator();o2.type=o.type;o2.frequency.value=chordRoots[0]*mult*1.004;
-    o.connect(g);o2.connect(g);g.connect(breath);
-    o.start(t);o2.start(t);
-    nodes.osc.push(o,o2);padGains.push({o,o2,mult});
+    o.connect(g);o2.connect(g);g.connect(breath);o.start(t);o2.start(t);nodes.osc.push(o,o2);padGains.push({o,o2,mult});
   });
-  // 和音をゆっくり切り替える(28秒ごと=飽きない、急変しない)
-  let ci=0;
-  const chordTimer=setInterval(()=>{
-    if(!audioOn||!AC)return;
-    ci=(ci+1)%chordRoots.length;const root=chordRoots[ci];const tt=AC.currentTime;
-    padGains.forEach(p=>{p.o.frequency.linearRampToValueAtTime(root*p.mult,tt+6);p.o2.frequency.linearRampToValueAtTime(root*p.mult*1.004,tt+6);});
-  },28000);
-  nodes.timers.push(chordTimer);
-  // --- 40Hzのごく薄いうねり(集中誘導・左右でわずかに差) ---
-  const b1=AC.createOscillator(),b2=AC.createOscillator(),bg=AC.createGain();
-  b1.type="sine";b1.frequency.value=120;b2.type="sine";b2.frequency.value=160; // 差=40Hz
-  bg.gain.value=0.015;b1.connect(bg);b2.connect(bg);bg.connect(tone);b1.start(t);b2.start(t);
-  nodes.osc.push(b1,b2);
-  // --- きらめき(星の瞬き: たまに高音がふわっと現れて消える) ---
-  const shimmerTimer=setInterval(()=>{
-    if(!audioOn||!AC)return;
-    const tt=AC.currentTime;const o=AC.createOscillator(),g=AC.createGain();
-    o.type="sine";
-    // 和音と協和する高音(ペンタトニックでハズさない)
-    const notes=[523.25,587.33,659.25,783.99,880];const f=notes[Math.floor(Math.random()*notes.length)];
-    o.frequency.value=f;o.connect(g);g.connect(tone);
-    g.gain.setValueAtTime(0.0001,tt);g.gain.linearRampToValueAtTime(0.035,tt+1.5);g.gain.linearRampToValueAtTime(0.0001,tt+4);
-    o.start(tt);o.stop(tt+4.2);
-  },7000+Math.random()*5000);
-  nodes.timers.push(shimmerTimer);
-  ambientNodes=nodes;
+  let ci=0;nodes.timers.push(setInterval(()=>{if(!audioOn||!AC)return;ci=(ci+1)%chordRoots.length;const root=chordRoots[ci];const tt=AC.currentTime;padGains.forEach(p=>{p.o.frequency.linearRampToValueAtTime(root*p.mult,tt+6);p.o2.frequency.linearRampToValueAtTime(root*p.mult*1.004,tt+6);});},28000));
+  const b1=AC.createOscillator(),b2=AC.createOscillator(),bg=AC.createGain();b1.type="sine";b1.frequency.value=120;b2.type="sine";b2.frequency.value=160;bg.gain.value=0.015;b1.connect(bg);b2.connect(bg);bg.connect(tone);b1.start(t);b2.start(t);nodes.osc.push(b1,b2);
+  nodes.timers.push(setInterval(()=>{if(!audioOn||!AC)return;const tt=AC.currentTime;const o=AC.createOscillator(),g=AC.createGain();o.type="sine";const notes=[523.25,587.33,659.25,783.99,880];o.frequency.value=notes[Math.floor(Math.random()*notes.length)];o.connect(g);g.connect(tone);g.gain.setValueAtTime(0.0001,tt);g.gain.linearRampToValueAtTime(0.035,tt+1.5);g.gain.linearRampToValueAtTime(0.0001,tt+4);o.start(tt);o.stop(tt+4.2);},7000+Math.random()*5000));
+  return nodes;
+}
+// --- ディープ集中: 低く暗く広がる。和音を下げ、きらめきを減らし、より静かで深い没入 ---
+function buildDeep(){
+  const t=AC.currentTime;const nodes={osc:[],timers:[]};
+  const tone=AC.createBiquadFilter();tone.type="lowpass";tone.frequency.value=900;tone.Q.value=0.5;tone.connect(bgmBus);
+  // ゆっくりした深い呼吸(16秒周期)
+  const breath=AC.createGain();breath.gain.value=0.5;breath.connect(tone);
+  const lfo=AC.createOscillator(),lfoG=AC.createGain();lfo.frequency.value=1/16;lfoG.gain.value=0.34;lfo.connect(lfoG);lfoG.connect(breath.gain);lfo.start(t);nodes.osc.push(lfo);
+  // 低めの協和音(ルート+5度+オクターブ+12度) 1オクターブ低い
+  const chordRoots=[65.41,55.00,73.42,49.00];const voices=[1,1.5,2,3.01];const padGains=[];
+  voices.forEach((mult,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type=i<2?"sine":"triangle";o.frequency.value=chordRoots[0]*mult;g.gain.value=[0.16,0.10,0.07,0.03][i];const o2=AC.createOscillator();o2.type=o.type;o2.frequency.value=chordRoots[0]*mult*1.004;o.connect(g);o2.connect(g);g.connect(breath);o.start(t);o2.start(t);nodes.osc.push(o,o2);padGains.push({o,o2,mult});});
+  let ci=0;nodes.timers.push(setInterval(()=>{if(!audioOn||!AC)return;ci=(ci+1)%chordRoots.length;const root=chordRoots[ci];const tt=AC.currentTime;padGains.forEach(p=>{p.o.frequency.linearRampToValueAtTime(root*p.mult,tt+8);p.o2.frequency.linearRampToValueAtTime(root*p.mult*1.004,tt+8);});},32000));
+  // 40Hzうねり(集中誘導)
+  const b1=AC.createOscillator(),b2=AC.createOscillator(),bg=AC.createGain();b1.type="sine";b1.frequency.value=100;b2.type="sine";b2.frequency.value=140;bg.gain.value=0.018;b1.connect(bg);b2.connect(bg);bg.connect(tone);b1.start(t);b2.start(t);nodes.osc.push(b1,b2);
+  // ごくまれの低い余韻(深さを添える・きらめきの代わり)
+  nodes.timers.push(setInterval(()=>{if(!audioOn||!AC)return;const tt=AC.currentTime;const notes=[130.81,146.83,164.81,196.00];const o=AC.createOscillator(),g=AC.createGain();o.type="sine";o.frequency.value=notes[Math.floor(Math.random()*notes.length)];o.connect(g);g.connect(tone);g.gain.setValueAtTime(0.0001,tt);g.gain.linearRampToValueAtTime(0.03,tt+2);g.gain.exponentialRampToValueAtTime(0.0001,tt+6);o.start(tt);o.stop(tt+6.2);},13000+Math.random()*7000));
+  return nodes;
+}
+// --- ウォーム集中: 温かく明るい。やや高めの優しい和音と柔らかなきらめき ---
+function buildWarm(){
+  const t=AC.currentTime;const nodes={osc:[],timers:[]};
+  const tone=AC.createBiquadFilter();tone.type="lowpass";tone.frequency.value=1900;tone.Q.value=0.4;tone.connect(bgmBus);
+  // やわらかな温かみ(高域を少し持ち上げる薄いピーク)
+  const warmth=AC.createBiquadFilter();warmth.type="peaking";warmth.frequency.value=900;warmth.gain.value=3;warmth.Q.value=0.7;warmth.connect(tone);
+  const breath=AC.createGain();breath.gain.value=0.5;breath.connect(warmth);
+  const lfo=AC.createOscillator(),lfoG=AC.createGain();lfo.frequency.value=1/10;lfoG.gain.value=0.3;lfo.connect(lfoG);lfoG.connect(breath.gain);lfo.start(t);nodes.osc.push(lfo);
+  // 明るい長調寄りの和音(C-G-Am-F の温かい進行) ルート+3度+5度+オクターブ
+  const chords=[
+    [130.81,164.81,196.00,261.63], // C
+    [98.00,123.47,146.83,196.00],  // G
+    [110.00,130.81,164.81,220.00], // Am
+    [87.31,110.00,130.81,174.61]   // F
+  ];
+  const voiceGain=[0.10,0.07,0.07,0.05];const padGains=[];
+  chords[0].forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type=i<3?"sine":"triangle";o.frequency.value=f;g.gain.value=voiceGain[i];const o2=AC.createOscillator();o2.type=o.type;o2.frequency.value=f*1.004;o.connect(g);o2.connect(g);g.connect(breath);o.start(t);o2.start(t);nodes.osc.push(o,o2);padGains.push({o,o2,i});});
+  let ci=0;nodes.timers.push(setInterval(()=>{if(!audioOn||!AC)return;ci=(ci+1)%chords.length;const ch=chords[ci];const tt=AC.currentTime;padGains.forEach(p=>{p.o.frequency.linearRampToValueAtTime(ch[p.i],tt+5);p.o2.frequency.linearRampToValueAtTime(ch[p.i]*1.004,tt+5);});},24000));
+  // 柔らかなきらめき(集中より少し頻繁・温かい高音)
+  nodes.timers.push(setInterval(()=>{if(!audioOn||!AC)return;const tt=AC.currentTime;const o=AC.createOscillator(),g=AC.createGain();o.type="sine";const notes=[523.25,587.33,659.25,783.99,880.00];o.frequency.value=notes[Math.floor(Math.random()*notes.length)];o.connect(g);g.connect(warmth);g.gain.setValueAtTime(0.0001,tt);g.gain.linearRampToValueAtTime(0.03,tt+1.2);g.gain.linearRampToValueAtTime(0.0001,tt+3.5);o.start(tt);o.stop(tt+3.7);},6000+Math.random()*4000));
+  return nodes;
 }
 function stopAmbient(){if(!ambientNodes)return;try{ambientNodes.osc.forEach(o=>{try{o.stop();}catch(_){}});ambientNodes.timers.forEach(t=>clearInterval(t));}catch(e){}ambientNodes=null;}
+// 音響テーマの切り替え(再生中なら作り直す)
+function setBgmTheme(name){bgmTheme=name;if(audioOn&&bgmOn&&!reduceMotion){stopAmbient();startAmbient();}}
 function toggleAudio(){
   initAudio();if(!AC)return;
   audioOn=!audioOn;
@@ -2027,6 +2054,12 @@ document.getElementById("fontRow").addEventListener("click",e=>{
   const opt=e.target.closest(".font-opt");if(!opt)return;sfx("tab");
   const fs=opt.dataset.fs;applyFontSize(fs);
   try{localStorage.setItem(FS_KEY,fs);}catch(e){}
+});
+// BGM音響テーマの選択
+document.getElementById("bgmRow").addEventListener("click",e=>{
+  const opt=e.target.closest(".font-opt");if(!opt)return;sfx("tab");
+  document.getElementById("bgmRow").querySelectorAll(".font-opt").forEach(o=>o.classList.toggle("on",o===opt));
+  setBgmTheme(opt.dataset.bgm);
 });
 function setConn(t,live){const e=document.getElementById("connStatus");e.textContent=t;e.style.color=live?"var(--bull)":t.includes("ERROR")?"var(--bear)":"var(--gold)";}
 setInterval(()=>{const d=new Date();document.getElementById("utcClock").textContent=`${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}:${String(d.getUTCSeconds()).padStart(2,"0")} UTC`;},1000);
