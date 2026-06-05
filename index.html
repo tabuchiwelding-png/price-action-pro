@@ -162,6 +162,16 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .tr-px{font-size:20px;font-weight:800;color:var(--gold);}
 .tr-qty{width:110px;background:var(--raised);border:1px solid var(--border2);color:var(--txt-br);font-family:'JetBrains Mono';font-size:15px;font-weight:700;padding:6px 10px;text-align:right;border-radius:2px;}
 .tr-qty-quick{display:flex;gap:6px;margin-bottom:12px;justify-content:flex-end;}
+/* SL/TP 入力 */
+.tr-sltp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.tr-sltp-cell{background:var(--raised);border:1px solid var(--border);padding:8px 10px;border-radius:3px;}
+.tr-sltp-lbl{font-size:8px;color:var(--txt-dim);letter-spacing:.06em;margin-bottom:5px;display:flex;align-items:center;gap:4px;}
+.tr-sltp-in{display:flex;align-items:center;gap:3px;}
+.tr-sltp-in input{flex:1;width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--txt-br);font-family:inherit;font-size:14px;font-weight:700;padding:5px 6px;border-radius:2px;text-align:right;outline:none;}
+.tr-sltp-in input:focus{border-color:var(--cyan);}
+.tr-sltp-in span{font-size:10px;color:var(--txt-dim);}
+.tr-sltp-px{font-size:9px;color:var(--txt-mid);margin-top:4px;text-align:right;font-weight:600;}
+.tr-sltp-rr{font-size:9px;color:var(--txt-dim);text-align:center;margin-bottom:10px;min-height:12px;}
 .tr-qty-q{font-size:9px;padding:3px 9px;border:1px solid var(--border2);color:var(--txt-mid);cursor:pointer;border-radius:2px;user-select:none;}
 .tr-qty-q:active{background:var(--raised);}
 .tr-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
@@ -177,6 +187,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .tr-pos-mid{flex:1;min-width:0;}
 .tr-pos-sym{font-size:11px;font-weight:700;color:var(--txt-br);}
 .tr-pos-info{font-size:8.5px;color:var(--txt-dim);margin-top:2px;}
+.tr-pos-sltp{font-size:8px;margin-top:3px;font-weight:600;letter-spacing:.02em;}
 .tr-pos-pnl{text-align:right;flex-shrink:0;}
 .tr-pos-pnl-v{font-size:13px;font-weight:800;}
 .tr-pos-pnl-pct{font-size:9px;margin-top:1px;}
@@ -672,6 +683,19 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
           <div style="text-align:right"><div class="tr-px-lbl jp">数量</div><input type="text" inputmode="decimal" id="trQty" class="tr-qty" value="0.01"></div>
         </div>
         <div class="tr-qty-quick" id="trQtyQuick"></div>
+        <div class="tr-sltp">
+          <div class="tr-sltp-cell">
+            <div class="tr-sltp-lbl jp"><span style="color:var(--bear)">●</span> SL 損切り</div>
+            <div class="tr-sltp-in"><input type="text" inputmode="decimal" id="trSL" placeholder="2.0"><span>%</span></div>
+            <div class="tr-sltp-px jp" id="trSLpx">—</div>
+          </div>
+          <div class="tr-sltp-cell">
+            <div class="tr-sltp-lbl jp"><span style="color:var(--bull)">●</span> TP 利確</div>
+            <div class="tr-sltp-in"><input type="text" inputmode="decimal" id="trTP" placeholder="5.0"><span>%</span></div>
+            <div class="tr-sltp-px jp" id="trTPpx">—</div>
+          </div>
+        </div>
+        <div class="tr-sltp-rr jp" id="trRR"></div>
         <div class="tr-btns">
           <div class="tr-btn buy" id="trBuy">▲ LONG<span class="jp">買い建て</span></div>
           <div class="tr-btn sell" id="trSell">▼ SHORT<span class="jp">売り建て</span></div>
@@ -1659,10 +1683,16 @@ function trOpen(side){
   if(!qty||qty<=0){trCostMsg("数量が不正です。");return;}
   const cost=px*qty;
   if(cost>trState.cash){trCostMsg(`証拠金不足。必要 ¥${fmt(Math.round(cost))} / 残高 ¥${fmt(Math.round(trState.cash))}`);return;}
+  // SL/TP(%入力 → 価格に変換。ロング/ショートで方向が逆)
+  const slPct=parseFloat(document.getElementById("trSL").value);
+  const tpPct=parseFloat(document.getElementById("trTP").value);
+  let sl=null,tp=null;
+  if(slPct>0)sl=side==="long"?px*(1-slPct/100):px*(1+slPct/100);
+  if(tpPct>0)tp=side==="long"?px*(1+tpPct/100):px*(1-tpPct/100);
   trState.cash-=cost;
-  trState.positions.push({id:Date.now()+""+Math.floor(Math.random()*1000),sym,side,qty,entry:px,opened:Date.now()});
+  trState.positions.push({id:Date.now()+""+Math.floor(Math.random()*1000),sym,side,qty,entry:px,opened:Date.now(),sl,tp});
   trSave();renderTrade();sfx(side==="long"?"signal-bull":"signal-bear");
-  trCostMsg(`${side==="long"?"買い":"売り"}建て ${qty} @ ¥${fmt(px)} 約定`);
+  trCostMsg(`${side==="long"?"買い":"売り"}建て ${qty} @ ¥${fmt(px)} 約定${sl?` · SL ¥${fmt(Math.round(sl))}`:""}${tp?` · TP ¥${fmt(Math.round(tp))}`:""}`);
 }
 // 決済
 function trClose(id){
@@ -1705,9 +1735,16 @@ function renderTrade(){
     else{pos.innerHTML=trState.positions.map(p=>{
       const cpx=trPrice(p.sym);const pnl=trPosPnl(p,cpx);const pnlPct=pnl!=null?(pnl/(p.entry*p.qty)*100):null;
       const sc=p.side==="long"?"var(--bull)":"var(--bear)";
+      let sltpLine="";
+      if(p.sl||p.tp){
+        const parts=[];
+        if(p.sl)parts.push(`<span style="color:var(--bear)">● SL ¥${fmt(Math.round(p.sl))}</span>`);
+        if(p.tp)parts.push(`<span style="color:var(--bull)">● TP ¥${fmt(Math.round(p.tp))}</span>`);
+        sltpLine=`<div class="tr-pos-sltp">${parts.join(" 　")}</div>`;
+      }
       return `<div class="tr-pos">
         <div class="tr-pos-side" style="color:${sc}">${p.side==="long"?"▲ L":"▼ S"}</div>
-        <div class="tr-pos-mid"><div class="tr-pos-sym">${fmtSym(p.sym)} <span style="color:var(--txt-dim);font-weight:400">${p.qty}</span></div><div class="tr-pos-info">建値 ¥${fmt(p.entry)} → 現在 ${cpx!=null?"¥"+fmt(cpx):"—"}</div></div>
+        <div class="tr-pos-mid"><div class="tr-pos-sym">${fmtSym(p.sym)} <span style="color:var(--txt-dim);font-weight:400">${p.qty}</span></div><div class="tr-pos-info">建値 ¥${fmt(p.entry)} → 現在 ${cpx!=null?"¥"+fmt(cpx):"—"}</div>${sltpLine}</div>
         <div class="tr-pos-pnl"><div class="tr-pos-pnl-v" style="color:${pnl!=null?(pnl>=0?'var(--bull)':'var(--bear)'):'var(--txt-dim)'}">${pnl!=null?(pnl>=0?'+':'')+'¥'+fmt(Math.round(pnl)):'—'}</div><div class="tr-pos-pnl-pct" style="color:${pnlPct!=null?(pnlPct>=0?'var(--bull)':'var(--bear)'):'var(--txt-dim)'}">${pnlPct!=null?(pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%':''}</div></div>
         <div class="tr-pos-close" data-close="${p.id}">決済</div>
       </div>`;}).join("");
@@ -1749,7 +1786,22 @@ function renderTradeStats(){
     <div class="tr-stat" style="grid-column:1/3"><div class="tr-stat-k jp">確定損益合計 NET REALIZED</div><div class="tr-stat-v" style="color:${netCol}">${net>=0?"+":""}¥${fmt(Math.round(net))}</div><div class="tr-stat-sub jp">期待値 ${net>=0?"+":""}¥${fmt(Math.round(net/n))} / 取引</div></div>
   </div>`;
 }
-function trUpdateCost(){const px=trPrice(activeSymbol);const qty=parseFloat(document.getElementById("trQty").value);if(px!=null&&qty>0)trCostMsg(`必要証拠金 ¥${fmt(Math.round(px*qty))}`);}
+function trUpdateCost(){
+  const px=trPrice(activeSymbol);const qty=parseFloat(document.getElementById("trQty").value);
+  if(px!=null&&qty>0)trCostMsg(`必要証拠金 ¥${fmt(Math.round(px*qty))}`);
+  // SL/TP の価格プレビュー(ロング基準で表示。発注時に方向反映)
+  const slPct=parseFloat(document.getElementById("trSL").value);
+  const tpPct=parseFloat(document.getElementById("trTP").value);
+  const slEl=document.getElementById("trSLpx"),tpEl=document.getElementById("trTPpx"),rrEl=document.getElementById("trRR");
+  if(px==null){if(slEl)slEl.textContent="—";if(tpEl)tpEl.textContent="—";if(rrEl)rrEl.textContent="";return;}
+  if(slEl)slEl.textContent=slPct>0?`▼ ¥${fmt(Math.round(px*(1-slPct/100)))}`:"未設定";
+  if(tpEl)tpEl.textContent=tpPct>0?`▲ ¥${fmt(Math.round(px*(1+tpPct/100)))}`:"未設定";
+  // リスクリワード比(TP% ÷ SL%)
+  if(rrEl){
+    if(slPct>0&&tpPct>0){const rr=tpPct/slPct;const c=rr>=2?"var(--bull)":rr>=1?"var(--gold)":"var(--bear)";rrEl.innerHTML=`損益比 <b style="color:${c}">1 : ${rr.toFixed(1)}</b>　${rr>=2?"(優秀)":rr>=1?"(可)":"(リスク過大)"}`;}
+    else rrEl.textContent="SL・TPを入れると損益比を表示";
+  }
+}
 // 配線
 trLoad();
 document.getElementById("trBuy").addEventListener("click",()=>trOpen("long"));
@@ -1780,6 +1832,8 @@ document.getElementById("midNav").addEventListener("click",e=>{
   document.querySelectorAll("#midNav .mid-item").forEach(x=>x.classList.toggle("on",x===it));
 });
 document.getElementById("trQty").addEventListener("input",trUpdateCost);
+document.getElementById("trSL").addEventListener("input",trUpdateCost);
+document.getElementById("trTP").addEventListener("input",trUpdateCost);
 // TRADEセクション表示中は1秒ごとに含み損益を更新
 setInterval(()=>{const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();},1000);
 
