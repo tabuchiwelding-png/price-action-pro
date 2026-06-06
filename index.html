@@ -230,6 +230,36 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .tab-sym.all{color:var(--violet);font-weight:700;}
 .tab-sym.all.on{border-bottom-color:var(--violet);background:rgba(140,125,255,.1);}
 
+/* ===== CHART QUICK ORDER ===== */
+.cq-wrap{border-top:1px solid var(--border2);background:linear-gradient(180deg,var(--panel2),var(--bg));padding:10px 12px 12px;}
+.cq-row1{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;}
+.cq-field{display:flex;flex-direction:column;gap:3px;}
+.cq-label{font-size:7.5px;letter-spacing:.1em;color:var(--txt-faint);}
+.cq-input-wrap{display:flex;align-items:center;gap:3px;background:var(--raised);border:1px solid var(--border2);padding:5px 7px;border-radius:2px;}
+.cq-input-wrap:focus-within{border-color:var(--cyan);}
+.cq-input{background:transparent;border:none;outline:none;color:var(--txt-br);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;width:100%;text-align:right;}
+.cq-unit{font-size:9px;color:var(--txt-faint);flex-shrink:0;}
+.cq-presets{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;}
+.cq-preset{font-size:8.5px;padding:3px 9px;border:1px solid var(--border2);color:var(--txt-dim);cursor:pointer;border-radius:2px;user-select:none;}
+.cq-preset:active{background:var(--raised);color:var(--txt-br);}
+.cq-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.cq-btn{padding:13px 6px;text-align:center;font-size:13px;font-weight:800;letter-spacing:.04em;cursor:pointer;border-radius:3px;user-select:none;display:flex;flex-direction:column;gap:2px;align-items:center;transition:all .15s;border:1px solid;}
+.cq-btn .cq-sub{font-size:8px;font-weight:600;opacity:.85;font-family:'Noto Sans JP',sans-serif;}
+.cq-btn.long{background:linear-gradient(135deg,var(--bull-dim),rgba(46,230,166,.1));border-color:var(--bull);color:var(--bull);}
+.cq-btn.long:active{background:var(--bull);color:#000;}
+.cq-btn.short{background:linear-gradient(135deg,var(--bear-dim),rgba(255,77,109,.1));border-color:var(--bear);color:var(--bear);}
+.cq-btn.short:active{background:var(--bear);color:#000;}
+.cq-msg{font-size:8.5px;color:var(--txt-dim);text-align:center;margin-top:7px;min-height:12px;font-family:'Noto Sans JP',sans-serif;}
+.cq-positions{margin-top:8px;display:flex;flex-direction:column;gap:4px;}
+.cq-pos{display:flex;align-items:center;gap:8px;background:var(--raised);border:1px solid var(--border);border-radius:2px;padding:7px 10px;}
+.cq-pos.pos-long{border-left:2px solid var(--bull);}
+.cq-pos.pos-short{border-left:2px solid var(--bear);}
+.cq-pos-side{font-size:10px;font-weight:800;width:32px;flex-shrink:0;}
+.cq-pos-info{flex:1;font-size:8.5px;color:var(--txt-mid);}
+.cq-pos-pnl{font-size:11px;font-weight:700;text-align:right;flex-shrink:0;}
+.cq-pos-close{font-size:8px;padding:5px 10px;border:1px solid var(--border2);color:var(--txt-dim);cursor:pointer;border-radius:2px;flex-shrink:0;user-select:none;}
+.cq-pos-close:active{background:var(--raised);}
+
 .page{flex:1;overflow-y:auto;display:none;}.page.on{display:block;}
 .ph{min-height:24px;display:flex;align-items:center;padding:5px 12px;border-bottom:1px solid var(--border);background:var(--row);font-size:8.5px;letter-spacing:.16em;color:var(--txt-mid);text-transform:uppercase;gap:6px;position:sticky;top:0;z-index:10;text-shadow:0 0 7px rgba(120,200,255,.18);}
 .ph::before{content:'>';width:auto;height:auto;background:none;color:var(--cyan);opacity:.95;margin-right:3px;font-weight:800;text-shadow:0 0 7px var(--cyan);letter-spacing:0;}
@@ -647,6 +677,32 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
       <div><div id="chart"></div>
         <div class="ph">DETECTED PATTERNS · 検出パターン <span class="ph-right" id="sigCount">0</span></div>
         <div id="sigFeed"></div>
+
+        <!-- チャートクイック注文 -->
+        <div class="ph">QUICK ORDER · チャートから発注 <span class="ph-right" style="color:var(--txt-faint)">仮想取引</span></div>
+        <div class="cq-wrap">
+          <div class="cq-row1">
+            <div class="cq-field">
+              <div class="cq-label">数量 QTY</div>
+              <div class="cq-input-wrap"><input type="text" inputmode="decimal" id="cqQty" class="cq-input" value="0.01"></div>
+            </div>
+            <div class="cq-field">
+              <div class="cq-label">SL 損切り</div>
+              <div class="cq-input-wrap"><input type="text" inputmode="decimal" id="cqSL" class="cq-input" value="2.0"><span class="cq-unit">%</span></div>
+            </div>
+            <div class="cq-field">
+              <div class="cq-label">TP 利確</div>
+              <div class="cq-input-wrap"><input type="text" inputmode="decimal" id="cqTP" class="cq-input" value="4.0"><span class="cq-unit">%</span></div>
+            </div>
+          </div>
+          <div class="cq-presets" id="cqPresets"></div>
+          <div class="cq-btns">
+            <div class="cq-btn long" id="cqLong">▲ LONG<span class="cq-sub">買い建て</span></div>
+            <div class="cq-btn short" id="cqShort">▼ SHORT<span class="cq-sub">売り建て</span></div>
+          </div>
+          <div class="cq-msg" id="cqMsg"></div>
+          <div class="cq-positions" id="cqPositions"></div>
+        </div>
       </div>
       <div>
         <div class="ai-meter">
@@ -798,7 +854,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 69; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 70; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1991,7 +2047,7 @@ function trCheckSLTP(){
       else{sfx("signal-bear");showTrToast(`● SL 損切り  ${fmtSym(p.sym)}  ${pnl>=0?"+":""}¥${fmt(Math.round(pnl))}`,"var(--bear)");}
     }
   }
-  if(changed){trSave();renderChartMarkers();const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();}
+  if(changed){trSave();renderChartMarkers();renderCQPositions();const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();}
 }
 // 自動決済の通知トースト(別タブ閲覧中でも気づけるように)
 let trToastTimer=null;
@@ -2059,6 +2115,75 @@ function renderTrade(){
   }
   renderTradeStats();
 }
+
+// ===== CHART QUICK ORDER =====
+function cqMsg(m,col){const el=document.getElementById("cqMsg");if(el){el.textContent=m;el.style.color=col||"var(--txt-dim)";}}
+function cqOrder(side){
+  const sym=activeSymbol;
+  const px=trPrice(sym);
+  if(px==null){cqMsg("価格取得待ち。チャートを開いてください。","var(--acc)");return;}
+  const qty=parseFloat(document.getElementById("cqQty")?.value);
+  if(!qty||qty<=0){cqMsg("数量が不正です。","var(--bear)");return;}
+  const cost=px*qty;
+  if(cost>trState.cash){cqMsg(`証拠金不足 · 必要 ¥${fmt(Math.round(cost))} / 残高 ¥${fmt(Math.round(trState.cash))}`,"var(--bear)");return;}
+  const slPct=parseFloat(document.getElementById("cqSL")?.value)||0;
+  const tpPct=parseFloat(document.getElementById("cqTP")?.value)||0;
+  let sl=null,tp=null;
+  if(slPct>0)sl=side==="long"?px*(1-slPct/100):px*(1+slPct/100);
+  if(tpPct>0)tp=side==="long"?px*(1+tpPct/100):px*(1-tpPct/100);
+  trState.cash-=cost;
+  trState.positions.push({id:Date.now()+""+Math.floor(Math.random()*1000),sym,side,qty,entry:px,opened:Date.now(),sl,tp});
+  trSave();renderChartMarkers();sfx(side==="long"?"signal-bull":"signal-bear");
+  cqMsg(`${side==="long"?"▲ 買い":"▼ 売り"}建て ${qty} @ ¥${fmt(px)}${sl?` · SL ¥${fmt(Math.round(sl))}`:""}${tp?` · TP ¥${fmt(Math.round(tp))}`:""} 約定`,"var(--bull)");
+  renderCQPositions();
+  const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();
+}
+function cqClosePos(id){
+  const i=trState.positions.findIndex(p=>p.id===id);if(i<0)return;
+  const p=trState.positions[i];const px=trPrice(p.sym);
+  if(px==null){cqMsg("価格取得待ち。","var(--acc)");return;}
+  const pnl=trSettle(p,px,"manual");
+  trState.positions.splice(i,1);
+  trSave();renderChartMarkers();sfx("select");
+  cqMsg(`決済 ${pnl>=0?"+":""}¥${fmt(Math.round(pnl))}`,pnl>=0?"var(--bull)":"var(--bear)");
+  renderCQPositions();
+  const pg=document.getElementById("pgTrade");if(pg&&pg.classList.contains("on"))renderTrade();
+}
+function renderCQPositions(){
+  const el=document.getElementById("cqPositions");if(!el)return;
+  const posList=trState.positions.filter(p=>p.sym===activeSymbol);
+  if(!posList.length){el.innerHTML="";return;}
+  el.innerHTML=posList.map(p=>{
+    const px=trPrice(p.sym);const pnl=trPosPnl(p,px);
+    const pnlPct=pnl!=null?(pnl/(p.entry*p.qty)*100):null;
+    const sc=p.side==="long"?"var(--bull)":"var(--bear)";
+    const pnlStr=pnl!=null?(pnl>=0?"+":"")+"¥"+fmt(Math.round(pnl)):"—";
+    const pctStr=pnlPct!=null?(pnlPct>=0?"+":"")+pnlPct.toFixed(1)+"%":"";
+    const sltp=[p.sl?`SL ¥${fmt(Math.round(p.sl))}`:"",p.tp?`TP ¥${fmt(Math.round(p.tp))}`:""].filter(Boolean).join(" · ");
+    return `<div class="cq-pos ${p.side==="long"?"pos-long":"pos-short"}">
+      <div class="cq-pos-side" style="color:${sc}">${p.side==="long"?"▲ L":"▼ S"}</div>
+      <div class="cq-pos-info">${p.qty} @ ¥${fmt(p.entry)}${sltp?" · "+sltp:""}<br>現在 ${px!=null?"¥"+fmt(px):"—"}</div>
+      <div class="cq-pos-pnl" style="color:${pnl!=null?(pnl>=0?"var(--bull)":"var(--bear)"):"var(--txt-dim)"}"><span>${pnlStr}</span><br><span style="font-size:8px">${pctStr}</span></div>
+      <div class="cq-pos-close" data-cq-close="${p.id}">決済</div>
+    </div>`;
+  }).join("");
+  el.querySelectorAll("[data-cq-close]").forEach(b=>b.addEventListener("click",()=>cqClosePos(b.dataset.cqClose)));
+}
+function initCQ(){
+  const pr=document.getElementById("cqPresets");
+  if(pr&&!pr.dataset.built){
+    [0.01,0.05,0.1,0.5,1].forEach(v=>{
+      const b=document.createElement("span");
+      b.className="cq-preset";b.textContent=v;
+      b.addEventListener("click",()=>{const el=document.getElementById("cqQty");if(el)el.value=v;});
+      pr.appendChild(b);
+    });
+    pr.dataset.built="1";
+  }
+  document.getElementById("cqLong")?.addEventListener("click",()=>cqOrder("long"));
+  document.getElementById("cqShort")?.addEventListener("click",()=>cqOrder("short"));
+}
+
 function renderTradeStats(){
   const el=document.getElementById("trStats");if(!el)return;
   const h=trState.history;
@@ -2147,6 +2272,7 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   buildMidNav(pg);
   buildSymTabs();
   if(pg==="Chart"&&chart)setTimeout(()=>{chart.applyOptions({width:document.getElementById("chart").clientWidth,height:document.getElementById("chart").clientHeight});renderChartMarkers();},50);
+  if(pg==="Chart"){initCQ();renderCQPositions();}
   if(pg==="Flow")connectFlowWS(activeSymbol);else disconnectFlowWS();
   if(pg==="Ana"){
     const st=store[activeSymbol];if(st?.candles?.length){renderTradeJudge(st.pa);renderFund(activeSymbol);}
@@ -2431,7 +2557,7 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 (async function(){
   checkForUpdate(); // 起動直後に最新版を確認(非ブロッキング)
   {const vl=document.getElementById("appVerLbl");if(vl)vl.textContent="· v"+APP_VERSION;}
-  buildWL();buildExec();buildSymTabs();buildMidNav("Scan");initChart();connectTickerWS();updateSwarmText();
+  buildWL();buildExec();buildSymTabs();buildMidNav("Scan");initChart();initCQ();connectTickerWS();updateSwarmText();
   try{const savedFs=localStorage.getItem(FS_KEY);if(savedFs)applyFontSize(savedFs);}catch(e){}
   document.getElementById("tabbarSym").style.display="none";
   await Promise.allSettled(SYMBOLS.map(async o=>{try{const c=await loadHistory(o.s,TF);store[o.s]=store[o.s]||{candles:[],pa:null,ticker:{}};store[o.s].candles=c;store[o.s].pa=runPA(c);updateWLRow(o.s);}catch(e){}}));
