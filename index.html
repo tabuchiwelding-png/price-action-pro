@@ -12,7 +12,7 @@
   --border:#1a2533; --border2:#26384c; --borderAcc:#33526f; --grid:#101822;
   --bull:#2ee6a6; --bull-soft:#1aa87a; --bull-dim:#0b3527; --bull-glow:#2ee6a6;
   --bear:#ff4d6d; --bear-soft:#cc3a54; --bear-dim:#371020; --bear-glow:#ff4d6d;
-  --gold:#22d3bf; --gold-soft:#15a193; --gold-dim:#0c302c; --gold-glow:#22d3bf;
+  --acc:#22d3bf; --acc-soft:#15a193; --acc-dim:#0c302c; --acc-glow:#22d3bf;
   --blue:#4da6ff; --violet:#8c7dff; --cyan:#34e6e0;
   --txt:#aebfce; --txt-br:#ecf3f9; --txt-dim:#6f879b; --txt-mid:#90a7bc; --txt-faint:#56697c;
 }
@@ -22,7 +22,7 @@ body.theme-midnight{
   --border:#1e2c4a; --border2:#2e4470; --borderAcc:#3d5a96; --grid:#111b30;
   --bull:#3ee0c0; --bull-soft:#1fa890; --bull-dim:#0a3530; --bull-glow:#3ee0c0;
   --bear:#ff5c8a; --bear-soft:#cc4a6e; --bear-dim:#3a1226; --bear-glow:#ff5c8a;
-  --gold:#22d3bf; --gold-soft:#15a193; --gold-dim:#0c302c; --gold-glow:#22d3bf;
+  --acc:#22d3bf; --acc-soft:#15a193; --acc-dim:#0c302c; --acc-glow:#22d3bf;
   --blue:#5cb3ff; --violet:#9d8cff; --cyan:#4ae0ec;
   --txt:#b9c8e0; --txt-br:#eef4ff; --txt-dim:#7a90b8; --txt-mid:#9aaed0; --txt-faint:#5e7299;
 }
@@ -32,7 +32,7 @@ body.theme-carbon{
   --border:#26282d; --border2:#3a3d44; --borderAcc:#52565f; --grid:#161719;
   --bull:#4ade80; --bull-soft:#2fa85e; --bull-dim:#103021; --bull-glow:#4ade80;
   --bear:#fb6f84; --bear-soft:#cc5868; --bear-dim:#341419; --bear-glow:#fb6f84;
-  --gold:#22d3bf; --gold-soft:#15a193; --gold-dim:#0c302c; --gold-glow:#22d3bf;
+  --acc:#22d3bf; --acc-soft:#15a193; --acc-dim:#0c302c; --acc-glow:#22d3bf;
   --blue:#60a5fa; --violet:#a78bfa; --cyan:#22d3ee;
   --txt:#c4c8d0; --txt-br:#f1f3f6; --txt-dim:#8a8f99; --txt-mid:#a8adb7; --txt-faint:#6a6f78;
 }
@@ -42,7 +42,7 @@ body.theme-ocean{
   --border:#1c3a3a; --border2:#2a5656; --borderAcc:#3a7474; --grid:#0f2020;
   --bull:#38bdf8; --bull-soft:#2090c4; --bull-dim:#0a2e3a; --bull-glow:#38bdf8;
   --bear:#fb923c; --bear-soft:#cc7530; --bear-dim:#3a2410; --bear-glow:#fb923c;
-  --gold:#22d3bf; --gold-soft:#15a193; --gold-dim:#0c302c; --gold-glow:#22d3bf;
+  --acc:#22d3bf; --acc-soft:#15a193; --acc-dim:#0c302c; --acc-glow:#22d3bf;
   --blue:#38bdf8; --violet:#a78bfa; --cyan:#2dd4bf;
   --txt:#b0cccb; --txt-br:#eafaf8; --txt-dim:#76a09e; --txt-mid:#94bab8; --txt-faint:#5a8280;
 }
@@ -52,7 +52,7 @@ body.theme-amber{
   --border:#3a2c1a; --border2:#56412a; --borderAcc:#74573a; --grid:#201810;
   --bull:#34e6a6; --bull-soft:#1fa878; --bull-dim:#0b3528; --bull-glow:#34e6a6;
   --bear:#ff5c5c; --bear-soft:#cc4a4a; --bear-dim:#3a1414; --bear-glow:#ff5c5c;
-  --gold:#22d3bf; --gold-soft:#15a193; --gold-dim:#0c302c; --gold-glow:#22d3bf;
+  --acc:#22d3bf; --acc-soft:#15a193; --acc-dim:#0c302c; --acc-glow:#22d3bf;
   --blue:#5cb3ff; --violet:#c08cff; --cyan:#40e0d0;
   --txt:#e0cba8; --txt-br:#fdf4e6; --txt-dim:#a08a6a; --txt-mid:#c0a880; --txt-faint:#82705a;
 }
@@ -62,7 +62,7 @@ body.theme-violet{
   --border:#2c2247; --border2:#443470; --borderAcc:#5a4496; --grid:#181230;
   --bull:#34e6c0; --bull-soft:#1fa890; --bull-dim:#0a3530; --bull-glow:#34e6c0;
   --bear:#ff5c9a; --bear-soft:#cc4a7a; --bear-dim:#3a1226; --bear-glow:#ff5c9a;
-  --gold:#22d3bf; --gold-soft:#15a193; --gold-dim:#0c302c; --gold-glow:#22d3bf;
+  --acc:#22d3bf; --acc-soft:#15a193; --acc-dim:#0c302c; --acc-glow:#22d3bf;
   --blue:#7c9dff; --violet:#b88cff; --cyan:#4ae0ec;
   --txt:#c8bce0; --txt-br:#f2ecff; --txt-dim:#8a7ab0; --txt-mid:#a89ad0; --txt-faint:#6e6299;
 }
@@ -127,8 +127,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 #app{display:flex;flex-direction:column;height:100vh;position:relative;z-index:2;}
 /* ===== TOPBAR: 角ばったHUD ===== */
 .topbar{flex-shrink:0;border-bottom:1px solid var(--border2);background:linear-gradient(180deg,var(--panel),var(--bg));display:flex;align-items:center;gap:12px;padding:7px 14px;flex-wrap:wrap;position:relative;}
-.topbar::after{content:'';position:absolute;left:0;bottom:-1px;width:60px;height:1px;background:var(--gold);box-shadow:0 0 8px var(--gold);}
-.brand-mark{width:24px;height:24px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:800;font-size:13px;box-shadow:0 0 10px rgba(34,211,191,.2) inset,0 0 12px rgba(34,211,191,.35);text-shadow:0 0 8px var(--gold);clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%);}
+.topbar::after{content:'';position:absolute;left:0;bottom:-1px;width:60px;height:1px;background:var(--acc);box-shadow:0 0 8px var(--acc);}
+.brand-mark{width:24px;height:24px;border:1px solid var(--acc);display:flex;align-items:center;justify-content:center;color:var(--acc);font-weight:800;font-size:13px;box-shadow:0 0 10px rgba(34,211,191,.2) inset,0 0 12px rgba(34,211,191,.35);text-shadow:0 0 8px var(--acc);clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%);}
 .brand-name{font-size:12px;font-weight:800;color:var(--txt-br);letter-spacing:.16em;text-shadow:0 0 10px rgba(120,200,255,.3);animation:brandGlitch 9s steps(1) infinite;}
 @keyframes brandGlitch{0%,95.5%,100%{text-shadow:0 0 10px rgba(120,200,255,.3);transform:translateX(0);}96%{text-shadow:-1.5px 0 var(--bear),1.5px 0 var(--cyan),0 0 10px rgba(120,200,255,.3);transform:translateX(1px);}96.6%{text-shadow:1.5px 0 var(--bear),-1.5px 0 var(--cyan);transform:translateX(-1px);}97.2%{text-shadow:0 0 10px rgba(120,200,255,.3);transform:translateX(0);}}
 @media (prefers-reduced-motion:reduce){.brand-name{animation:none;}}
@@ -163,11 +163,11 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .midnav::-webkit-scrollbar{display:none;}
 .midnav .mid-item{flex:1;min-width:62px;text-align:center;padding:6px 3px 5px;font-size:9px;letter-spacing:.07em;font-weight:600;color:var(--txt-dim);cursor:pointer;user-select:none;border-bottom:1.5px solid transparent;transition:color .2s,border-color .2s;display:flex;flex-direction:column;gap:1px;align-items:center;justify-content:center;}
 .midnav .mid-item .jp{font-size:7px;opacity:.6;letter-spacing:0;}
-.midnav .mid-item.on{color:var(--gold);border-bottom-color:var(--gold);text-shadow:0 0 8px var(--gold);}
+.midnav .mid-item.on{color:var(--acc);border-bottom-color:var(--acc);text-shadow:0 0 8px var(--acc);}
 .genrenav{display:flex;}
 .genrenav .genre-item{flex:1;text-align:center;padding:8px 4px 9px;font-size:11.5px;letter-spacing:.14em;font-weight:700;color:var(--txt-faint);cursor:pointer;user-select:none;display:flex;flex-direction:column;gap:2px;align-items:center;border-bottom:2px solid transparent;transition:all .2s;}
 .genrenav .genre-item .jp{font-size:8.5px;opacity:.8;letter-spacing:.02em;font-weight:600;}
-.genrenav .genre-item.on{color:var(--gold);border-bottom-color:var(--gold);background:linear-gradient(180deg,rgba(34,211,191,.1),transparent);}
+.genrenav .genre-item.on{color:var(--acc);border-bottom-color:var(--acc);background:linear-gradient(180deg,rgba(34,211,191,.1),transparent);}
 .genrenav .genre-item:not(.on):active{color:var(--txt-mid);}
 .tr-acct-cell{background:var(--panel2);padding:10px 12px;}
 .tr-acct-k{font-size:8px;color:var(--txt-dim);letter-spacing:.08em;margin-bottom:3px;}
@@ -175,7 +175,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .tr-order{background:var(--panel2);padding:14px 12px;border-bottom:1px solid var(--border);}
 .tr-px-row{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;}
 .tr-px-lbl{font-size:8px;color:var(--txt-dim);letter-spacing:.08em;margin-bottom:3px;}
-.tr-px{font-size:20px;font-weight:800;color:var(--gold);}
+.tr-px{font-size:20px;font-weight:800;color:var(--acc);}
 .tr-qty{width:110px;background:var(--raised);border:1px solid var(--border2);color:var(--txt-br);font-family:'JetBrains Mono';font-size:15px;font-weight:700;padding:6px 10px;text-align:right;border-radius:2px;}
 .tr-qty-quick{display:flex;gap:6px;margin-bottom:12px;justify-content:flex-end;}
 /* SL/TP 入力 */
@@ -224,7 +224,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .tr-winbar-fill{background:var(--bull);height:100%;transition:width .5s;}
 .tr-empty{padding:16px;text-align:center;color:var(--txt-dim);font-size:9px;}
 .tab-sym{flex-shrink:0;padding:7px 13px;font-size:10px;font-weight:600;color:var(--txt-dim);cursor:pointer;border-right:1px solid var(--border);border-bottom:2px solid transparent;white-space:nowrap;letter-spacing:.04em;}
-.tab-sym.on{color:var(--txt-br);border-bottom-color:var(--gold);background:rgba(34,211,191,.06);}
+.tab-sym.on{color:var(--txt-br);border-bottom-color:var(--acc);background:rgba(34,211,191,.06);}
 .tab-sym.all{color:var(--violet);font-weight:700;}
 .tab-sym.all.on{border-bottom-color:var(--violet);background:rgba(140,125,255,.1);}
 
@@ -232,23 +232,47 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .ph{min-height:24px;display:flex;align-items:center;padding:5px 12px;border-bottom:1px solid var(--border);background:var(--row);font-size:8.5px;letter-spacing:.16em;color:var(--txt-mid);text-transform:uppercase;gap:6px;position:sticky;top:0;z-index:10;text-shadow:0 0 7px rgba(120,200,255,.18);}
 .ph::before{content:'>';width:auto;height:auto;background:none;color:var(--cyan);opacity:.95;margin-right:3px;font-weight:800;text-shadow:0 0 7px var(--cyan);letter-spacing:0;}
 .ph .dot{width:4px;height:4px;border-radius:50%;background:var(--bull);box-shadow:0 0 5px var(--bull);}
+/* ===== 共通デザインシステム(全画面で統一) ===== */
+.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:2px;padding:11px 12px;position:relative;}
+.card.sel{border-color:var(--acc);box-shadow:0 0 12px rgba(34,211,191,.14);}
+.card.bull{border-left:2px solid var(--bull);}
+.card.bear{border-left:2px solid var(--bear);}
+.card-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+/* 折りたたみ解説(常時表示を圧迫しない) */
+.foldnote{margin:0;border-bottom:1px solid var(--border);}
+.foldnote>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:8.5px;letter-spacing:.14em;color:var(--txt-mid);text-transform:uppercase;}
+.foldnote>summary::-webkit-details-marker{display:none;}
+.foldnote>summary::before{content:'>';color:var(--cyan);font-weight:800;text-shadow:0 0 7px var(--cyan);transition:transform .2s;}
+.foldnote[open]>summary::before{transform:rotate(90deg);}
+.foldnote .fold-body{padding:2px 12px 10px;font-size:11px;line-height:1.65;color:var(--txt);}
+/* 統一バッジ/ボタン */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:8px;font-weight:700;letter-spacing:.06em;padding:1px 6px;border:1px solid;border-radius:2px;}
+.badge.bull{color:var(--bull);border-color:var(--bull);}
+.badge.bear{color:var(--bear);border-color:var(--bear);}
+.badge.acc{color:var(--acc);border-color:var(--acc);}
+.badge.dim{color:var(--txt-dim);border-color:var(--border2);}
+.btn-ghost{font-size:9px;padding:5px 11px;border:1px solid var(--border2);color:var(--txt-mid);cursor:pointer;border-radius:2px;user-select:none;background:transparent;}
+.btn-ghost:active{background:var(--raised);}
+.btn-acc{font-size:9px;padding:5px 11px;border:1px solid var(--acc);color:var(--acc);cursor:pointer;border-radius:2px;user-select:none;background:transparent;text-shadow:0 0 6px var(--acc);}
+.btn-danger{font-size:9px;padding:5px 11px;border:1px solid var(--bear);color:var(--bear);cursor:pointer;border-radius:2px;user-select:none;background:transparent;}
 .ph-right{margin-left:auto;color:var(--txt-dim);text-transform:none;letter-spacing:.04em;}
 /* 解説帯(人名なし) */
 .note{padding:9px 12px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(77,166,255,.04),transparent);font-size:9.5px;line-height:1.75;color:var(--txt);}
-.note b{color:var(--gold);font-weight:600;}
+.note b{color:var(--acc);font-weight:600;}
 .note .tag{display:inline-block;font-size:7.5px;letter-spacing:.14em;color:var(--cyan);border:1px solid rgba(52,230,224,.3);padding:0 5px;margin-right:6px;vertical-align:1px;text-shadow:0 0 6px var(--cyan);box-shadow:0 0 8px rgba(52,230,224,.12),inset 0 0 8px rgba(52,230,224,.06);}
 
-.wl-row{display:grid;grid-template-columns:1fr auto;gap:2px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;border-left:2px solid transparent;}
-.wl-row.sel{background:var(--panel2);border-left-color:var(--gold);}
-.wl-sym{font-size:13px;color:var(--txt-br);font-weight:600;text-shadow:0 0 8px rgba(120,200,255,.22);}
-.wl-name{font-size:8px;color:var(--txt-dim);}
-.wl-price{font-size:12px;text-align:right;font-weight:500;color:var(--txt-br);}
-.wl-chg{font-size:9px;text-align:right;}
-.wl-ai{grid-column:1/3;display:flex;align-items:center;gap:5px;margin-top:5px;}
-.wl-ai-track{flex:1;height:5px;background:linear-gradient(90deg,var(--bear-dim),var(--border),var(--bull-dim));border-radius:0;position:relative;overflow:hidden;}
-.wl-ai-marker{position:absolute;top:-1px;width:3px;height:7px;background:var(--txt-br);transition:left .4s,width .4s;}
-.wl-ai-lbl{font-size:8px;min-width:56px;text-align:right;}
-.wl-sigs{grid-column:1/3;display:flex;gap:3px;flex-wrap:wrap;margin-top:4px;}
+.wl-row{display:grid;grid-template-columns:1fr auto;gap:2px;padding:11px 12px;border-bottom:1px solid var(--border);cursor:pointer;border-left:2px solid transparent;transition:background .15s;}
+.wl-row.sel{background:linear-gradient(90deg,rgba(34,211,191,.07),transparent);border-left-color:var(--acc);box-shadow:inset 0 0 14px rgba(34,211,191,.06);}
+.wl-row:active{background:var(--raised);}
+.wl-sym{font-size:14px;color:var(--txt-br);font-weight:700;text-shadow:0 0 8px rgba(120,200,255,.22);}
+.wl-name{font-size:8.5px;color:var(--txt-dim);}
+.wl-price{font-size:13px;text-align:right;font-weight:600;color:var(--txt-br);}
+.wl-chg{font-size:9.5px;text-align:right;font-weight:600;}
+.wl-ai{grid-column:1/3;display:flex;align-items:center;gap:6px;margin-top:7px;}
+.wl-ai-track{flex:1;height:6px;background:linear-gradient(90deg,var(--bear-dim),var(--border),var(--bull-dim));border-radius:2px;position:relative;overflow:hidden;}
+.wl-ai-marker{position:absolute;top:-1px;width:3px;height:8px;background:var(--txt-br);box-shadow:0 0 6px var(--txt-br);transition:left .4s,width .4s;}
+.wl-ai-lbl{font-size:8.5px;min-width:58px;text-align:right;font-weight:600;}
+.wl-sigs{grid-column:1/3;display:flex;gap:3px;flex-wrap:wrap;margin-top:5px;}
 .sig-pill{font-size:8px;padding:0 5px;line-height:14px;border:1px solid;}
 
 .chart-head{display:flex;align-items:center;gap:12px;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--row);flex-wrap:wrap;}
@@ -257,7 +281,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .chart-chg{font-size:12px;font-weight:600;}
 .tf-group{display:flex;border:1px solid var(--border2);overflow:hidden;margin-left:auto;}
 .tf-btn{padding:4px 9px;font-size:10px;color:var(--txt-mid);cursor:pointer;background:transparent;border:none;font-family:inherit;border-right:1px solid var(--border2);}
-.tf-btn:last-child{border-right:none;}.tf-btn.on{background:var(--gold);color:#000;font-weight:700;}
+.tf-btn:last-child{border-right:none;}.tf-btn.on{background:var(--acc);color:#000;font-weight:700;}
 #chart{height:300px;}
 
 .ai-meter{padding:14px 12px;border-bottom:1px solid var(--border);text-align:center;}
@@ -309,10 +333,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .exec-detail{font-size:8px;color:var(--txt-dim);}
 .exec-ms{font-size:9px;color:var(--bull);min-height:11px;}
 .exec-step.active{background:rgba(34,211,191,.06);}
-.exec-step.active .exec-name{color:var(--gold);}
-.exec-step.active::after{content:'';position:absolute;bottom:0;left:0;height:2px;width:40%;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:sweep .4s linear;}
+.exec-step.active .exec-name{color:var(--acc);}
+.exec-step.active::after{content:'';position:absolute;bottom:0;left:0;height:2px;width:40%;background:linear-gradient(90deg,transparent,var(--acc),transparent);animation:sweep .4s linear;}
 .cycle-head{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--border);background:var(--row);font-size:8.5px;letter-spacing:.14em;color:var(--txt-mid);}
-.cycle-count{color:var(--gold);}
+.cycle-count{color:var(--acc);}
 
 .of-pressure{display:flex;height:30px;margin:12px;overflow:hidden;border:1px solid var(--border2);}
 .of-bull{background:var(--bull-dim);color:var(--bull);display:flex;align-items:center;padding-left:10px;font-weight:700;font-size:13px;transition:width .4s;}
@@ -324,7 +348,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .book-row.bid .depth{right:0;background:var(--bull);}
 .book-row.ask .depth{left:0;background:var(--bear);}
 .book-row span{position:relative;z-index:1;}
-.spread-bar{text-align:center;font-size:10px;color:var(--gold);padding:8px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:0 12px 12px;}
+.spread-bar{text-align:center;font-size:10px;color:var(--acc);padding:8px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:0 12px 12px;}
 .trade-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;padding:3px 12px;font-size:10px;border-bottom:1px solid var(--border);}
 .conf-box{padding:12px;border-bottom:1px solid var(--border);}
 .conf-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;}
@@ -338,7 +362,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .cyc-explain{border-top:1px solid var(--border);background:var(--panel2);}
 .cyc-explain summary{padding:9px 12px;font-size:9px;letter-spacing:.08em;color:var(--txt-mid);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;}
 .cyc-explain summary::-webkit-details-marker{display:none;}
-.cyc-explain summary::before{content:'▸';color:var(--gold);transition:transform .2s;}
+.cyc-explain summary::before{content:'▸';color:var(--acc);transition:transform .2s;}
 .cyc-explain[open] summary::before{transform:rotate(90deg);}
 .cyc-diagram{padding:6px 12px 14px;}
 .cyc-head{display:flex;align-items:center;justify-content:space-between;}
@@ -355,11 +379,11 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .cyc-explain{border-top:1px solid var(--border);}
 .cyc-explain summary{padding:9px 12px;font-size:9px;letter-spacing:.08em;color:var(--txt-mid);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;}
 .cyc-explain summary::-webkit-details-marker{display:none;}
-.cyc-explain summary::before{content:'▸';color:var(--gold);transition:transform .2s;}
+.cyc-explain summary::before{content:'▸';color:var(--acc);transition:transform .2s;}
 .cyc-explain[open] summary::before{transform:rotate(90deg);}
 .cyc-explain-body{padding:4px 12px 14px;}
 .cyc-explain-note{font-size:9px;line-height:1.6;color:var(--txt);margin-bottom:8px;}
-.cyc-explain-note b{color:var(--gold);}
+.cyc-explain-note b{color:var(--acc);}
 .cyc-explain-legend{display:flex;flex-direction:column;gap:4px;margin-top:8px;}
 .cyc-explain-legend span{font-size:8.5px;color:var(--txt-mid);display:flex;align-items:center;gap:6px;}
 .cyc-explain-legend i{width:14px;height:4px;flex-shrink:0;display:inline-block;}
@@ -384,7 +408,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .settings-body{padding:14px;}
 .theme-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .theme-opt{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--border2);cursor:pointer;font-size:10px;color:var(--txt-mid);user-select:none;transition:all .2s;border-radius:2px;}
-.theme-opt.on{border-color:var(--gold);color:var(--txt-br);background:rgba(34,211,191,.08);box-shadow:0 0 10px rgba(34,211,191,.15) inset;}
+.theme-opt.on{border-color:var(--acc);color:var(--txt-br);background:rgba(34,211,191,.08);box-shadow:0 0 10px rgba(34,211,191,.15) inset;}
 .theme-sw{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1px solid var(--border2);}
 /* 文字サイズ選択 + 全体拡大 */
 .font-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
@@ -397,7 +421,7 @@ body.fs-xlarge #app{zoom:1.24;}
 /* 設定パネルは拡大を打ち消し、画面内に収めてスクロール可能に保つ */
 body.fs-large .settings-overlay{zoom:0.8929;}
 body.fs-xlarge .settings-overlay{zoom:0.8065;}
-.set-group-title{font-size:9px;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+.set-group-title{font-size:9px;letter-spacing:.14em;color:var(--acc);text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
 .set-desc{font-size:8.5px;line-height:1.6;color:var(--txt-dim);margin-bottom:8px;}
 .set-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
 .set-label{font-size:10px;color:var(--txt);}
@@ -406,8 +430,8 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 .set-btn{font-size:9px;font-weight:600;padding:3px 12px;border:1px solid var(--borderAcc);color:var(--cyan);cursor:pointer;user-select:none;}
 .set-btn:active{background:rgba(52,230,224,.15);}
 .set-slider{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--raised);outline:none;margin:4px 0;border:1px solid var(--border);}
-.set-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;background:var(--gold);cursor:pointer;border-radius:50%;box-shadow:0 0 6px rgba(34,211,191,.5);}
-.set-slider::-moz-range-thumb{width:16px;height:16px;background:var(--gold);cursor:pointer;border-radius:50%;border:none;}
+.set-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;background:var(--acc);cursor:pointer;border-radius:50%;box-shadow:0 0 6px rgba(34,211,191,.5);}
+.set-slider::-moz-range-thumb{width:16px;height:16px;background:var(--acc);cursor:pointer;border-radius:50%;border:none;}
 /* ===== 時間軸オービット(ラジアル主役) ===== */
 .tfi-sec{border-bottom:1px solid var(--border);}
 .tfi-radial{padding:6px 12px 4px;background:radial-gradient(ellipse at 50% 50%,rgba(52,82,110,.08),transparent 70%);}
@@ -423,7 +447,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 .tfi-details{border-top:1px solid var(--border);}
 .tfi-details summary{padding:9px 12px;font-size:9px;letter-spacing:.1em;color:var(--txt-mid);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;}
 .tfi-details summary::-webkit-details-marker{display:none;}
-.tfi-details summary::before{content:'▸';color:var(--gold);transition:transform .2s;}
+.tfi-details summary::before{content:'▸';color:var(--acc);transition:transform .2s;}
 .tfi-details[open] summary::before{transform:rotate(90deg);}
 .hm-wrap{padding:4px 12px 14px;overflow-x:auto;}
 .hm-grid{display:grid;gap:3px;min-width:300px;}
@@ -490,7 +514,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <div class="brand-mark">P</div>
     <div><div class="brand-name">PA TERMINAL</div><div class="brand-sub">PRICE ACTION · ALWAYS-IN · JPY</div></div>
     <div style="width:1px;height:22px;background:var(--border);"></div>
-    <div class="chip"><span class="chip-label">CONN</span><span class="chip-val" id="connStatus" style="color:var(--gold)">…</span></div>
+    <div class="chip"><span class="chip-label">CONN</span><span class="chip-val" id="connStatus" style="color:var(--acc)">…</span></div>
     <div class="chip"><span class="chip-label">ALWAYS-IN</span><span class="chip-val" id="sigSummary">—</span></div>
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
       <span style="font-size:9px;color:var(--txt-dim)" id="utcClock">—</span>
@@ -522,10 +546,10 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
         <div class="set-group-title jp" style="margin-top:14px;">音声アラート</div>
         <div class="set-desc jp">強いシグナルが出た通貨を、女性の音声で読み上げます。例:「ビットコイン、強い買いシグナル」</div>
         <div class="set-row"><span class="set-label jp">音声アラート</span><span id="setVoiceToggle" class="set-toggle">OFF</span></div>
-        <div class="set-row"><span class="set-label jp">読み上げ速度</span><span id="setRateVal" style="color:var(--gold);font-size:11px;font-weight:600">1.0x</span></div>
+        <div class="set-row"><span class="set-label jp">読み上げ速度</span><span id="setRateVal" style="color:var(--acc);font-size:11px;font-weight:600">1.0x</span></div>
         <input type="range" id="setRate" min="0.6" max="1.6" step="0.1" value="1.0" class="set-slider">
         <div class="set-row" style="margin-top:6px;"><span class="set-label jp">テスト再生</span><span id="setVoiceTest" class="set-btn">▶ 試す</span></div>
-        <div class="set-row" style="margin-top:14px;"><span class="set-label jp">シグナル感度</span><span id="setSensVal" style="color:var(--gold);font-size:11px;font-weight:600">80%</span></div>
+        <div class="set-row" style="margin-top:14px;"><span class="set-label jp">シグナル感度</span><span id="setSensVal" style="color:var(--acc);font-size:11px;font-weight:600">80%</span></div>
         <div class="set-desc jp">この強さ以上のシグナルで音声を出します。高いほど厳選(鳴る回数が減る)、低いほど敏感(増える)。</div>
         <input type="range" id="setSens" min="55" max="95" step="5" value="80" class="set-slider">
         <div class="set-group-title jp" style="margin-top:16px;">BGM音響</div>
@@ -562,8 +586,8 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
   <!-- SCAN -->
   <div class="page on" id="pgScan">
-    <div class="note jp"><span class="tag">価格分析</span>相場は<b>常にどちらかに傾いている(Always-In)</b>——完全な中立は稀で、買い手か売り手のどちらかが主導権を握る。この一覧は全銘柄の主導権を強度順に並べたもの。<b>強い銘柄を順張りで触り、弱い方向には逆らわない</b>のが基本。ボラ順に切り替えれば「今どこが動いて稼ぎやすいか」が見える。</div>
-    <div class="ph"><span class="dot"></span> WATCHLIST · 監視銘柄 <span class="ph-right" id="scanModeBtn" style="cursor:pointer;color:var(--gold)">主導権(強度)順 ⇄ ボラ順</span></div>
+    <details class="foldnote jp"><summary>価格分析 · ALWAYS-IN の読み方</summary><div class="fold-body">相場は<b>常にどちらかに傾いている(Always-In)</b>——完全な中立は稀で、買い手か売り手のどちらかが主導権を握る。この一覧は全銘柄の主導権を強度順に並べたもの。<b>強い銘柄を順張りで触り、弱い方向には逆らわない</b>のが基本。ボラ順に切り替えれば「今どこが動いて稼ぎやすいか」が見える。</div></details>
+    <div class="ph"><span class="dot"></span> WATCHLIST · 監視銘柄 <span class="ph-right" id="scanModeBtn" style="cursor:pointer;color:var(--acc)">主導権(強度)順 ⇄ ボラ順</span></div>
     <div id="watchlist"></div>
   </div>
 
@@ -620,7 +644,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
   <!-- FLOW -->
   <div class="page" id="pgFlow">
-    <div class="ph"><span class="dot" id="flowDot" style="background:var(--gold);box-shadow:0 0 5px var(--gold)"></span> ORDER FLOW · 注文フロー · <span id="flowSym">—</span> <span class="ph-right" id="flowConn">接続待ち</span></div>
+    <div class="ph"><span class="dot" id="flowDot" style="background:var(--acc);box-shadow:0 0 5px var(--acc)"></span> ORDER FLOW · 注文フロー · <span id="flowSym">—</span> <span class="ph-right" id="flowConn">接続待ち</span></div>
     <div class="note jp"><span class="tag">需給</span>板と成行は「<b>今この瞬間、どちらが攻めているか</b>」を映す。チャートのAlways-In(中長期の傾き)と、注文フロー(目先の攻防)が<b>同じ方向なら勢いは本物</b>。逆に乖離していたら、どちらかが騙し。下の「判定」はこの一致/乖離を自動でチェックする。</div>
     <div style="font-size:8px;color:var(--txt-dim);padding:8px 12px 0;letter-spacing:.1em;">BUY / SELL 成行圧力 (直近約定) · どちらが攻めているか</div>
     <div class="of-pressure"><div class="of-bull" id="ofBull" style="width:50%">50%</div><div class="of-bear" id="ofBear" style="width:50%">50%</div></div>
@@ -645,7 +669,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <div class="mtf-hint jp" id="swarmHint"></div>
     <div class="swarm-legend">
       <span><span class="swarm-dot" style="background:var(--bear)"></span>売り優勢</span>
-      <span><span class="swarm-dot" style="background:var(--gold)"></span>中立</span>
+      <span><span class="swarm-dot" style="background:var(--acc)"></span>中立</span>
       <span><span class="swarm-dot" style="background:var(--bull)"></span>買い優勢</span>
       <span style="color:var(--txt-faint)">|</span>
       <span><span class="swarm-dot" style="background:var(--txt-br);width:11px;height:11px"></span>大=確信度高</span>
@@ -945,10 +969,10 @@ function onTrade(d){
 function updateConfluence(buyPct){
   const pa=store[activeSymbol]?.pa;if(!pa)return;
   const paDir=pa.ai.dir, flowDir=buyPct>55?"LONG":buyPct<45?"SHORT":"中立";
-  const e1=document.getElementById("confPA");e1.textContent=paDir;e1.style.color=paDir==="LONG"?"var(--bull)":paDir==="SHORT"?"var(--bear)":"var(--gold)";
-  const e2=document.getElementById("confFlow");e2.textContent=flowDir+` (買${buyPct}%)`;e2.style.color=flowDir==="LONG"?"var(--bull)":flowDir==="SHORT"?"var(--bear)":"var(--gold)";
+  const e1=document.getElementById("confPA");e1.textContent=paDir;e1.style.color=paDir==="LONG"?"var(--bull)":paDir==="SHORT"?"var(--bear)":"var(--acc)";
+  const e2=document.getElementById("confFlow");e2.textContent=flowDir+` (買${buyPct}%)`;e2.style.color=flowDir==="LONG"?"var(--bull)":flowDir==="SHORT"?"var(--bear)":"var(--acc)";
   let res,col;
-  if(paDir==="中立"||flowDir==="中立"){res="様子見 (片方中立)";col="var(--gold)";}
+  if(paDir==="中立"||flowDir==="中立"){res="様子見 (片方中立)";col="var(--acc)";}
   else if(paDir===flowDir){res=`★ 一致 → ${paDir}優勢`;col=paDir==="LONG"?"var(--bull)":"var(--bear)";}
   else{res="⚠ 乖離 → 警戒";col="var(--bear)";}
   const e3=document.getElementById("confResult");e3.textContent=res;e3.style.color=col;
@@ -1040,13 +1064,13 @@ async function loadChart(symbol,tf){
   }catch(e){setConn("ERROR",false);}
 }
 const fmt=v=>v>=1000?v.toLocaleString("en",{maximumFractionDigits:0}):v>=1?v.toFixed(2):v.toFixed(4);
-const dc=d=>d==="bull"?"var(--bull)":d==="bear"?"var(--bear)":"var(--gold)";
-const db=d=>d==="bull"?"var(--bull-dim)":d==="bear"?"var(--bear-dim)":"var(--gold-dim)";
+const dc=d=>d==="bull"?"var(--bull)":d==="bear"?"var(--bear)":"var(--acc)";
+const db=d=>d==="bull"?"var(--bull-dim)":d==="bear"?"var(--bear-dim)":"var(--acc-dim)";
 
 // ===== RENDER: meter, 内訳バー, heat, narrative =====
 function renderAlwaysIn(pa){
   if(!pa)return;const ai=pa.ai;
-  const col=ai.dir==="LONG"?"var(--bull)":ai.dir==="SHORT"?"var(--bear)":"var(--gold)";
+  const col=ai.dir==="LONG"?"var(--bull)":ai.dir==="SHORT"?"var(--bear)":"var(--acc)";
   const dEl=document.getElementById("aiDir"),cEl=document.getElementById("aiConf");
   dEl.textContent=ai.dir==="LONG"?"▲ ALWAYS-IN LONG":ai.dir==="SHORT"?"▼ ALWAYS-IN SHORT":"◆ 中立 / レンジ";
   dEl.style.color=col;cEl.textContent=ai.conf+"%";cEl.style.color=col;
@@ -1058,12 +1082,12 @@ function renderBreakdown(pa){
   const items=[["構造 HH/HL",p.struct,35],["EMA20傾き",p.ema,25],["直近ローソク",p.bars,25],["出来高",p.vol,15]];
   const sign=v=>v>0?"+"+v:""+v;
   document.getElementById("bdRows").innerHTML=items.map(([k,v,max])=>{
-    const col=v>0?"var(--bull)":v<0?"var(--bear)":"var(--gold)";
+    const col=v>0?"var(--bull)":v<0?"var(--bear)":"var(--acc)";
     const half=Math.abs(v)/max*50; // 中央から左右に伸びる(最大50%)
     const left=v>=0?50:50-half;
     return `<div class="bd-row"><span class="bd-k">${k}</span><div class="bd-bar-track"><div class="bd-bar-center"></div><div class="bd-bar-fill" style="left:${left}%;width:${half}%;background:${col};box-shadow:0 0 5px ${col}"></div></div><span class="bd-v" style="color:${col}">${sign(v)}</span></div>`;
   }).join("");
-  const tot=pa.ai.val,tcol=tot>0?"var(--bull)":tot<0?"var(--bear)":"var(--gold)";
+  const tot=pa.ai.val,tcol=tot>0?"var(--bull)":tot<0?"var(--bear)":"var(--acc)";
   document.getElementById("bdTotal").innerHTML=`合計 <b style="color:${tcol}">${sign(tot)}</b> → ${pa.ai.dir} ${pa.ai.conf}%`;
 }
 function renderHeat(hist){
@@ -1093,11 +1117,11 @@ function updateWLRow(sym){
     const marker=document.getElementById("aim-"+sym),track=marker?.parentElement,ail=document.getElementById("ail-"+sym);
     if(scanMode==="ai"){
       if(track)track.style.background="linear-gradient(90deg,var(--bear-dim),var(--border),var(--bull-dim))";
-      const ai=pa.ai;const col=ai.dir==="LONG"?"var(--bull)":ai.dir==="SHORT"?"var(--bear)":"var(--gold)";
+      const ai=pa.ai;const col=ai.dir==="LONG"?"var(--bull)":ai.dir==="SHORT"?"var(--bear)":"var(--acc)";
       if(marker){marker.style.left=((ai.val+100)/2)+"%";marker.style.width="3px";marker.style.background=col;marker.style.boxShadow="none";}
       if(ail){ail.textContent=ai.dir==="LONG"?`買 ${ai.conf}%`:ai.dir==="SHORT"?`売 ${ai.conf}%`:`中立`;ail.style.color=col;}
     }else{
-      const atrPct=pa.atrPct||0;const maxAtr=Math.max(...SYMBOLS.map(o=>store[o.s]?.pa?.atrPct||0))||1;const w=Math.min(100,atrPct/maxAtr*100);const col=pa.atrHot?"var(--gold)":"var(--blue)";
+      const atrPct=pa.atrPct||0;const maxAtr=Math.max(...SYMBOLS.map(o=>store[o.s]?.pa?.atrPct||0))||1;const w=Math.min(100,atrPct/maxAtr*100);const col=pa.atrHot?"var(--acc)":"var(--blue)";
       if(track)track.style.background="var(--raised)";
       if(marker){marker.style.left="0";marker.style.width=w+"%";marker.style.background=col;marker.style.boxShadow=pa.atrHot?`0 0 6px ${col}`:"none";}
       if(ail){ail.textContent=(pa.atrHot?"🔥":"")+atrPct+"%";ail.style.color=col;}
@@ -1122,7 +1146,7 @@ function renderSignals(pa){const f=document.getElementById("sigFeed");document.g
 function renderInd(pa){if(!pa)return;document.getElementById("indGrid").innerHTML=[["Always-In 主導権",pa.ai.dir+" "+pa.ai.conf+"%",pa.ai.dir==="LONG"?"bull":pa.ai.dir==="SHORT"?"bear":"neutral"],["Trend トレンド",pa.trendLabel,pa.trendDir],["RSI(14) 参考",pa.rsi??"—",null],["Vol Ratio 出来高比",pa.volRatio+"x",pa.highVol?"bull":null],["EMA20 短期線","¥"+fmt(pa.e20),null],["EMA50 中期線",pa.e50?"¥"+fmt(pa.e50):"—",null],["ATR% 変動幅",pa.atrPct?pa.atrPct+"%":"—",pa.atrHot?"bull":null],["Range位置 レンジ",pa.rangePos+"%",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");}
 function updateChartHead(){const st=store[activeSymbol];if(!st)return;document.getElementById("chartSym").textContent=fmtSym(activeSymbol);const t=st.ticker;if(t.price){document.getElementById("chartPrice").textContent="¥"+fmt(t.price);document.getElementById("chartPrice").style.color=t.chg>=0?"var(--bull)":"var(--bear)";const ch=document.getElementById("chartChg");ch.textContent=(t.chg>=0?"+":"")+t.chg.toFixed(2)+"%";ch.style.color=t.chg>=0?"var(--bull)":"var(--bear)";}if(t.high){document.getElementById("statsGrid").innerHTML=[["24h High 高値","¥"+fmt(t.high),"bull"],["24h Low 安値","¥"+fmt(t.low),"bear"],["24h Open 始値","¥"+fmt(t.open),null],["24h Vol 出来高","¥"+(t.vol/1e8).toFixed(1)+"億",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");}}
 function updateTape(){document.getElementById("tape").innerHTML=(()=>{const h=SYMBOLS.map(o=>{const t=store[o.s]?.ticker;if(!t||!t.price)return"";const c=t.chg>=0?"var(--bull)":"var(--bear)";return `<span style="font-size:9px"><span style="color:var(--txt-br)">${shortSym(o.s)}</span> <span style="color:${c}">¥${fmt(t.price)} ${t.chg>=0?"+":""}${t.chg.toFixed(2)}%</span></span>`;}).filter(Boolean).join("");return h+h;})();}
-function updateSummary(){let b=0,s=0,n=0;SYMBOLS.forEach(o=>{const pa=store[o.s]?.pa;if(!pa)return;if(pa.ai.dir==="LONG")b++;else if(pa.ai.dir==="SHORT")s++;else n++;});document.getElementById("sigSummary").innerHTML=`<span style="color:var(--bull)">▲${b}</span> <span style="color:var(--bear)">▼${s}</span> <span style="color:var(--gold)">◆${n}</span>`;}
+function updateSummary(){let b=0,s=0,n=0;SYMBOLS.forEach(o=>{const pa=store[o.s]?.pa;if(!pa)return;if(pa.ai.dir==="LONG")b++;else if(pa.ai.dir==="SHORT")s++;else n++;});document.getElementById("sigSummary").innerHTML=`<span style="color:var(--bull)">▲${b}</span> <span style="color:var(--bear)">▼${s}</span> <span style="color:var(--acc)">◆${n}</span>`;}
 // ════════ サイクル分析(ダウ理論スイング基準) ════════
 // 各時間軸の安値スイング間隔から平均サイクル長を測り、今の波の位置を出す
 function detectSwingLows(candles){
@@ -1207,11 +1231,11 @@ function renderCycle(sym){
     const upFromLow=lastLow.price>0?((nowPrice-lastLow.price)/lastLow.price*100):0;
     let phase,pcol,act;
     if(pct<40){phase="前半 Early";pcol="var(--bull)";act="安値から上昇の初期。押し目買いを狙いやすい局面。";}
-    else if(pct<70){phase="中盤 Mid";pcol="var(--gold)";act="トレンド進行中。順張り継続、新規は押し目で。";}
+    else if(pct<70){phase="中盤 Mid";pcol="var(--acc)";act="トレンド進行中。順張り継続、新規は押し目で。";}
     else if(pct<100){phase="後半 Late";pcol="var(--bear)";act="周期の終盤。利確を意識し、新規の追随は慎重に。";}
     else{phase="延長・転換警戒";pcol="var(--bear)";act="平均周期を超過。次の安値形成(反転)を警戒。逆張りは反転確認後。";}
     const barW=Math.min(100,pct);
-    const barCol=pct<40?"var(--bull)":pct<70?"var(--gold)":"var(--bear)";
+    const barCol=pct<40?"var(--bull)":pct<70?"var(--acc)":"var(--bear)";
     html+=`<div class="cyc-cell">
       <div class="cyc-head"><span class="cyc-tf">${lbl}</span><span class="cyc-phase" style="color:${pcol}">${phase}</span></div>
       <div class="cyc-bar-track"><div class="cyc-bar-fill" style="width:${barW}%;background:${barCol};box-shadow:0 0 6px ${barCol}"></div><div class="cyc-bar-pct">${pct}%</div></div>
@@ -1227,7 +1251,7 @@ function renderCycle(sym){
     let txt,c;
     if(late>=Math.ceil(n*0.6)){c="var(--bear)";txt=`▼ ${n}本中${late}本が周期後半〜延長 — 全体として転換(下落・調整)が近い可能性。利確・新規慎重。`;}
     else if(early>=Math.ceil(n*0.6)){c="var(--bull)";txt=`▲ ${n}本中${early}本が周期前半 — 上昇サイクルの初動。押し目買いの好機が多い局面。`;}
-    else{c="var(--gold)";txt=`◆ 時間軸でサイクル位置がバラバラ — 上位足と短期で局面が異なる。上位足の位置を優先して判断。`;}
+    else{c="var(--acc)";txt=`◆ 時間軸でサイクル位置がバラバラ — 上位足と短期で局面が異なる。上位足の位置を優先して判断。`;}
     synth=`<div class="cyc-synth" style="color:${c};border-color:${c}55;background:linear-gradient(90deg,${c}14,transparent)">${txt}</div>`;
   }
   el.innerHTML=synth+(html||`<div style="padding:14px;text-align:center;color:var(--txt-dim);font-size:9px" class="jp">データ取得中</div>`);
@@ -1245,7 +1269,7 @@ function renderMTS(sym){
   keyTfs.forEach(([tf,lbl,band])=>{
     const d=m[tf];
     if(!d||!d.enough){html+=`<div class="mts-cell"><div class="mts-tf">${lbl}<span class="mts-band">${band}</span></div><div class="mts-dir" style="color:var(--txt-faint)">蓄積中</div><div class="mts-meter"><div class="mts-mid"></div></div></div>`;return;}
-    const ai=d.ai;const col=ai.dir==="LONG"?"var(--bull)":ai.dir==="SHORT"?"var(--bear)":"var(--gold)";
+    const ai=d.ai;const col=ai.dir==="LONG"?"var(--bull)":ai.dir==="SHORT"?"var(--bear)":"var(--acc)";
     const dirLbl=ai.dir==="LONG"?"買い優勢":ai.dir==="SHORT"?"売り優勢":"中立";
     const half=Math.abs(ai.val)/100*50;const left=ai.val>=0?50:50-half;
     const vola=d.pa&&d.pa.atrPct!=null?d.pa.atrPct:null;
@@ -1259,8 +1283,8 @@ function renderMTS(sym){
     const sD=sV>15?1:sV<-15?-1:0,lD=lV>15?1:lV<-15?-1:0;
     let txt,c;
     if(sD!==0&&lD!==0&&sD===lD){c=sD>0?"var(--bull)":"var(--bear)";txt=(sD>0?"▲ ":"▼ ")+"短期・上位足ともに"+(sD>0?"買い優勢":"売り優勢")+" — 方向一致";}
-    else if(sD!==0&&lD!==0){c="var(--gold)";txt="⚠ 短期と上位足が逆行 — 時間軸不一致";}
-    else{c="var(--gold)";txt="◆ 明確な方向感なし — レンジ";}
+    else if(sD!==0&&lD!==0){c="var(--acc)";txt="⚠ 短期と上位足が逆行 — 時間軸不一致";}
+    else{c="var(--acc)";txt="◆ 明確な方向感なし — レンジ";}
     html+=`<div class="mts-summary" style="color:${c};border-color:${c}55;background:linear-gradient(90deg,${c}12,transparent)">${txt}</div>`;
   }
   el.innerHTML=html;
@@ -1269,12 +1293,12 @@ function renderTradeJudge(pa){
   const box=document.getElementById("tjBox");if(!pa)return;
   const price=pa.last.close,ai=pa.ai,abovePoc=price>pa.poc,pos=pa.rangePos;
   let verdict,vcol,advice;
-  if(ai.dir==="LONG"){if(pos<40){verdict="押し目買い好機";vcol="var(--bull)";advice="買い手が主導権を握り、価格はレンジ下部。順張りロングの典型。EMA20付近での反発を確認して入る。";}else if(pos>75){verdict="買いだが過熱";vcol="var(--gold)";advice="買い優勢だがレンジ上限。高値掴みのリスク。新規は次の押しを待つ方が安全。";}else{verdict="買い継続";vcol="var(--bull)";advice="買い優勢でレンジ中央。トレンドフォロー継続。POC割れは黄信号。";}}
-  else if(ai.dir==="SHORT"){if(pos>60){verdict="戻り売り好機";vcol="var(--bear)";advice="売り手が主導権を握り、価格はレンジ上部。順張りショートの典型。戻りの失速を確認して入る。";}else if(pos<25){verdict="売りだが過熱";vcol="var(--gold)";advice="売り優勢だがレンジ下限。底値売りは危険。踏み上げ(急反発)に注意。";}else{verdict="売り継続";vcol="var(--bear)";advice="売り優勢でレンジ中央。戻り売り継続。POC上抜けは黄信号。";}}
-  else{verdict="様子見(レンジ)";vcol="var(--gold)";advice="どちらも主導権を取れていない。レンジ両端での逆張りのみ。中央では手を出さず、明確なブレイクを待つ。";}
+  if(ai.dir==="LONG"){if(pos<40){verdict="押し目買い好機";vcol="var(--bull)";advice="買い手が主導権を握り、価格はレンジ下部。順張りロングの典型。EMA20付近での反発を確認して入る。";}else if(pos>75){verdict="買いだが過熱";vcol="var(--acc)";advice="買い優勢だがレンジ上限。高値掴みのリスク。新規は次の押しを待つ方が安全。";}else{verdict="買い継続";vcol="var(--bull)";advice="買い優勢でレンジ中央。トレンドフォロー継続。POC割れは黄信号。";}}
+  else if(ai.dir==="SHORT"){if(pos>60){verdict="戻り売り好機";vcol="var(--bear)";advice="売り手が主導権を握り、価格はレンジ上部。順張りショートの典型。戻りの失速を確認して入る。";}else if(pos<25){verdict="売りだが過熱";vcol="var(--acc)";advice="売り優勢だがレンジ下限。底値売りは危険。踏み上げ(急反発)に注意。";}else{verdict="売り継続";vcol="var(--bear)";advice="売り優勢でレンジ中央。戻り売り継続。POC上抜けは黄信号。";}}
+  else{verdict="様子見(レンジ)";vcol="var(--acc)";advice="どちらも主導権を取れていない。レンジ両端での逆張りのみ。中央では手を出さず、明確なブレイクを待つ。";}
   let entry,stop,target;
   if(ai.dir==="LONG"){entry=Math.max(pa.poc,pa.e20);stop=pa.rLo;target=pa.rHi;}else if(ai.dir==="SHORT"){entry=Math.min(pa.poc,pa.e20);stop=pa.rHi;target=pa.rLo;}else{entry=pa.poc;stop=null;target=null;}
-  box.innerHTML=`<div class="tj-verdict" style="color:${vcol};border-color:${vcol}55;background:${ai.dir==="LONG"?"var(--bull-dim)":ai.dir==="SHORT"?"var(--bear-dim)":"var(--gold-dim)"}">${verdict}</div><div style="font-size:9.5px;line-height:1.7;color:var(--txt);margin-bottom:10px;" class="jp">${advice}</div><div class="tj-row"><span class="tj-k">現在価格</span><span class="tj-v">¥${fmt(price)}</span></div><div class="tj-row"><span class="tj-k">POC (出来高集中価格)</span><span class="tj-v" style="color:var(--gold)">¥${fmt(pa.poc)} ${abovePoc?"↑上":"↓下"}</span></div><div class="tj-row"><span class="tj-k">レンジ位置 (安値0〜高値100)</span><span class="tj-v">${pos}%</span></div><div class="tj-row"><span class="tj-k">参考エントリー目安</span><span class="tj-v">¥${fmt(entry)}</span></div><div class="tj-row"><span class="tj-k">参考損切り目安</span><span class="tj-v" style="color:var(--bear)">${stop?"¥"+fmt(stop):"—"}</span></div><div class="tj-row"><span class="tj-k">参考利確目安</span><span class="tj-v" style="color:var(--bull)">${target?"¥"+fmt(target):"—"}</span></div><div style="font-size:8px;color:var(--txt-dim);margin-top:8px;text-align:center;" class="jp">※ 自動売買指示ではなく参考値。最終判断は自分で。</div>`;
+  box.innerHTML=`<div class="tj-verdict" style="color:${vcol};border-color:${vcol}55;background:${ai.dir==="LONG"?"var(--bull-dim)":ai.dir==="SHORT"?"var(--bear-dim)":"var(--acc-dim)"}">${verdict}</div><div style="font-size:9.5px;line-height:1.7;color:var(--txt);margin-bottom:10px;" class="jp">${advice}</div><div class="tj-row"><span class="tj-k">現在価格</span><span class="tj-v">¥${fmt(price)}</span></div><div class="tj-row"><span class="tj-k">POC (出来高集中価格)</span><span class="tj-v" style="color:var(--acc)">¥${fmt(pa.poc)} ${abovePoc?"↑上":"↓下"}</span></div><div class="tj-row"><span class="tj-k">レンジ位置 (安値0〜高値100)</span><span class="tj-v">${pos}%</span></div><div class="tj-row"><span class="tj-k">参考エントリー目安</span><span class="tj-v">¥${fmt(entry)}</span></div><div class="tj-row"><span class="tj-k">参考損切り目安</span><span class="tj-v" style="color:var(--bear)">${stop?"¥"+fmt(stop):"—"}</span></div><div class="tj-row"><span class="tj-k">参考利確目安</span><span class="tj-v" style="color:var(--bull)">${target?"¥"+fmt(target):"—"}</span></div><div style="font-size:8px;color:var(--txt-dim);margin-top:8px;text-align:center;" class="jp">※ 自動売買指示ではなく参考値。最終判断は自分で。</div>`;
 }
 function renderFund(sym){
   const st=store[sym];if(!st||!st.pa)return;const pa=st.pa,c=st.candles;
@@ -1325,11 +1349,11 @@ function updateSwarmText(){
   const hint=document.getElementById("swarmHint"),label=document.getElementById("swarmModeLabel"),footer=document.getElementById("swarmFooter");
   if(swarmMode==="all"){
     label.textContent="全通貨";
-    hint.innerHTML=`<b style="color:var(--gold)">全通貨マップ</b> — 各通貨を中心の大きな星、その周りの小さな光点は<b>9つの時間軸(1分〜月足)と主要指標</b>。買い優勢は右(緑)、売り優勢は左(赤)の星雲に集まる。星が大きく明るいほど確信度が高い。中央のリング(⊕収束/⊗対立)は通貨間の関係性。`;
+    hint.innerHTML=`<b style="color:var(--acc)">全通貨マップ</b> — 各通貨を中心の大きな星、その周りの小さな光点は<b>9つの時間軸(1分〜月足)と主要指標</b>。買い優勢は右(緑)、売り優勢は左(赤)の星雲に集まる。星が大きく明るいほど確信度が高い。中央のリング(⊕収束/⊗対立)は通貨間の関係性。`;
     footer.textContent="星をタップでその通貨のチャートへ。群れに逆らう孤立した星は転換点になりやすい。光点は全て実データ(各時間軸のAlways-In)。";
   }else{
     label.textContent=fmtSym(swarmMode)+" マルチタイムフレーム";
-    hint.innerHTML=`<b style="color:var(--gold)">${fmtSym(swarmMode)} 時間軸マップ</b> — 9つの時間軸(1分〜月足)を星に。<b>全部が同じ側に集まれば全時間軸が一致した強いトレンド</b>。バラけていれば時間軸ごとに主導権が対立した迷い相場。各星の周りの微小な点は、その時間軸の指標(EMA・トレンド・出来高・変動幅)。`;
+    hint.innerHTML=`<b style="color:var(--acc)">${fmtSym(swarmMode)} 時間軸マップ</b> — 9つの時間軸(1分〜月足)を星に。<b>全部が同じ側に集まれば全時間軸が一致した強いトレンド</b>。バラけていれば時間軸ごとに主導権が対立した迷い相場。各星の周りの微小な点は、その時間軸の指標(EMA・トレンド・出来高・変動幅)。`;
     footer.textContent="短期(1分・5分)と長期(4時間・日足・週足)が揃う方向が最も信頼できる。月足は蓄積中の場合あり。";
   }
 }
@@ -1877,8 +1901,8 @@ function renderTradeStats(){
   const pf=sumLoss>0?(sumWin/sumLoss):(sumWin>0?Infinity:0);
   const best=Math.max(...h.map(x=>x.pnl)),worst=Math.min(...h.map(x=>x.pnl));
   const netCol=net>=0?"var(--bull)":"var(--bear)";
-  const pfCol=pf>=1.5?"var(--bull)":pf>=1?"var(--gold)":"var(--bear)";
-  const wrCol=winRate>=50?"var(--bull)":winRate>=40?"var(--gold)":"var(--bear)";
+  const pfCol=pf>=1.5?"var(--bull)":pf>=1?"var(--acc)":"var(--bear)";
+  const wrCol=winRate>=50?"var(--bull)":winRate>=40?"var(--acc)":"var(--bear)";
   el.innerHTML=`<div class="tr-stats-grid">
     <div class="tr-stat"><div class="tr-stat-k jp">勝率 WIN RATE</div><div class="tr-stat-v" style="color:${wrCol}">${winRate.toFixed(1)}%</div><div class="tr-stat-sub jp">${wins.length}勝 ${losses.length}敗 / ${n}件</div><div class="tr-winbar"><div class="tr-winbar-fill" style="width:${winRate}%"></div></div></div>
     <div class="tr-stat"><div class="tr-stat-k jp">損益比 P/F</div><div class="tr-stat-v" style="color:${pfCol}">${pf===Infinity?"∞":pf.toFixed(2)}</div><div class="tr-stat-sub jp">総利益÷総損失 ${pf>=1?"(優位)":"(要改善)"}</div></div>
@@ -1899,7 +1923,7 @@ function trUpdateCost(){
   if(tpEl)tpEl.textContent=tpPct>0?`▲ ¥${fmt(Math.round(px*(1+tpPct/100)))}`:"未設定";
   // リスクリワード比(TP% ÷ SL%)
   if(rrEl){
-    if(slPct>0&&tpPct>0){const rr=tpPct/slPct;const c=rr>=2?"var(--bull)":rr>=1?"var(--gold)":"var(--bear)";rrEl.innerHTML=`損益比 <b style="color:${c}">1 : ${rr.toFixed(1)}</b>　${rr>=2?"(優秀)":rr>=1?"(可)":"(リスク過大)"}`;}
+    if(slPct>0&&tpPct>0){const rr=tpPct/slPct;const c=rr>=2?"var(--bull)":rr>=1?"var(--acc)":"var(--bear)";rrEl.innerHTML=`損益比 <b style="color:${c}">1 : ${rr.toFixed(1)}</b>　${rr>=2?"(優秀)":rr>=1?"(可)":"(リスク過大)"}`;}
     else rrEl.textContent="SL・TPを入れると損益比を表示";
   }
 }
@@ -2216,7 +2240,7 @@ document.getElementById("bgmRow").addEventListener("click",e=>{
   document.getElementById("bgmRow").querySelectorAll(".font-opt").forEach(o=>o.classList.toggle("on",o===opt));
   setBgmTheme(opt.dataset.bgm);
 });
-function setConn(t,live){const e=document.getElementById("connStatus");e.textContent=t;e.style.color=live?"var(--bull)":t.includes("ERROR")?"var(--bear)":"var(--gold)";}
+function setConn(t,live){const e=document.getElementById("connStatus");e.textContent=t;e.style.color=live?"var(--bull)":t.includes("ERROR")?"var(--bear)":"var(--acc)";}
 setInterval(()=>{const d=new Date();document.getElementById("utcClock").textContent=`${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}:${String(d.getUTCSeconds()).padStart(2,"0")} UTC`;},1000);
 
 // ===== BOOT =====
