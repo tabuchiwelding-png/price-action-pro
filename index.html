@@ -89,12 +89,10 @@ body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospac
 #chart{position:relative;}
 #chartMarkers{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:100;}
 .cm-marker{position:absolute;transform:translate(-50%,-50%);}
-.cm-dot{width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;border:1.5px solid;background:rgba(5,8,12,.72);box-shadow:0 0 8px currentColor;}
-.cm-exit{font-size:15px;line-height:1;filter:drop-shadow(0 0 3px rgba(0,0,0,.9));}
-.cm-done .cm-dot{opacity:.55;width:12px;height:12px;font-size:7px;}
-.cm-in .cm-lbl,.cm-in .cm-dot{color:var(--cyan);border-color:var(--cyan);}
-.cm-sl .cm-lbl,.cm-sl .cm-dot{color:var(--bear);border-color:var(--bear);}
-.cm-tp .cm-lbl,.cm-tp .cm-dot{color:var(--bull);border-color:var(--bull);}
+.cm-dot{display:flex;align-items:center;justify-content:center;line-height:1;border-radius:50%;font-family:'JetBrains Mono',monospace;}
+.cm-entry .cm-dot{width:14px;height:14px;border:2px solid var(--c);background:rgba(5,8,12,.5);box-shadow:0 0 8px var(--c);}
+.cm-exitm .cm-dot{width:16px;height:16px;background:var(--c);color:#06090d;font-size:11px;font-weight:900;box-shadow:0 0 9px var(--c);}
+.cm-lvl .cm-dot{width:9px;height:9px;border:1.4px dashed var(--c);background:transparent;opacity:.75;}
 /* 起動ブートシーケンス */
 #bootSeq{position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:bootFade .6s ease 2.1s forwards;}
 #bootSeq .boot-inner{font-family:'JetBrains Mono',monospace;text-align:left;}
@@ -991,24 +989,27 @@ function drawChartMarkers(){
   function barX(ms){const sec=Math.floor(ms/1000);let bt=firstT;for(let i=cndl.length-1;i>=0;i--){if(cndl[i].time<=sec){bt=cndl[i].time;break;}}let x=ts.timeToCoordinate(bt);if(x==null){x=(vr&&bt<vr.from)?3:w-3;}return x;}
   // 価格 → y座標(画面外は上下端へ)
   function yOf(price){let y=candleSeries.priceToCoordinate(price);if(y==null){y=price>lastClose?8:h-32;}else{y=Math.max(8,Math.min(h-32,y));}return y;}
-  const dot=(cls,x,y,g)=>`<div class="cm-marker ${cls}" style="left:${x}px;top:${y}px"><span class="cm-dot">${g}</span></div>`;
-  const exit=(x,y,g)=>`<div class="cm-marker cm-exit" style="left:${x}px;top:${y}px">${g}</div>`;
+  const entryM=(x,y,c)=>`<div class="cm-marker cm-entry" style="left:${x}px;top:${y}px;--c:${c}"><span class="cm-dot"></span></div>`;
+  const exitM=(x,y,c,win)=>`<div class="cm-marker cm-exitm" style="left:${x}px;top:${y}px;--c:${c}"><span class="cm-dot">${win?"✓":"✕"}</span></div>`;
+  const lvlM=(x,y,c)=>`<div class="cm-marker cm-lvl" style="left:${x}px;top:${y}px;--c:${c}"><span class="cm-dot"></span></div>`;
+  // 取引ごとに色を割り当て(古い順)。同じ取引のエントリーと決済は同色
+  const palette=["#34e6e0","#a78bfa","#fbbf24","#a3e635","#f472b6","#60a5fa","#fb923c","#e879f9"];
+  let trades=[];
+  trState.positions.filter(p=>p.sym===activeSymbol).forEach(p=>trades.push({opened:p.opened,entry:p.entry,sl:p.sl,tp:p.tp,open:true}));
+  trState.history.forEach(t=>{if(t.sym===activeSymbol&&t.opened!=null&&t.opened/1000>=firstT)trades.push({opened:t.opened,entry:t.entry,exit:t.exit,closed:t.closed,pnl:t.pnl,open:false});});
+  trades.sort((a,b)=>a.opened-b.opened);
+  if(trades.length>12)trades=trades.slice(trades.length-12);
   const html=[];
-  // 保有中: エントリー● + 予定SL✕ / TP✓(点のみ・ラベルなし)
-  trState.positions.filter(p=>p.sym===activeSymbol).forEach(p=>{
-    const x=barX(p.opened);
-    html.push(dot("cm-in",x,yOf(p.entry),"●"));
-    if(p.sl)html.push(dot("cm-sl",x,yOf(p.sl),"✕"));
-    if(p.tp)html.push(dot("cm-tp",x,yOf(p.tp),"✓"));
+  trades.forEach((t,i)=>{
+    const c=palette[i%palette.length];const x=barX(t.opened);
+    html.push(entryM(x,yOf(t.entry),c));               // エントリー○(取引の色)
+    if(t.open){                                         // 保有中: 予定SL(赤)/TP(緑)を小さく控えめに
+      if(t.sl)html.push(lvlM(x,yOf(t.sl),"var(--bear)"));
+      if(t.tp)html.push(lvlM(x,yOf(t.tp),"var(--bull)"));
+    }else{                                              // 決済済み: 同色の塗り円に ✓利確 / ✕損切り
+      html.push(exitM(barX(t.closed),yOf(t.exit),c,t.pnl>=0));
+    }
   });
-  // 決済済み(直近・読込範囲内): エントリー●はそのまま + 決済地点に 利確✅ / 損切り❌
-  let shown=0;
-  for(const t of trState.history){
-    if(t.sym!==activeSymbol||t.opened==null||t.opened/1000<firstT)continue;
-    html.push(dot("cm-in cm-done",barX(t.opened),yOf(t.entry),"●"));
-    html.push(exit(barX(t.closed),yOf(t.exit),t.pnl>=0?"✅":"❌"));
-    if(++shown>=12)break;
-  }
   ov.innerHTML=html.join("");
 }
 // CHARTページ表示中かつ建玉ありの間は毎フレーム再配置(パン・ズームでズレないように)。離れたら停止
