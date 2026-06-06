@@ -282,7 +282,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .tf-group{display:flex;border:1px solid var(--border2);overflow:hidden;margin-left:auto;}
 .tf-btn{padding:4px 9px;font-size:10px;color:var(--txt-mid);cursor:pointer;background:transparent;border:none;font-family:inherit;border-right:1px solid var(--border2);}
 .tf-btn:last-child{border-right:none;}.tf-btn.on{background:var(--acc);color:#000;font-weight:700;}
-#chart{height:300px;}
+#chart{height:360px;}
 
 .ai-meter{padding:14px 12px;border-bottom:1px solid var(--border);text-align:center;}
 .ai-dir{font-size:20px;font-weight:700;letter-spacing:.04em;text-shadow:0 0 12px currentColor;}
@@ -608,7 +608,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
         <button class="tf-btn" data-tf="1d">1d</button>
       </div>
     </div>
-    <div class="note jp"><span class="tag">価格分析</span><b>EMA20(金線)が上向きで価格がその上</b>なら買い手優勢、下なら売り手優勢。トレンド中は<b>EMAへの押し/戻りが絶好の順張り機会</b>。ローソクの実体が大きく髭が短いほど、その方向の意志が強い。下のメーターと内訳は、この読みを数値化したもの。</div>
+    <details class="foldnote jp"><summary>価格分析 · EMA と実体の読み方</summary><div class="fold-body"><b>EMA20(短期線)が上向きで価格がその上</b>なら買い手優勢、下なら売り手優勢。トレンド中は<b>EMAへの押し/戻りが絶好の順張り機会</b>。ローソクの実体が大きく髭が短いほど、その方向の意志が強い。下のメーターと内訳は、この読みを数値化したもの。</div></details>
     <div class="lscols">
       <div><div id="chart"></div>
         <div class="ph">DETECTED PATTERNS · 検出パターン <span class="ph-right" id="sigCount">0</span></div>
@@ -1974,7 +1974,7 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   document.getElementById("tabbarSym").style.display=(pg==="Scan")?"none":"flex";
   buildMidNav(pg);
   buildSymTabs();
-  if(pg==="Chart"&&chart)setTimeout(()=>{chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300});renderChartMarkers();},50);
+  if(pg==="Chart"&&chart)setTimeout(()=>{chart.applyOptions({width:document.getElementById("chart").clientWidth,height:document.getElementById("chart").clientHeight});renderChartMarkers();},50);
   if(pg==="Flow")connectFlowWS(activeSymbol);else disconnectFlowWS();
   if(pg==="Ana"){
     const st=store[activeSymbol];if(st?.candles?.length){renderTradeJudge(st.pa);renderFund(activeSymbol);}
@@ -2227,7 +2227,7 @@ function applyFontSize(fs){
   const row=document.getElementById("fontRow");
   if(row)row.querySelectorAll(".font-opt").forEach(o=>o.classList.toggle("on",o.dataset.fs===fs));
   // チャートが開いていれば拡大に合わせて再フィット
-  if(chart&&document.getElementById("pgChart")?.classList.contains("on")){setTimeout(()=>{try{chart.applyOptions({width:document.getElementById("chart").clientWidth,height:300});}catch(e){}},60);}
+  if(chart&&document.getElementById("pgChart")?.classList.contains("on")){setTimeout(()=>{try{chart.applyOptions({width:document.getElementById("chart").clientWidth,height:document.getElementById("chart").clientHeight});}catch(e){}},60);}
 }
 document.getElementById("fontRow").addEventListener("click",e=>{
   const opt=e.target.closest(".font-opt");if(!opt)return;sfx("tab");
