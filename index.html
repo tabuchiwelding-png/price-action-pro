@@ -198,16 +198,18 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .tr-btn.sell{background:linear-gradient(135deg,var(--bear-dim),rgba(255,77,109,.12));border:1px solid var(--bear);color:var(--bear);}
 .tr-btn.sell:active{background:var(--bear);color:#000;}
 .tr-cost{font-size:9px;color:var(--txt-dim);text-align:center;margin-top:8px;min-height:12px;}
-.tr-pos{background:var(--panel2);border-bottom:1px solid var(--border);padding:11px 12px;display:flex;align-items:center;gap:10px;}
+.tr-pos{background:var(--panel2);border-bottom:1px solid var(--border);border-left:3px solid var(--border2);padding:11px 12px;display:flex;align-items:center;gap:10px;}
+.tr-pos.pos-long{border-left-color:var(--bull);}
+.tr-pos.pos-short{border-left-color:var(--bear);}
 .tr-pos-side{font-size:11px;font-weight:800;width:46px;flex-shrink:0;}
 .tr-pos-mid{flex:1;min-width:0;}
 .tr-pos-sym{font-size:11px;font-weight:700;color:var(--txt-br);}
 .tr-pos-info{font-size:8.5px;color:var(--txt-dim);margin-top:2px;}
 .tr-pos-sltp{font-size:8px;margin-top:3px;font-weight:600;letter-spacing:.02em;}
 .tr-pos-pnl{text-align:right;flex-shrink:0;}
-.tr-pos-pnl-v{font-size:13px;font-weight:800;}
-.tr-pos-pnl-pct{font-size:9px;margin-top:1px;}
-.tr-pos-close{font-size:9px;padding:5px 11px;border:1px solid var(--border2);color:var(--txt-mid);cursor:pointer;border-radius:2px;flex-shrink:0;user-select:none;}
+.tr-pos-pnl-v{font-size:15px;font-weight:800;text-shadow:0 0 9px currentColor;}
+.tr-pos-pnl-pct{font-size:9px;margin-top:1px;font-weight:600;}
+.tr-pos-close{font-size:9px;padding:8px 13px;border:1px solid var(--border2);color:var(--txt-mid);cursor:pointer;border-radius:2px;flex-shrink:0;user-select:none;}
 .tr-pos-close:active{background:var(--raised);}
 .tr-hist{background:var(--panel2);border-bottom:1px solid var(--border);padding:9px 12px;display:flex;align-items:center;gap:8px;font-size:9.5px;}
 .tr-hist-side{font-weight:800;width:38px;flex-shrink:0;}
@@ -1868,7 +1870,7 @@ function renderTrade(){
         if(p.tp)parts.push(`<span style="color:var(--bull)">● TP ¥${fmt(Math.round(p.tp))}</span>`);
         sltpLine=`<div class="tr-pos-sltp">${parts.join(" 　")}</div>`;
       }
-      return `<div class="tr-pos">
+      return `<div class="tr-pos ${p.side==="long"?"pos-long":"pos-short"}">
         <div class="tr-pos-side" style="color:${sc}">${p.side==="long"?"▲ L":"▼ S"}</div>
         <div class="tr-pos-mid"><div class="tr-pos-sym">${fmtSym(p.sym)} <span style="color:var(--txt-dim);font-weight:400">${p.qty}</span></div><div class="tr-pos-info">建値 ¥${fmt(p.entry)} → 現在 ${cpx!=null?"¥"+fmt(cpx):"—"}</div>${sltpLine}</div>
         <div class="tr-pos-pnl"><div class="tr-pos-pnl-v" style="color:${pnl!=null?(pnl>=0?'var(--bull)':'var(--bear)'):'var(--txt-dim)'}">${pnl!=null?(pnl>=0?'+':'')+'¥'+fmt(Math.round(pnl)):'—'}</div><div class="tr-pos-pnl-pct" style="color:${pnlPct!=null?(pnlPct>=0?'var(--bull)':'var(--bear)'):'var(--txt-dim)'}">${pnlPct!=null?(pnlPct>=0?'+':'')+pnlPct.toFixed(2)+'%':''}</div></div>
