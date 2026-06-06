@@ -338,9 +338,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;back
 .cycle-head{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--border);background:var(--row);font-size:8.5px;letter-spacing:.14em;color:var(--txt-mid);}
 .cycle-count{color:var(--acc);}
 
-.of-pressure{display:flex;height:30px;margin:12px;overflow:hidden;border:1px solid var(--border2);}
-.of-bull{background:var(--bull-dim);color:var(--bull);display:flex;align-items:center;padding-left:10px;font-weight:700;font-size:13px;transition:width .4s;}
-.of-bear{background:var(--bear-dim);color:var(--bear);display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-weight:700;font-size:13px;transition:width .4s;}
+.of-pressure{display:flex;height:42px;margin:12px;overflow:hidden;border:1px solid var(--border2);border-radius:2px;position:relative;box-shadow:0 0 14px rgba(0,0,0,.4) inset;}
+.of-pressure::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--txt-faint);opacity:.5;z-index:2;}
+.of-bull{background:linear-gradient(90deg,var(--bull-dim),rgba(46,230,166,.28));color:var(--bull);display:flex;align-items:center;padding-left:11px;font-weight:800;font-size:15px;transition:width .4s;text-shadow:0 0 8px var(--bull);letter-spacing:.02em;}
+.of-bear{background:linear-gradient(90deg,rgba(255,77,109,.28),var(--bear-dim));color:var(--bear);display:flex;align-items:center;justify-content:flex-end;padding-right:11px;font-weight:800;font-size:15px;transition:width .4s;text-shadow:0 0 8px var(--bear);letter-spacing:.02em;}
 .book{display:grid;grid-template-columns:1fr 1fr;gap:1px;padding:0 12px 12px;}
 .book-col-h{font-size:8px;color:var(--txt-dim);padding:6px 0;letter-spacing:.1em;}
 .book-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 6px;position:relative;}
@@ -645,8 +646,8 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
   <!-- FLOW -->
   <div class="page" id="pgFlow">
     <div class="ph"><span class="dot" id="flowDot" style="background:var(--acc);box-shadow:0 0 5px var(--acc)"></span> ORDER FLOW · 注文フロー · <span id="flowSym">—</span> <span class="ph-right" id="flowConn">接続待ち</span></div>
-    <div class="note jp"><span class="tag">需給</span>板と成行は「<b>今この瞬間、どちらが攻めているか</b>」を映す。チャートのAlways-In(中長期の傾き)と、注文フロー(目先の攻防)が<b>同じ方向なら勢いは本物</b>。逆に乖離していたら、どちらかが騙し。下の「判定」はこの一致/乖離を自動でチェックする。</div>
-    <div style="font-size:8px;color:var(--txt-dim);padding:8px 12px 0;letter-spacing:.1em;">BUY / SELL 成行圧力 (直近約定) · どちらが攻めているか</div>
+    <details class="foldnote jp"><summary>需給 · 板と成行の読み方</summary><div class="fold-body">板と成行は「<b>今この瞬間、どちらが攻めているか</b>」を映す。チャートのAlways-In(中長期の傾き)と、注文フロー(目先の攻防)が<b>同じ方向なら勢いは本物</b>。逆に乖離していたら、どちらかが騙し。下の「判定」はこの一致/乖離を自動でチェックする。</div></details>
+    <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--txt-dim);padding:8px 12px 0;letter-spacing:.1em;"><span style="color:var(--bull)">◀ BUY 買い成行</span><span>成行圧力 (直近約定)</span><span style="color:var(--bear)">SELL 売り成行 ▶</span></div>
     <div class="of-pressure"><div class="of-bull" id="ofBull" style="width:50%">50%</div><div class="of-bear" id="ofBear" style="width:50%">50%</div></div>
     <div class="conf-box">
       <div style="font-size:8px;color:var(--txt-dim);letter-spacing:.12em;margin-bottom:6px;">CONFLUENCE · コンフルエンス(根拠の重なり) · PA方向 vs 需給</div>
