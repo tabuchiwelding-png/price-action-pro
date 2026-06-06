@@ -515,7 +515,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
   <div class="topbar">
     <div class="brand-mark">P</div>
-    <div><div class="brand-name">PA TERMINAL</div><div class="brand-sub">PRICE ACTION · ALWAYS-IN · JPY</div></div>
+    <div><div class="brand-name">PA TERMINAL</div><div class="brand-sub">PRICE ACTION · ALWAYS-IN · JPY <span id="appVerLbl" style="opacity:.6"></span></div></div>
     <div style="width:1px;height:22px;background:var(--border);"></div>
     <div class="chip"><span class="chip-label">CONN</span><span class="chip-val" id="connStatus" style="color:var(--acc)">…</span></div>
     <div class="chip"><span class="chip-label">ALWAYS-IN</span><span class="chip-val" id="sigSummary">—</span></div>
@@ -767,6 +767,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
+const APP_VERSION = 67; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -2247,8 +2248,22 @@ document.getElementById("bgmRow").addEventListener("click",e=>{
 function setConn(t,live){const e=document.getElementById("connStatus");e.textContent=t;e.style.color=live?"var(--bull)":t.includes("ERROR")?"var(--bear)":"var(--acc)";}
 setInterval(()=>{const d=new Date();document.getElementById("utcClock").textContent=`${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}:${String(d.getUTCSeconds()).padStart(2,"0")} UTC`;},1000);
 
+// ===== 自動更新(キャッシュを飛び越えて常に最新版に) =====
+async function checkForUpdate(){
+  try{
+    const res=await fetch(location.pathname+"?_cb="+Date.now(),{cache:"no-store"});
+    if(!res.ok)return;
+    const txt=await res.text();
+    const m=txt.match(/APP_VERSION\s*=\s*(\d+)/);
+    if(m){const sv=parseInt(m[1],10);if(sv>APP_VERSION){location.replace(location.pathname+"?v="+sv);}}
+  }catch(e){}
+}
+// アプリに戻ってきた時(ホーム画面アイコンから開き直した時など)も最新を確認
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkForUpdate();});
 // ===== BOOT =====
 (async function(){
+  checkForUpdate(); // 起動直後に最新版を確認(非ブロッキング)
+  {const vl=document.getElementById("appVerLbl");if(vl)vl.textContent="· v"+APP_VERSION;}
   buildWL();buildExec();buildSymTabs();buildMidNav("Scan");initChart();connectTickerWS();updateSwarmText();
   try{const savedFs=localStorage.getItem(FS_KEY);if(savedFs)applyFontSize(savedFs);}catch(e){}
   document.getElementById("tabbarSym").style.display="none";
