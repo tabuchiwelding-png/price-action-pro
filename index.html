@@ -675,8 +675,6 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <details class="foldnote jp"><summary>価格分析 · EMA と実体の読み方</summary><div class="fold-body"><b>EMA20(短期線)が上向きで価格がその上</b>なら買い手優勢、下なら売り手優勢。トレンド中は<b>EMAへの押し/戻りが絶好の順張り機会</b>。ローソクの実体が大きく髭が短いほど、その方向の意志が強い。下のメーターと内訳は、この読みを数値化したもの。</div></details>
     <div class="lscols">
       <div><div id="chart"></div>
-        <div class="ph">DETECTED PATTERNS · 検出パターン <span class="ph-right" id="sigCount">0</span></div>
-        <div id="sigFeed"></div>
 
         <!-- チャートクイック注文 -->
         <div class="ph">QUICK ORDER · チャートから発注 <span class="ph-right" style="color:var(--txt-faint)">仮想取引</span></div>
@@ -703,6 +701,9 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
           <div class="cq-msg" id="cqMsg"></div>
           <div class="cq-positions" id="cqPositions"></div>
         </div>
+
+        <div class="ph">DETECTED PATTERNS · 検出パターン <span class="ph-right" id="sigCount">0</span></div>
+        <div id="sigFeed"></div>
       </div>
       <div>
         <div class="ai-meter">
@@ -854,7 +855,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 70; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 72; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -872,33 +873,142 @@ const store={}, mtfStore={}, mtfCandles={};
 const fmtSym=s=>s.replace("JPY","/JPY");
 const shortSym=s=>s.replace("JPY","");
 
-// ===== ALWAYS-IN ENGINE (内訳を返す) =====
+// ===== ダウ理論準拠スイング構造検出エンジン =====
+// フラクタル高値・安値を検出し、HH/HL・LH/LLの連続を3点以上で確認する
+function detectSwingPoints(c,wing=3){
+  // wingは前後何本で判断するか(デフォルト3)
+  const n=c.length;
+  const highs=[],lows=[];
+  for(let i=wing;i<n-wing;i++){
+    let isH=true,isL=true;
+    for(let k=1;k<=wing;k++){
+      if(c[i].high<=c[i-k].high||c[i].high<=c[i+k].high)isH=false;
+      if(c[i].low>=c[i-k].low||c[i].low>=c[i+k].low)isL=false;
+    }
+    if(isH)highs.push({idx:i,v:c[i].high,time:c[i].time});
+    if(isL)lows.push({idx:i,v:c[i].low,time:c[i].time});
+  }
+  return{highs,lows};
+}
+
+// ダウ理論に基づくトレンド構造判定
+// 戻り値: {dir, label, strength, swingHighs, swingLows, lastHH, lastHL, lastLH, lastLL, confirmed}
+function detectDowStructure(c,wing=3){
+  const{highs,lows}=detectSwingPoints(c,wing);
+
+  // 最低3点ないと判断不能
+  if(highs.length<3||lows.length<3){
+    return{dir:"neutral",label:"データ不足",strength:0,highs,lows,confirmed:false};
+  }
+
+  // 直近4点を使って連続性を確認(2点ではノイズを拾いすぎる)
+  const rH=highs.slice(-4),rL=lows.slice(-4);
+
+  // HH: 高値が切り上がっているか(連続して)
+  // HL: 安値が切り上がっているか(連続して)
+  // LH: 高値が切り下がっているか
+  // LL: 安値が切り下がっているか
+
+  // 上昇カウント: 連続するHH・HLの数を数える
+  let hhCount=0,hlCount=0,lhCount=0,llCount=0;
+  for(let i=1;i<rH.length;i++){if(rH[i].v>rH[i-1].v)hhCount++;else lhCount++;}
+  for(let i=1;i<rL.length;i++){if(rL[i].v>rL[i-1].v)hlCount++;else llCount++;}
+
+  const maxH=rH.length-1,maxL=rL.length-1;
+
+  // 強い上昇: HHとHLが過半数
+  const bullStrong=hhCount>=Math.ceil(maxH*0.67)&&hlCount>=Math.ceil(maxL*0.67);
+  // 弱い上昇: HHかHLどちらかが過半数
+  const bullWeak=(hhCount>lhCount&&hlCount>=llCount)||(hhCount>=lhCount&&hlCount>llCount);
+  // 強い下降: LHとLLが過半数
+  const bearStrong=lhCount>=Math.ceil(maxH*0.67)&&llCount>=Math.ceil(maxL*0.67);
+  // 弱い下降
+  const bearWeak=(lhCount>hhCount&&llCount>=hlCount)||(lhCount>=hhCount&&llCount>hlCount);
+
+  // 最新スイング点
+  const lastHigh=rH[rH.length-1],lastLow=rL[rL.length-1];
+  const prevHigh=rH[rH.length-2],prevLow=rL[rL.length-2];
+
+  let dir,label,strength;
+  if(bullStrong){
+    dir="bull";label="Uptrend (HH/HL confirmed)";
+    // 強度: 連続確認数で加重
+    strength=Math.round(((hhCount/maxH)+(hlCount/maxL))/2*100);
+  } else if(bullWeak){
+    dir="bull";label="Uptrend (weak)";
+    strength=Math.round(((hhCount/maxH)+(hlCount/maxL))/2*60);
+  } else if(bearStrong){
+    dir="bear";label="Downtrend (LH/LL confirmed)";
+    strength=Math.round(((lhCount/maxH)+(llCount/maxL))/2*100);
+  } else if(bearWeak){
+    dir="bear";label="Downtrend (weak)";
+    strength=Math.round(((lhCount/maxH)+(llCount/maxL))/2*60);
+  } else {
+    dir="neutral";label="Trading Range";strength=0;
+  }
+
+  return{
+    dir,label,strength,
+    highs,lows,
+    lastHigh,lastLow,prevHigh,prevLow,
+    hhCount,hlCount,lhCount,llCount,
+    confirmed:bullStrong||bearStrong
+  };
+}
+
+// ===== ALWAYS-IN ENGINE (ダウ理論強化版) =====
 function alwaysIn(c){
-  const n=c.length; if(n<25)return{val:0,dir:"中立",conf:0,parts:{struct:0,ema:0,bars:0,vol:0}};
+  const n=c.length; if(n<25)return{val:0,dir:"中立",conf:0,parts:{struct:0,ema:0,bars:0,vol:0},dow:null};
   const cl=c.map(x=>x.close);
-  // 構造 (HH/HL) 最大±35
-  const sH=[],sL=[];
-  for(let i=3;i<n-3;i++){if([1,2,3].every(k=>c[i].high>c[i-k].high&&c[i].high>c[i+k].high))sH.push(c[i].high);if([1,2,3].every(k=>c[i].low<c[i-k].low&&c[i].low<c[i+k].low))sL.push(c[i].low);}
+
+  // ===== 構造スコア: ダウ理論準拠(3点以上で確認) 最大±40 =====
+  const dow=detectDowStructure(c,3);
   let structScore=0;
-  if(sH.length>=2&&sL.length>=2){const h=sH.slice(-2),l=sL.slice(-2);if(h[1]>h[0]&&l[1]>l[0])structScore=35;else if(h[1]<h[0]&&l[1]<l[0])structScore=-35;}
-  // EMA20傾き 最大±25
+  if(dow.dir==="bull"){
+    // 強度に応じて段階的にスコアを与える
+    structScore=dow.confirmed
+      ? Math.round(40*(dow.strength/100))      // 確認済み: 最大40
+      : Math.round(22*(dow.strength/100));      // 弱い上昇: 最大22
+  } else if(dow.dir==="bear"){
+    structScore=dow.confirmed
+      ? -Math.round(40*(dow.strength/100))
+      : -Math.round(22*(dow.strength/100));
+  }
+  // レンジの深さも考慮: 価格が直近スイング高値/安値のどちらに近いか
+  if(dow.lastHigh&&dow.lastLow){
+    const rng=dow.lastHigh.v-dow.lastLow.v;
+    if(rng>0){
+      const pos=(c[n-1].close-dow.lastLow.v)/rng; // 0=安値圏 1=高値圏
+      if(dow.dir==="bull"&&pos>0.6)structScore=Math.min(40,structScore+5);
+      if(dow.dir==="bear"&&pos<0.4)structScore=Math.max(-40,structScore-5);
+    }
+  }
+
+  // ===== EMA20傾き 最大±25 =====
   const ema=(a,p)=>{const k=2/(p+1);const o=[];let v=a[0];a.forEach((x,i)=>{v=i===0?x:x*k+v*(1-k);o.push(v);});return o;};
-  const e20=ema(cl,20);const slope=(e20[n-1]-e20[n-6])/e20[n-6]*100;
-  const slopeScore=Math.round(Math.max(-25,Math.min(25,slope*25)));
-  // 直近ローソク連続性 最大±25
-  const last8=c.slice(-8);const bulls=last8.filter(x=>x.close>=x.open).length;
-  const contScore=Math.round((bulls-4)/4*25);
-  // 出来高 最大±15
+  const e20=ema(cl,20);
+  // 傾きを5本・10本の両方で見て平均(短期ノイズを軽減)
+  const slope5=(e20[n-1]-e20[n-6])/e20[n-6]*100;
+  const slope10=n>10?(e20[n-1]-e20[n-11])/e20[n-11]*100:slope5;
+  const slopeAvg=(slope5+slope10)/2;
+  const slopeScore=Math.round(Math.max(-25,Math.min(25,slopeAvg*20)));
+
+  // ===== 直近ローソク連続性 最大±20(8本→12本に拡張) =====
+  const last12=c.slice(-12);const bulls12=last12.filter(x=>x.close>=x.open).length;
+  const contScore=Math.round((bulls12-6)/6*20);
+
+  // ===== 出来高 最大±15 =====
   const aV=c.slice(-20).reduce((s,x)=>s+x.volume,0)/20;const last=c[n-1];
   const volBoost=aV>0?Math.min(1.5,last.volume/aV):1;
   const volScore=Math.round((last.close>=last.open?1:-1)*Math.min(15,volBoost*10));
+
   let val=structScore+slopeScore+contScore+volScore;
   val=Math.max(-100,Math.min(100,Math.round(val)));
   const dir=val>15?"LONG":val<-15?"SHORT":"中立";
-  return{val,dir,conf:Math.abs(val),parts:{struct:structScore,ema:slopeScore,bars:contScore,vol:volScore}};
+  return{val,dir,conf:Math.abs(val),parts:{struct:structScore,ema:slopeScore,bars:contScore,vol:volScore},dow};
 }
 
-// ===== PA ENGINE (RSIは判定から除外・参考表示のみ。シグナル解釈を精緻化) =====
+// ===== PA ENGINE (ダウ理論強化版) =====
 function runPA(c){
   const n=c.length; if(n<25)return null;
   const body=x=>Math.abs(x.close-x.open),rng=x=>x.high-x.low,isB=x=>x.close>=x.open;
@@ -908,18 +1018,28 @@ function runPA(c){
   const cl=c.map(x=>x.close),ma20=s20.reduce((s,x)=>s+x.close,0)/20,ma50=n>=50?c.slice(-50).reduce((s,x)=>s+x.close,0)/50:null;
   const ema=(a,p)=>{const k=2/(p+1);let v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-k);return v;};
   const e20=ema(cl.slice(-20),20),e50=cl.length>=50?ema(cl.slice(-50),50):null;
-  let rsi=null; // 参考表示のみ。スコアには使わない
+  let rsi=null;
   if(n>=16){const d=cl.slice(-15).map((v,i,a)=>i>0?v-a[i-1]:0).slice(1);const ag=d.map(x=>x>0?x:0).reduce((s,v)=>s+v,0)/14,al=d.map(x=>x<0?-x:0).reduce((s,v)=>s+v,0)/14;rsi=al===0?100:Math.round(100-100/(1+ag/al));}
-  const sH=[],sL=[];
-  for(let i=3;i<n-3;i++){if([1,2,3].every(k=>c[i].high>c[i-k].high&&c[i].high>c[i+k].high))sH.push({v:c[i].high});if([1,2,3].every(k=>c[i].low<c[i-k].low&&c[i].low<c[i+k].low))sL.push({v:c[i].low});}
-  let trendDir="neutral",trendLabel="Trading Range";
-  if(sH.length>=2&&sL.length>=2){const[h0,h1]=sH.slice(-2),[l0,l1]=sL.slice(-2);if(h1.v>h0.v&&l1.v>l0.v){trendDir="bull";trendLabel="Uptrend (HH/HL)";}else if(h1.v<h0.v&&l1.v<l0.v){trendDir="bear";trendLabel="Downtrend (LH/LL)";}else if(h1.v>h0.v&&l1.v<l0.v)trendLabel="Expanding Triangle";else trendLabel="Tight Range";}
+
+  // ===== ダウ理論構造(3点以上で確認) =====
+  const dow=detectDowStructure(c,3);
+  const trendDir=dow.dir==="bull"?"bull":dow.dir==="bear"?"bear":"neutral";
+  const trendLabel=dow.label;
+  // 確認済みトレンドかどうかでシグナル強度を変える
+  const trendConfirmed=dow.confirmed;
+
   const sig=[],adj=[];
-  if(trendDir==="bull")adj.push(1.5);else if(trendDir==="bear")adj.push(-1.5);
+  // 確認済みトレンドは1.5、未確認は0.8で加重
+  const trendWeight=trendConfirmed?1.5:0.8;
+  if(trendDir==="bull")adj.push(trendWeight);
+  else if(trendDir==="bear")adj.push(-trendWeight);
+
   if(last.close>ma20)adj.push(.5);else adj.push(-.5);
   if(ma50&&last.close>ma50)adj.push(.5);else if(ma50)adj.push(-.5);
-  // A(name, dir, strength, desc=何が起きたか, action=ブルックス的対応, bolman=ボルマン的視点)
+
   const A=(name,dir,str,desc,action,bolman)=>sig.push({name,dir,str,desc,action,bolman});
+
+  // パターン検出(既存と同じ)
   if(!isB(prev)&&isB(last)&&body(last)>aB*1.3&&dnW(last)<body(last)*.25){A("Bull Reversal Bar","bull",3,"陰線の直後に、下髭が短く実体の大きい陽線。売りを呑み込み買いが主導権を奪った形。","次バーがこの高値を上抜けたら、買い手が確認された合図。ストップは反転バーの安値下。","ボルマン視点: 髭が短く実体主導なら『ダブルプレッシャー』が買い方向。次バーで高値を抜く明確なトリガーが出るまで待ち、曖昧なら見送る。");adj.push(1.5);}
   if(isB(prev)&&!isB(last)&&body(last)>aB*1.3&&upW(last)<body(last)*.25){A("Bear Reversal Bar","bear",3,"陽線の直後に、上髭が短く実体の大きい陰線。買いを呑み込み売りが主導権を奪った形。","次バーがこの安値を下抜けたら売り確認。ストップは反転バーの高値上。","ボルマン視点: 上髭が短い実体主導の陰線は売り圧力が明確。安値ブレイクの明快なトリガーを待つ。");adj.push(-1.5);}
   if(last.high<=prev.high&&last.low>=prev.low)A("Inside Bar","neutral",2,"前バーの値幅に完全に収まった小バー。買い手と売り手が一旦休戦し、力を溜めている状態。","どちらかにブレイクした方向へ追随。レンジ内では手を出さない。","ボルマン視点: 単独のインサイドバーは弱いセットアップ。ブレイクの方向と勢いを確認してからのみ参加。");
@@ -927,35 +1047,28 @@ function runPA(c){
   if(last.high>prev.high&&last.low<prev.low){const d=last.close>(last.high+last.low)/2?"bull":"bear";A("Outside Bar",d,2,`前バーを完全に包む大バー。クローズが${d==="bull"?"上半分→買いが押し切った":"下半分→売りが押し切った"}。`,`クローズした側の方向が優勢。ただし値幅が大きく、次バーで反転だましもあるため確認重視。`,"ボルマン視点: 大きな値幅は両側の攻防の激しさ。髭が長ければ方向不明瞭として評価を下げる。");adj.push(d==="bull"?1:-1);}
   if(bR(last)<.15&&rng(last)>0)A("Doji","neutral",1,"実体が極小で、買いと売りが完全に拮抗。方向感の喪失か、転換の予兆。","単独では判断しない。トレンドの天底に出れば転換注意、レンジ中なら無視。","ボルマン視点: 迷いのバー。明瞭なセットアップではないので、これ単体では取引しない。");
   const s6=c.slice(-7,-1),tight=s6.every(x=>rng(x)<aR*.75),bc=s6.filter(x=>!isB(x)).length,uc=s6.filter(x=>isB(x)).length;
-  if(trendDir==="bull"&&bc>=3&&tight){A("Bull Flag","bull",3,"上昇の後、小さく浅い押し。買い手が利確しつつも、売り手は主導権を奪えていない。","高値ブレイクで順張りロング。押しの安値割れはフラッグ崩れで撤退。トレンド継続を狙う一番素直な形。","ボルマン視点: 浅く整った押しは高品質セットアップ。ブレイク時に実体が伴えば信頼度が高い。");adj.push(1.5);}
-  if(trendDir==="bear"&&uc>=3&&tight){A("Bear Flag","bear",3,"下降の後、小さく浅い戻し。売り手が一服しているが、買い手は反撃できていない。","安値ブレイクで順張りショート。戻り高値超えは崩れで撤退。下降継続を狙う形。","ボルマン視点: 整った戻しは好機。戻りが節目で止まれば一層強い売りシグナル。");adj.push(-1.5);}
+  if(trendDir==="bull"&&bc>=3&&tight){A("Bull Flag","bull",trendConfirmed?3:2,"上昇の後、小さく浅い押し。買い手が利確しつつも、売り手は主導権を奪えていない。","高値ブレイクで順張りロング。押しの安値割れはフラッグ崩れで撤退。トレンド継続を狙う一番素直な形。","ボルマン視点: 浅く整った押しは高品質セットアップ。ブレイク時に実体が伴えば信頼度が高い。");adj.push(trendConfirmed?1.5:0.8);}
+  if(trendDir==="bear"&&uc>=3&&tight){A("Bear Flag","bear",trendConfirmed?3:2,"下降の後、小さく浅い戻し。売り手が一服しているが、買い手は反撃できていない。","安値ブレイクで順張りショート。戻り高値超えは崩れで撤退。下降継続を狙う形。","ボルマン視点: 整った戻しは好機。戻りが節目で止まれば一層強い売りシグナル。");adj.push(trendConfirmed?-1.5:-0.8);}
   const h20=Math.max(...c.slice(-21,-1).map(x=>x.high)),l20=Math.min(...c.slice(-21,-1).map(x=>x.low));
   if(last.close>h20){A("Breakout (20-bar High)","bull",3,"直近20本の高値を実体で上抜け。買い手がレンジ上限を突破し、新たな主導権を握った。","フォロースルー(続伸)を確認して順張り。ブレイク後の押しが浅いほど本物。だまし注意。","ボルマン視点: 節目を超えるブレイクは強い。ただし直上にラウンドナンバーがあると跳ね返されやすい。");adj.push(1.5);}
   if(last.close<l20){A("Breakdown (20-bar Low)","bear",3,"直近20本の安値を実体で下抜け。売り手がレンジ下限を割り、下降が加速しやすい。","戻りを売る。割れた水準が抵抗に変わる。急落後の自律反発に注意。","ボルマン視点: 節目割れは加速しやすい。実体で明確に割れたかを重視する。");adj.push(-1.5);}
-  if(c[n-2]?.high>c[n-3]?.high&&!isB(last)&&last.close<prev.open){A("Bull Trap","bear",3,"高値更新の直後に急反落し、買い手を上で捕まえた。ブレイクのだまし。","逆張り売りの好機だが、トレンドが強いと痛手。確実な反転バーを待つ。","ボルマン視点: 節目での失敗ブレイクは『ダマシ』の典型。逆方向への勢いが出やすい。");adj.push(-2);}
-  if(rng(last)>aR*2.5){A("Climax Bar",isB(last)?"bear":"bull",2,"通常の2.5倍を超える特大バー。一方向に行き過ぎたクライマックス(消尽)で、反転や急な調整が起きやすい。","飛び乗らない。クライマックス後はレンジ化か逆行が多い。利確と逆張りの両にらみ。","ボルマン視点: 行き過ぎは消尽。新規追随は避け、セットアップの再構築を待つ。");adj.push(isB(last)?-1:1);}
+  if(c[n-2]?.high>c[n-3]?.high&&!isB(last)&&last.close<prev.open){A("Bull Trap","bear",3,"高値更新の直後に急反落し、買い手を上で捕まえた。ブレイクのだまし。","確実な反転バーを待ってから判断。","ボルマン視点: 節目での失敗ブレイクは『ダマシ』の典型。逆方向への勢いが出やすい。");adj.push(-2);}
+  if(rng(last)>aR*2.5){A("Climax Bar",isB(last)?"bear":"bull",2,"通常の2.5倍を超える特大バー。一方向に行き過ぎたクライマックス(消尽)で、反転や急な調整が起きやすい。","飛び乗らない。クライマックス後はレンジ化か逆行が多い。利確を意識し、次のセットアップを待つ。","ボルマン視点: 行き過ぎは消尽。新規追随は避け、セットアップの再構築を待つ。");adj.push(isB(last)?-1:1);}
   if(e50&&cl.length>=51){const pe20=ema(cl.slice(-21,-1),20),pe50=ema(cl.slice(-51,-1),50);if(pe20<pe50&&e20>e50){A("EMA Cross (Bull)","bull",3,"EMA20がEMA50を上抜け。中期の勢いが買いに転換。","押し目を待って順張り。クロス直後は値動きが荒いことがある。","ボルマン視点: クロス自体より、その後の押しで買い圧力が確認できるかを重視。");adj.push(1.5);}if(pe20>pe50&&e20<e50){A("EMA Cross (Bear)","bear",3,"EMA20がEMA50を下抜け。中期の勢いが売りに転換。","戻りを待って順張り売り。","ボルマン視点: クロス後の戻りで売り圧力が再確認できれば信頼度が高い。");adj.push(-1.5);}}
   const aV=c.slice(-20).map(x=>x.volume).filter(v=>v>0).reduce((s,v)=>s+v,0)/20,vR=aV>0?+(last.volume/aV).toFixed(1):1;
   if(vR>1.8&&isB(last))adj.push(.5); if(vR>1.8&&!isB(last))adj.push(-.5);
-  // ===== ボルマン視点レイヤー =====
-  // ① ラウンドナンバー(キリのいい価格)= 支持/抵抗。価格の桁から節目を推定し近接度を測る
   const price=last.close;
-  const mag=Math.pow(10,Math.floor(Math.log10(price)));const roundStep=mag/2; // 価格帯に応じた節目間隔
+  const mag=Math.pow(10,Math.floor(Math.log10(price)));const roundStep=mag/2;
   const nearestRound=Math.round(price/roundStep)*roundStep;
-  const roundDist=Math.abs(price-nearestRound)/price; // 節目までの距離(割合)
-  const nearRound=roundDist<0.0015; // 節目に非常に近い
-  // ② ダブルプレッシャー(両側からの圧力)= 上下の髭がともに短い実体主導のバー = 一方向の強い意志
+  const roundDist=Math.abs(price-nearestRound)/price;
+  const nearRound=roundDist<0.0015;
   const totalWick=upW(last)+dnW(last),wickRatio=rng(last)>0?totalWick/rng(last):1;
-  const doublePressure=wickRatio<0.3&&body(last)>aB; // 髭が少なく実体が大きい=圧力が一方向
+  const doublePressure=wickRatio<0.3&&body(last)>aB;
   if(doublePressure){if(isB(last))adj.push(0.5);else adj.push(-0.5);}
-  // ③ セットアップの明瞭性(ボルマンは曖昧なバーを嫌う)= 髭が長く方向不明なバーは減点
-  const messyBar=wickRatio>0.65&&body(last)<aB*0.6; // 髭だらけで実体が小さい=曖昧
-  // ④ ラウンドナンバー近接時、ブレイク方向を後押し/逆張りを警戒
+  const messyBar=wickRatio>0.65&&body(last)<aB*0.6;
   let bolmanNote="";
   if(nearRound){bolmanNote=`節目 ¥${fmt(nearestRound)} 付近`;}
-  // ボルマン式・総合品質(0-100): 明瞭なら高い、曖昧なら低い
   const setupClarity=Math.max(0,Math.min(100,Math.round((doublePressure?70:45)+(messyBar?-30:0)+(wickRatio<0.4?15:0)+(body(last)>aB*1.3?15:0))));
-  // RSIはスコアに反映しない(参考表示のみ)
   const score=Math.max(0,Math.min(10,+(5+adj.reduce((s,v)=>s+v,0)).toFixed(1)));
   const sd=score>=6.5?"bull":score<=3.5?"bear":"neutral";
   const tr=[];for(let i=1;i<c.length;i++){const h=c[i].high,l=c[i].low,pc=c[i-1].close;tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));}
@@ -970,7 +1083,7 @@ function runPA(c){
   const BINS=24,step=(rHi-rLo)/BINS||1,vbin=new Array(BINS).fill(0);
   recent.forEach(x=>{const mid=(x.high+x.low)/2;let bi=Math.floor((mid-rLo)/step);if(bi<0)bi=0;if(bi>=BINS)bi=BINS-1;vbin[bi]+=x.volume;});
   const pocIdx=vbin.indexOf(Math.max(...vbin)),poc=rLo+step*(pocIdx+.5);
-  return{score,signalDir:sd,trendDir,trendLabel,signals:sig.sort((a,b)=>b.str-a.str),ma20:+ma20.toFixed(2),ma50:ma50?+ma50.toFixed(2):null,e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,rsi,volRatio:vR,highVol:vR>1.8,aboveMA20:last.close>ma20,aboveMA50:ma50?last.close>ma50:null,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai:alwaysIn(c),atr14,atrPct,atrHot,rangePos,rHi,rLo,poc:+poc.toFixed(2),nearestRound:+nearestRound.toFixed(2),nearRound,bolmanNote,doublePressure,setupClarity,messyBar};
+  return{score,signalDir:sd,trendDir,trendLabel,trendConfirmed,dow,signals:sig.sort((a,b)=>b.str-a.str),ma20:+ma20.toFixed(2),ma50:ma50?+ma50.toFixed(2):null,e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,rsi,volRatio:vR,highVol:vR>1.8,aboveMA20:last.close>ma20,aboveMA50:ma50?last.close>ma50:null,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai:alwaysIn(c),atr14,atrPct,atrHot,rangePos,rHi,rLo,poc:+poc.toFixed(2),nearestRound:+nearestRound.toFixed(2),nearRound,bolmanNote,doublePressure,setupClarity,messyBar};
 }
 
 // ===== DATA =====
@@ -1235,7 +1348,7 @@ document.getElementById("scanModeBtn").addEventListener("click",()=>{
 
 function renderGauge(pa){const num=document.getElementById("gaugeNum");if(!pa){num.textContent="—";return;}const c=dc(pa.signalDir);num.textContent=pa.score.toFixed(1);num.style.color=c;document.getElementById("gaugeBias").innerHTML=`<span class="gauge-bias" style="color:${c};background:${db(pa.signalDir)};border-color:${c}55">${pa.signalDir==="bull"?"▲ BUY BIAS":pa.signalDir==="bear"?"▼ SELL BIAS":"◆ NEUTRAL"}</span>`;document.getElementById("gaugeBars").innerHTML=[...Array(10)].map((_,i)=>`<div class="gauge-bar" style="background:${i<Math.round(pa.score)?c:"var(--border2)"}"></div>`).join("");}
 function renderSignals(pa){const f=document.getElementById("sigFeed");document.getElementById("sigCount").textContent=pa?pa.signals.length:0;if(!pa||!pa.signals.length){f.innerHTML=`<div style="padding:14px;text-align:center;color:var(--txt-dim)">パターン未検出</div>`;return;}f.innerHTML=pa.signals.map(s=>{const c=dc(s.dir);return `<div class="sig-card"><div class="sig-icon" style="background:${c};box-shadow:0 0 5px ${c}"></div><div style="flex:1"><div class="sig-name" style="color:${c}">${s.name}</div><div class="sig-desc jp">${s.desc}</div>${s.action?`<div class="sig-action jp">→ ${s.action}</div>`:''}${s.bolman?`<div class="sig-bolman jp">◇ ${s.bolman}</div>`:''}</div><div class="sig-str">${"●".repeat(s.str)}${"○".repeat(3-s.str)}</div></div>`;}).join("");}
-function renderInd(pa){if(!pa)return;document.getElementById("indGrid").innerHTML=[["Always-In 主導権",pa.ai.dir+" "+pa.ai.conf+"%",pa.ai.dir==="LONG"?"bull":pa.ai.dir==="SHORT"?"bear":"neutral"],["Trend トレンド",pa.trendLabel,pa.trendDir],["RSI(14) 参考",pa.rsi??"—",null],["Vol Ratio 出来高比",pa.volRatio+"x",pa.highVol?"bull":null],["EMA20 短期線","¥"+fmt(pa.e20),null],["EMA50 中期線",pa.e50?"¥"+fmt(pa.e50):"—",null],["ATR% 変動幅",pa.atrPct?pa.atrPct+"%":"—",pa.atrHot?"bull":null],["Range位置 レンジ",pa.rangePos+"%",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");}
+function renderInd(pa){if(!pa)return;document.getElementById("indGrid").innerHTML=[["Always-In 主導権",pa.ai.dir+" "+pa.ai.conf+"%",pa.ai.dir==="LONG"?"bull":pa.ai.dir==="SHORT"?"bear":"neutral"],["Trend トレンド",pa.trendLabel+(pa.trendConfirmed?" ✓":""),pa.trendDir],["Dow確認",pa.trendConfirmed?"確認済み(3点以上)":"未確認(2点以下)",pa.trendConfirmed?pa.trendDir:"neutral"],["RSI(14) 参考",pa.rsi??"—",null],["Vol Ratio 出来高比",pa.volRatio+"x",pa.highVol?"bull":null],["EMA20 短期線","¥"+fmt(pa.e20),null],["EMA50 中期線",pa.e50?"¥"+fmt(pa.e50):"—",null],["ATR% 変動幅",pa.atrPct?pa.atrPct+"%":"—",pa.atrHot?"bull":null],["Range位置 レンジ",pa.rangePos+"%",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");}
 function updateChartHead(){const st=store[activeSymbol];if(!st)return;document.getElementById("chartSym").textContent=fmtSym(activeSymbol);const t=st.ticker;if(t.price){document.getElementById("chartPrice").textContent="¥"+fmt(t.price);document.getElementById("chartPrice").style.color=t.chg>=0?"var(--bull)":"var(--bear)";const ch=document.getElementById("chartChg");ch.textContent=(t.chg>=0?"+":"")+t.chg.toFixed(2)+"%";ch.style.color=t.chg>=0?"var(--bull)":"var(--bear)";}if(t.high){document.getElementById("statsGrid").innerHTML=[["24h High 高値","¥"+fmt(t.high),"bull"],["24h Low 安値","¥"+fmt(t.low),"bear"],["24h Open 始値","¥"+fmt(t.open),null],["24h Vol 出来高","¥"+(t.vol/1e8).toFixed(1)+"億",null]].map(([k,v,d])=>`<div class="ind-item"><span class="ind-k">${k}</span><span class="ind-v" style="color:${d?dc(d):"var(--txt-br)"}">${v}</span></div>`).join("");}}
 function updateTape(){document.getElementById("tape").innerHTML=(()=>{const h=SYMBOLS.map(o=>{const t=store[o.s]?.ticker;if(!t||!t.price)return"";const c=t.chg>=0?"var(--bull)":"var(--bear)";return `<span style="font-size:9px"><span style="color:var(--txt-br)">${shortSym(o.s)}</span> <span style="color:${c}">¥${fmt(t.price)} ${t.chg>=0?"+":""}${t.chg.toFixed(2)}%</span></span>`;}).filter(Boolean).join("");return h+h;})();}
 function updateSummary(){let b=0,s=0,n=0;SYMBOLS.forEach(o=>{const pa=store[o.s]?.pa;if(!pa)return;if(pa.ai.dir==="LONG")b++;else if(pa.ai.dir==="SHORT")s++;else n++;});document.getElementById("sigSummary").innerHTML=`<span style="color:var(--bull)">▲${b}</span> <span style="color:var(--bear)">▼${s}</span> <span style="color:var(--acc)">◆${n}</span>`;}
