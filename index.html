@@ -1068,8 +1068,8 @@ async function loadChart(symbol,tf){
   }catch(e){setConn("ERROR",false);}
 }
 const fmt=v=>v>=1000?v.toLocaleString("en",{maximumFractionDigits:0}):v>=1?v.toFixed(2):v.toFixed(4);
-const dc=d=>d==="bull"?"var(--bull)":d==="bear"?"var(--bear)":"var(--acc)";
-const db=d=>d==="bull"?"var(--bull-dim)":d==="bear"?"var(--bear-dim)":"var(--acc-dim)";
+const dc=d=>d==="bull"?"var(--bull)":d==="bear"?"var(--bear)":"var(--txt-dim)";
+const db=d=>d==="bull"?"var(--bull-dim)":d==="bear"?"var(--bear-dim)":"transparent";
 
 // ===== RENDER: meter, 内訳バー, heat, narrative =====
 function renderAlwaysIn(pa){
