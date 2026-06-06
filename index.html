@@ -689,19 +689,20 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
   <!-- ANALYSIS -->
   <div class="page" id="pgAna">
     <div class="ph">TRADE JUDGEMENT · トレード判断ボード <span class="ph-right" id="tjSym">—</span></div>
-    <div class="note jp"><span class="tag">価格分析</span><b>どこで入り、どこで損切るか</b>を常に決めてから触る。POC(出来高が最も厚い価格)は強力な支持/抵抗。今の価格がレンジのどこにいて、Always-Inがどちらかを掛け合わせ、行動の目安を示す。<b>あくまで参考値。最終判断は自分で</b>。</div>
+    <details class="foldnote jp"><summary>判断ボードの見方 · POC とレンジ</summary><div class="fold-body"><b>どこで入り、どこで損切るか</b>を常に決めてから触る。POC(出来高が最も厚い価格)は強力な支持/抵抗。今の価格がレンジのどこにいて、Always-Inがどちらかを掛け合わせ、行動の目安を示す。<b>あくまで参考値。最終判断は自分で</b>。</div></details>
+    <div style="padding:7px 12px 0;"><span class="badge dim">参考値 · 自動発注ではない</span></div>
     <div class="tj-box" id="tjBox"><div style="text-align:center;color:var(--txt-dim);padding:10px;">銘柄を選択すると判断材料を表示</div></div>
 
     <div class="ph">LONG-TERM REFERENCE · 長期保有 参考スコア <span class="ph-right">テクニカル外・補助</span></div>
-    <div class="note jp"><span class="tag">補助</span>これは<b>長期保有の判断を補助する参考値</b>に過ぎず、短期売買には使わない。Binanceのデータから「資金の勢い・BTC比の相対強弱・出来高の厚み」を集計したもの。</div>
+    <details class="foldnote jp"><summary>長期保有スコアとは(短期売買には使わない)</summary><div class="fold-body">これは<b>長期保有の判断を補助する参考値</b>に過ぎず、短期売買には使わない。Binanceのデータから「資金の勢い・BTC比の相対強弱・出来高の厚み」を集計したもの。</div></details>
     <div class="ind-grid" id="fundGrid" style="border:none;"></div>
 
     <div class="ph">時間軸サマリー · MULTI-TIMEFRAME <span class="ph-right" id="mtsSym">—</span></div>
-    <div class="note jp"><span class="tag">概要</span>主要な時間軸(5分・1時間・日足・週足)の<b>Always-In方向</b>を一覧。短期と上位足が揃えば強いトレンド、バラつけば方向感が弱い。詳細は主導権マップで。</div>
+    <details class="foldnote jp"><summary>時間軸サマリーの見方</summary><div class="fold-body">主要な時間軸(5分・1時間・日足・週足)の<b>Always-In方向</b>を一覧。短期と上位足が揃えば強いトレンド、バラつけば方向感が弱い。詳細は主導権マップで。</div></details>
     <div id="mtsGrid" class="mts-grid"></div>
 
     <div class="ph">サイクル分析 · CYCLE <span class="ph-right" id="cycSym">—</span></div>
-    <div class="note jp"><span class="tag">概要</span>ダウ理論のスイング(高値・安値の更新)から各時間軸の<b>平均サイクル長</b>を測り、<b>今が波のどの位置か</b>を示す中長期の目安。安値からの経過が長いほど次の転換が近づく。あくまで過去の実測に基づく目安で、予言ではない。</div>
+    <details class="foldnote jp"><summary>サイクル分析とは</summary><div class="fold-body">ダウ理論のスイング(高値・安値の更新)から各時間軸の<b>平均サイクル長</b>を測り、<b>今が波のどの位置か</b>を示す中長期の目安。安値からの経過が長いほど次の転換が近づく。あくまで過去の実測に基づく目安で、予言ではない。</div></details>
     <div id="cycGrid" class="cyc-grid"></div>
     <details class="cyc-explain" open><summary>サイクル波形 · この通貨の実データ CHART</summary><div id="cycDiagram" class="cyc-diagram"></div></details>
 
