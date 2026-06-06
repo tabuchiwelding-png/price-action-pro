@@ -89,9 +89,14 @@ body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospac
 #chart{position:relative;}
 #chartMarkers{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:100;}
 .cm-marker{position:absolute;transform:translate(-50%,-50%);}
-.cm-dot{display:flex;align-items:center;justify-content:center;line-height:1;border-radius:50%;font-family:'JetBrains Mono',monospace;}
-.cm-entry .cm-dot{width:14px;height:14px;border:2px solid var(--c);background:rgba(5,8,12,.5);box-shadow:0 0 8px var(--c);}
-.cm-exitm .cm-dot{width:16px;height:16px;background:var(--c);color:#06090d;font-size:11px;font-weight:900;box-shadow:0 0 9px var(--c);}
+.cm-dot{position:relative;display:flex;align-items:center;justify-content:center;line-height:1;border-radius:50%;}
+.cm-entry .cm-dot{width:14px;height:14px;border:2px solid var(--c);background:transparent;box-shadow:0 0 8px var(--c);}
+.cm-exitm .cm-dot{width:17px;height:17px;background:var(--c);box-shadow:0 0 9px var(--c);}
+/* 利確=CSSチェック / 損切り=CSSバツ(絵文字を一切使わない) */
+.cm-win .cm-dot::after{content:"";width:4px;height:8px;border:solid #05080c;border-width:0 2.2px 2.2px 0;transform:rotate(45deg) translate(-0.5px,-1px);}
+.cm-loss .cm-dot::before,.cm-loss .cm-dot::after{content:"";position:absolute;width:11px;height:2.2px;background:#05080c;border-radius:1px;}
+.cm-loss .cm-dot::before{transform:rotate(45deg);}
+.cm-loss .cm-dot::after{transform:rotate(-45deg);}
 .cm-lvl .cm-dot{width:9px;height:9px;border:1.4px dashed var(--c);background:transparent;opacity:.75;}
 /* 起動ブートシーケンス */
 #bootSeq{position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:bootFade .6s ease 2.1s forwards;}
@@ -990,7 +995,7 @@ function drawChartMarkers(){
   // 価格 → y座標(画面外は上下端へ)
   function yOf(price){let y=candleSeries.priceToCoordinate(price);if(y==null){y=price>lastClose?8:h-32;}else{y=Math.max(8,Math.min(h-32,y));}return y;}
   const entryM=(x,y,c)=>`<div class="cm-marker cm-entry" style="left:${x}px;top:${y}px;--c:${c}"><span class="cm-dot"></span></div>`;
-  const exitM=(x,y,c,win)=>`<div class="cm-marker cm-exitm" style="left:${x}px;top:${y}px;--c:${c}"><span class="cm-dot">${win?"✓":"✕"}</span></div>`;
+  const exitM=(x,y,c,win)=>`<div class="cm-marker cm-exitm ${win?"cm-win":"cm-loss"}" style="left:${x}px;top:${y}px;--c:${c}"><span class="cm-dot"></span></div>`;
   const lvlM=(x,y,c)=>`<div class="cm-marker cm-lvl" style="left:${x}px;top:${y}px;--c:${c}"><span class="cm-dot"></span></div>`;
   // 取引ごとに色を割り当て(古い順)。同じ取引のエントリーと決済は同色
   const palette=["#34e6e0","#a78bfa","#fbbf24","#a3e635","#f472b6","#60a5fa","#fb923c","#e879f9"];
