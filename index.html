@@ -492,6 +492,37 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 .tj-k{color:var(--txt-dim);}
 .tj-v{color:var(--txt-br);font-weight:500;}
 
+/* ===== MERRIMAN CYCLE ENHANCED ===== */
+.mc-header{display:flex;align-items:center;gap:8px;padding:10px 12px 6px;border-bottom:1px solid var(--border);}
+.mc-badge{font-size:7.5px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border:1px solid;border-radius:2px;white-space:nowrap;}
+.mc-phase-ring{display:flex;align-items:center;justify-content:center;gap:0;padding:12px 12px 4px;}
+.mc-phase-ring svg{width:100%;max-width:320px;height:auto;display:block;}
+.mc-translation{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin:0 0 1px;}
+.mc-tl-cell{background:var(--panel2);padding:10px 12px;display:flex;flex-direction:column;gap:4px;}
+.mc-tl-label{font-size:8px;letter-spacing:.1em;color:var(--txt-dim);}
+.mc-tl-val{font-size:13px;font-weight:800;line-height:1;}
+.mc-tl-sub{font-size:8px;line-height:1.4;}
+.mc-cyc-row{background:var(--row);border-bottom:1px solid var(--border);padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
+.mc-cyc-row:last-child{border-bottom:none;}
+.mc-cyc-head{display:flex;align-items:center;justify-content:space-between;}
+.mc-cyc-tf{font-size:10px;font-weight:700;color:var(--txt-br);display:flex;align-items:center;gap:6px;}
+.mc-cyc-hier{font-size:7px;letter-spacing:.08em;color:var(--txt-faint);border:1px solid var(--border2);padding:1px 5px;}
+.mc-cyc-phase{font-size:9px;font-weight:700;letter-spacing:.04em;}
+.mc-progress{position:relative;height:8px;background:var(--raised);border:1px solid var(--border);border-radius:1px;overflow:hidden;}
+.mc-progress-fill{position:absolute;left:0;top:0;bottom:0;border-radius:1px;transition:width .6s ease;}
+.mc-progress-mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border2);opacity:.7;}
+.mc-progress-pct{position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:7px;font-weight:700;color:rgba(255,255,255,.7);}
+.mc-cyc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;}
+.mc-stat{display:flex;flex-direction:column;gap:1px;}
+.mc-stat-k{font-size:7px;color:var(--txt-faint);letter-spacing:.06em;}
+.mc-stat-v{font-size:9.5px;font-weight:600;color:var(--txt-mid);}
+.mc-tl-tag{display:inline-flex;align-items:center;gap:3px;font-size:8px;font-weight:700;padding:2px 7px;border:1px solid;border-radius:2px;}
+.mc-act{font-size:8.5px;line-height:1.55;color:var(--txt);padding:5px 0 0;border-top:1px dashed var(--border);}
+.mc-synth{margin:8px 12px;padding:10px 12px;font-size:9.5px;font-weight:700;line-height:1.6;border:1px solid;border-radius:3px;letter-spacing:.02em;}
+.mc-phase-legend{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 12px;border-top:1px solid var(--border);}
+.mc-leg-item{display:flex;align-items:center;gap:6px;font-size:8.5px;color:var(--txt-mid);}
+.mc-leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
 @media (min-width:900px) and (orientation:landscape){.lscols{display:grid;grid-template-columns:1fr 360px;}}
 </style>
 </head>
@@ -704,7 +735,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <div id="mtsGrid" class="mts-grid"></div>
 
     <div class="ph">サイクル分析 · CYCLE <span class="ph-right" id="cycSym">—</span></div>
-    <details class="foldnote jp"><summary>サイクル分析とは</summary><div class="fold-body">ダウ理論のスイング(高値・安値の更新)から各時間軸の<b>平均サイクル長</b>を測り、<b>今が波のどの位置か</b>を示す中長期の目安。安値からの経過が長いほど次の転換が近づく。あくまで過去の実測に基づく目安で、予言ではない。</div></details>
+    <details class="foldnote jp"><summary>メリマンサイクル分析とは</summary><div class="fold-body"><b>メリマンサイクル論(Merriman on Market Cycles)</b>は「相場は安値から次の安値までを1サイクルとして周期的に動く」という考え方。<br><br>◆ <b>ライト(右寄り)</b> = 高値がサイクル後半に出る = 買い優勢の強気相場。次の安値は前回安値を割りにくい。<br>◆ <b>レフト(左寄り)</b> = 高値がサイクル前半に出る = 売り優勢の弱気相場。次の安値は前回安値を割りやすい。<br><br>サイクルには階層があり、長期→中間→プライマリー(13〜21週)→メジャー(4〜7週)→トレーディング(2〜4週)の順で入れ子構造を成す。上位足の判断を最優先に使う。</div></details>
     <div id="cycGrid" class="cyc-grid"></div>
     <details class="cyc-explain" open><summary>サイクル波形 · この通貨の実データ CHART</summary><div id="cycDiagram" class="cyc-diagram"></div></details>
 
@@ -767,7 +798,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 67; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 68; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1214,52 +1245,188 @@ function projDate(bars,tf){
   const d=new Date(Date.now()+bars*info[0]);
   return(d.getMonth()+1)+"/"+d.getDate()+"頃";
 }
+// ===== MERRIMAN CYCLE: サイクル階層定義 =====
+// 各時間軸に対してメリマンサイクルの階層名と期間目安を定義
+const MC_HIER={
+  "1h": {name:"トレーディング",en:"Trading",range:"2〜4週",bars:[14,28]},
+  "4h": {name:"メジャー",en:"Major",range:"4〜7週",bars:[7,12]},
+  "1d": {name:"プライマリー",en:"Primary",range:"13〜21週",bars:[13,21]},
+  "1w": {name:"中間",en:"Intermediate",range:"数ヶ月〜1年超",bars:[20,60]},
+  "1M": {name:"長期",en:"Long-term",range:"数年単位",bars:[24,60]}
+};
+
+// ===== MERRIMAN CYCLE: 高値位置からトランスレーション判定 =====
+function detectTranslation(cndl,lastLow,avgCycle){
+  if(!lastLow||avgCycle<4)return null;
+  // 直近安値以降の窓でスイング高値を検出
+  const startIdx=lastLow.idx;
+  const window=cndl.slice(startIdx);
+  if(window.length<4)return null;
+  // 最高値の位置を検出
+  let peakIdx=0,peakPrice=-Infinity;
+  window.forEach((c,i)=>{if(c.high>peakPrice){peakPrice=c.high;peakIdx=i;}});
+  // 現在の経過本数に対して高値が前半か後半か
+  const elapsed=window.length-1;
+  const peakRatio=elapsed>0?peakIdx/elapsed:0.5;
+  const halfCycle=avgCycle/2;
+  // ライト: 高値がサイクル後半(50%超)に形成 → 買い優勢
+  // レフト: 高値がサイクル前半(50%未満)に形成 → 売り優勢
+  const isRight=peakIdx>halfCycle;
+  return{
+    type:isRight?"RIGHT":"LEFT",
+    peakIdx,peakPrice,peakRatio,elapsed,
+    label:isRight?"ライト(右寄り)":"レフト(左寄り)",
+    labelEn:isRight?"Right Translation":"Left Translation",
+    bias:isRight?"bull":"bear",
+    desc:isRight
+      ?"高値がサイクル後半に形成 — 買い手優勢の強気相場。次の安値は前回安値を割りにくい。"
+      :"高値がサイクル前半に形成 — 売り手優勢の弱気相場。次の安値は前回安値を割りやすい。",
+    action:isRight
+      ?"押し目買いを優先。ライトなら下値は底堅い。高値更新を確認して順張り。"
+      :"新規買いは慎重。レフトは戻り売りが有効。次の安値割れに備える。"
+  };
+}
+
+// ===== MERRIMAN CYCLE: 4局面判定 =====
+function detectMarketPhase(pct,translation){
+  // 蓄積(0〜25%) → 上昇(25〜60%) → 分配(60〜80%) → 下落(80〜100%+)
+  if(pct<25)return{phase:"蓄積期",phaseEn:"Accumulation",col:"var(--blue)",
+    desc:"底値圏。悲観ムードの中、賢い投資家が仕込む時期。上昇に備える局面。"};
+  if(pct<60)return{phase:"上昇期",phaseEn:"Markup",col:"var(--bull)",
+    desc:"上昇トレンドが本格化。トレンドに乗り、押し目で買いを強化する局面。"};
+  if(pct<80)return{phase:"分配期",phaseEn:"Distribution",col:"var(--acc)",
+    desc:"高値圏。徐々に利確しリスクを下げる。強気のピークに警戒が必要。"};
+  return{phase:"下落期",phaseEn:"Markdown",col:"var(--bear)",
+    desc:"下降トレンド。保有株を整理し、現金比率を高め次の蓄積期を待つ。"};
+}
+
 function renderCycle(sym){
   const el=document.getElementById("cycGrid");if(!el)return;
   const cs=document.getElementById("cycSym");if(cs)cs.textContent=fmtSym(sym);
-  const cycTfs=[["1h","1時間 1H"],["4h","4時間 4H"],["1d","日足 1D"],["1w","週足 1W"],["1M","月足 1M"]];
+  // メリマン階層順(短期→長期)
+  const cycTfs=[["1h","1時間"],["4h","4時間"],["1d","日足"],["1w","週足"],["1M","月足"]];
   const m=mtfStore[sym];
-  if(!m){el.innerHTML=`<div style="padding:14px;text-align:center;color:var(--txt-dim);font-size:9px" class="jp">主導権マップ(SWARM)を開くと時間軸データを取得します</div>`;return;}
-  let html="";const phaseScore=[];// 総合判断用(各時間軸の位置%)
+  if(!m){el.innerHTML=`<div style="padding:18px;text-align:center;color:var(--txt-dim);font-size:9px" class="jp">主導権マップ(SWARM)を開くと時間軸データを取得します</div>`;return;}
+
+  const results=[]; // 各TFの解析結果を収集(総合判断用)
+
+  let rowsHtml="";
   cycTfs.forEach(([tf,lbl])=>{
     const cndl=mtfCandles[sym]&&mtfCandles[sym][tf];
-    if(!cndl||cndl.length<30){html+=`<div class="cyc-cell"><div class="cyc-head"><span class="cyc-tf">${lbl}</span><span class="cyc-phase" style="color:var(--txt-faint)">蓄積中</span></div></div>`;return;}
+    const hier=MC_HIER[tf];
+    const hierBadge=`<span class="mc-cyc-hier">${hier.name} · ${hier.range}</span>`;
+
+    if(!cndl||cndl.length<30){
+      rowsHtml+=`<div class="mc-cyc-row"><div class="mc-cyc-head"><div class="mc-cyc-tf">${lbl}${hierBadge}</div><div class="mc-cyc-phase" style="color:var(--txt-faint)">蓄積中</div></div></div>`;return;
+    }
     const lows=detectSwingLows(cndl);
-    if(lows.length<3){html+=`<div class="cyc-cell"><div class="cyc-head"><span class="cyc-tf">${lbl}</span><span class="cyc-phase" style="color:var(--txt-faint)">スイング安値が不足</span></div></div>`;return;}
+    if(lows.length<3){
+      rowsHtml+=`<div class="mc-cyc-row"><div class="mc-cyc-head"><div class="mc-cyc-tf">${lbl}${hierBadge}</div><div class="mc-cyc-phase" style="color:var(--txt-faint)">安値データ不足</div></div></div>`;return;
+    }
+
+    // 平均サイクル長(安値間の平均本数)
     const gaps=[];for(let i=1;i<lows.length;i++)gaps.push(lows[i].idx-lows[i-1].idx);
     const avgCycle=Math.round(gaps.reduce((s,v)=>s+v,0)/gaps.length);
-    const lastLow=lows[lows.length-1];const elapsed=(cndl.length-1)-lastLow.idx;
-    const pct=avgCycle>0?Math.min(150,Math.round(elapsed/avgCycle*100)):0;
+    const lastLow=lows[lows.length-1];
+    const elapsed=(cndl.length-1)-lastLow.idx;
+    const pct=avgCycle>0?Math.min(160,Math.round(elapsed/avgCycle*100)):0;
     const remain=Math.max(0,avgCycle-elapsed);
-    phaseScore.push(pct);
     const nowPrice=cndl[cndl.length-1].close;
     const upFromLow=lastLow.price>0?((nowPrice-lastLow.price)/lastLow.price*100):0;
-    let phase,pcol,act;
-    if(pct<40){phase="前半 Early";pcol="var(--bull)";act="安値から上昇の初期。押し目買いを狙いやすい局面。";}
-    else if(pct<70){phase="中盤 Mid";pcol="var(--acc)";act="トレンド進行中。順張り継続、新規は押し目で。";}
-    else if(pct<100){phase="後半 Late";pcol="var(--bear)";act="周期の終盤。利確を意識し、新規の追随は慎重に。";}
-    else{phase="延長・転換警戒";pcol="var(--bear)";act="平均周期を超過。次の安値形成(反転)を警戒。逆張りは反転確認後。";}
+
+    // ===== トランスレーション判定(メリマン核心) =====
+    const trans=detectTranslation(cndl,lastLow,avgCycle);
+
+    // ===== 4局面 =====
+    const mphase=detectMarketPhase(pct,trans);
+
+    // プログレスバーの色
+    const barCol=pct<25?"var(--blue)":pct<60?"var(--bull)":pct<80?"var(--acc)":"var(--bear)";
     const barW=Math.min(100,pct);
-    const barCol=pct<40?"var(--bull)":pct<70?"var(--acc)":"var(--bear)";
-    html+=`<div class="cyc-cell">
-      <div class="cyc-head"><span class="cyc-tf">${lbl}</span><span class="cyc-phase" style="color:${pcol}">${phase}</span></div>
-      <div class="cyc-bar-track"><div class="cyc-bar-fill" style="width:${barW}%;background:${barCol};box-shadow:0 0 6px ${barCol}"></div><div class="cyc-bar-pct">${pct}%</div></div>
-      <div class="cyc-detail">前回安値 <b style="color:var(--bull)">¥${fmt(Math.round(lastLow.price))}</b>（${elapsed}本前・現在 <b style="color:${upFromLow>=0?'var(--bull)':'var(--bear)'}">${upFromLow>=0?'+':''}${upFromLow.toFixed(1)}%</b>）</div>
-      <div class="cyc-detail">平均周期 ${avgCycle}本（${fmtCycleSpan(avgCycle,tf)}）· 転換目安 あと約${remain}本（${fmtCycleSpan(remain,tf)}・${projDate(remain,tf)}）</div>
-      <div class="cyc-act jp" style="color:${pcol}">▸ ${act}</div>
+
+    // フェーズラベル
+    let phaseLabel,phaseCol;
+    if(pct<40){phaseLabel="前半 Early";phaseCol="var(--bull)";}
+    else if(pct<70){phaseLabel="中盤 Mid";phaseCol="var(--acc)";}
+    else if(pct<100){phaseLabel="後半 Late";phaseCol="var(--bear)";}
+    else{phaseLabel="延長";phaseCol="var(--bear)";}
+
+    // トランスレーションバッジ
+    const tlCol=trans?(trans.type==="RIGHT"?"var(--bull)":"var(--bear)"):"var(--txt-dim)";
+    const tlBadge=trans
+      ?`<span class="mc-tl-tag" style="color:${tlCol};border-color:${tlCol}55;background:${tlCol}12">${trans.type==="RIGHT"?"▶ ":"◀ "}${trans.label}</span>`
+      :`<span style="color:var(--txt-faint);font-size:8px">判定待ち</span>`;
+
+    // 行動指針
+    const actTxt=trans?trans.action:(pct<40?"安値から上昇初期。押し目買いを狙いやすい。":pct<70?"トレンド進行中。順張り継続。":pct<100?"終盤。利確を意識。":"平均超過。転換を警戒。");
+
+    results.push({tf,lbl,pct,trans,mphase,avgCycle,elapsed,remain});
+
+    rowsHtml+=`<div class="mc-cyc-row">
+      <div class="mc-cyc-head">
+        <div class="mc-cyc-tf">${lbl}${hierBadge}</div>
+        <div class="mc-cyc-phase" style="color:${phaseCol}">${phaseLabel} ${pct}%</div>
+      </div>
+      <div class="mc-progress"><div class="mc-progress-fill" style="width:${barW}%;background:${barCol};box-shadow:0 0 6px ${barCol}66"></div><div class="mc-progress-mid"></div><div class="mc-progress-pct">${pct}%</div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px">
+        ${tlBadge}
+        <span style="font-size:8px;color:var(--txt-dim)">${mphase.phase}</span>
+      </div>
+      <div class="mc-cyc-stats">
+        <div class="mc-stat"><div class="mc-stat-k">前回安値</div><div class="mc-stat-v" style="color:var(--bull)">¥${fmt(Math.round(lastLow.price))}</div></div>
+        <div class="mc-stat"><div class="mc-stat-k">安値からの上昇</div><div class="mc-stat-v" style="color:${upFromLow>=0?'var(--bull)':'var(--bear)'}">${upFromLow>=0?'+':''}${upFromLow.toFixed(1)}%</div></div>
+        <div class="mc-stat"><div class="mc-stat-k">転換目安</div><div class="mc-stat-v" style="color:var(--txt-mid)">あと${remain}本</div></div>
+      </div>
+      <div class="mc-act jp">▸ ${actTxt}</div>
     </div>`;
   });
-  // ===== 複数時間軸の総合判断 =====
-  let synth="";
-  if(phaseScore.length>=2){
-    const late=phaseScore.filter(p=>p>=70).length,early=phaseScore.filter(p=>p<40).length,n=phaseScore.length;
-    let txt,c;
-    if(late>=Math.ceil(n*0.6)){c="var(--bear)";txt=`▼ ${n}本中${late}本が周期後半〜延長 — 全体として転換(下落・調整)が近い可能性。利確・新規慎重。`;}
-    else if(early>=Math.ceil(n*0.6)){c="var(--bull)";txt=`▲ ${n}本中${early}本が周期前半 — 上昇サイクルの初動。押し目買いの好機が多い局面。`;}
-    else{c="var(--acc)";txt=`◆ 時間軸でサイクル位置がバラバラ — 上位足と短期で局面が異なる。上位足の位置を優先して判断。`;}
-    synth=`<div class="cyc-synth" style="color:${c};border-color:${c}55;background:linear-gradient(90deg,${c}14,transparent)">${txt}</div>`;
+
+  // ===== 総合判断(メリマン式) =====
+  let synthHtml="";
+  if(results.length>=2){
+    const rightCount=results.filter(r=>r.trans?.type==="RIGHT").length;
+    const leftCount=results.filter(r=>r.trans?.type==="LEFT").length;
+    const lateCount=results.filter(r=>r.pct>=70).length;
+    const earlyCount=results.filter(r=>r.pct<40).length;
+    const n=results.length;
+
+    // プライマリー(1d)の状態を最優先
+    const primary=results.find(r=>r.tf==="1d");
+    const primaryTrans=primary?.trans;
+
+    let synthTxt,synthCol;
+    if(rightCount>=Math.ceil(n*0.6)&&earlyCount>=Math.ceil(n*0.5)){
+      synthCol="var(--bull)";
+      synthTxt="▲ 複数時間軸でライト+前半 — 上昇サイクルの初動。押し目買いが有効な強気局面。";
+    } else if(leftCount>=Math.ceil(n*0.5)&&lateCount>=Math.ceil(n*0.5)){
+      synthCol="var(--bear)";
+      synthTxt="▼ 複数時間軸でレフト+後半 — 弱気相場の終盤。転換(下落)が近い可能性。守りを優先。";
+    } else if(lateCount>=Math.ceil(n*0.6)){
+      synthCol="var(--bear)";
+      synthTxt=`▼ ${n}軸中${lateCount}軸が周期後半〜延長 — 転換(調整・下落)が近い可能性。利確・新規慎重。`;
+    } else if(earlyCount>=Math.ceil(n*0.6)){
+      synthCol="var(--bull)";
+      synthTxt=`▲ ${n}軸中${earlyCount}軸が周期前半 — 上昇サイクル初動の可能性。押し目買いの好機。`;
+    } else if(primaryTrans){
+      synthCol=primaryTrans.type==="RIGHT"?"var(--bull)":"var(--bear)";
+      synthTxt=`◆ プライマリー(日足)は${primaryTrans.label} — ${primaryTrans.type==="RIGHT"?"買い手優勢。上位足の方向を軸に判断。":"売り手優勢。レンジ上限での売りを意識。"}`;
+    } else {
+      synthCol="var(--acc)";
+      synthTxt="◆ 時間軸でサイクル位置が混在 — 上位足(日足・週足)の位置を最優先に判断。";
+    }
+    synthHtml=`<div class="mc-synth jp" style="color:${synthCol};border-color:${synthCol}44;background:linear-gradient(90deg,${synthCol}0f,transparent)">${synthTxt}</div>`;
+
+    // ===== トランスレーション一覧(コンパクト) =====
+    synthHtml+=`<div class="mc-translation">`;
+    results.forEach(r=>{
+      if(!r.trans)return;
+      const tc=r.trans.type==="RIGHT"?"var(--bull)":"var(--bear)";
+      synthHtml+=`<div class="mc-tl-cell"><div class="mc-tl-label">${r.lbl}</div><div class="mc-tl-val" style="color:${tc}">${r.trans.type}</div><div class="mc-tl-sub" style="color:${tc}cc">${r.trans.label}</div></div>`;
+    });
+    synthHtml+=`</div>`;
   }
-  el.innerHTML=synth+(html||`<div style="padding:14px;text-align:center;color:var(--txt-dim);font-size:9px" class="jp">データ取得中</div>`);
+
+  el.innerHTML=synthHtml+rowsHtml;
   renderCycleDiagram(sym);
 }
 
