@@ -735,7 +735,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <div id="mtsGrid" class="mts-grid"></div>
 
     <div class="ph">サイクル分析 · CYCLE <span class="ph-right" id="cycSym">—</span></div>
-    <details class="foldnote jp"><summary>メリマンサイクル分析とは</summary><div class="fold-body"><b>メリマンサイクル論(Merriman on Market Cycles)</b>は「相場は安値から次の安値までを1サイクルとして周期的に動く」という考え方。<br><br>◆ <b>ライト(右寄り)</b> = 高値がサイクル後半に出る = 買い優勢の強気相場。次の安値は前回安値を割りにくい。<br>◆ <b>レフト(左寄り)</b> = 高値がサイクル前半に出る = 売り優勢の弱気相場。次の安値は前回安値を割りやすい。<br><br>サイクルには階層があり、長期→中間→プライマリー(13〜21週)→メジャー(4〜7週)→トレーディング(2〜4週)の順で入れ子構造を成す。上位足の判断を最優先に使う。</div></details>
+    <details class="foldnote jp"><summary>メリマンサイクル分析とは</summary><div class="fold-body"><b>メリマンサイクル論(Merriman on Market Cycles)</b>は「相場は安値から次の安値までを1サイクルとして周期的に動く」という考え方。<br><br>◆ <b>ライト(右寄り)</b> = 高値がサイクル後半に出る = 買い優勢の局面。トレンドフォローが基本。<br>◆ <b>レフト(左寄り)</b> = 高値がサイクル前半に出る = 売り優勢の局面。転換確認まで新規は見送る。<br><br>サイクルには階層があり、長期→中間→プライマリー(13〜21週)→メジャー(4〜7週)→トレーディング(2〜4週)の順で入れ子構造を成す。上位足の判断を最優先に使う。あくまで過去実績に基づく目安で、予言ではない。</div></details>
     <div id="cycGrid" class="cyc-grid"></div>
     <details class="cyc-explain" open><summary>サイクル波形 · この通貨の実データ CHART</summary><div id="cycDiagram" class="cyc-diagram"></div></details>
 
@@ -798,7 +798,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 68; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 69; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1279,11 +1279,11 @@ function detectTranslation(cndl,lastLow,avgCycle){
     labelEn:isRight?"Right Translation":"Left Translation",
     bias:isRight?"bull":"bear",
     desc:isRight
-      ?"高値がサイクル後半に形成 — 買い手優勢の強気相場。次の安値は前回安値を割りにくい。"
-      :"高値がサイクル前半に形成 — 売り手優勢の弱気相場。次の安値は前回安値を割りやすい。",
+      ?"高値がサイクル後半に形成 — 買い手が優勢な局面。トレンドフォローが基本。"
+      :"高値がサイクル前半に形成 — 売り手が優勢な局面。新規エントリーは慎重に。",
     action:isRight
-      ?"押し目買いを優先。ライトなら下値は底堅い。高値更新を確認して順張り。"
-      :"新規買いは慎重。レフトは戻り売りが有効。次の安値割れに備える。"
+      ?"買い優勢の局面。押し目での順張りを基本とし、高値更新を確認してから判断。"
+      :"売り優勢の局面。明確なトレンド転換が確認されるまで新規エントリーは見送る。"
   };
 }
 
@@ -1291,13 +1291,13 @@ function detectTranslation(cndl,lastLow,avgCycle){
 function detectMarketPhase(pct,translation){
   // 蓄積(0〜25%) → 上昇(25〜60%) → 分配(60〜80%) → 下落(80〜100%+)
   if(pct<25)return{phase:"蓄積期",phaseEn:"Accumulation",col:"var(--blue)",
-    desc:"底値圏。悲観ムードの中、賢い投資家が仕込む時期。上昇に備える局面。"};
+    desc:"サイクル初期。方向感が出るまで様子見。明確なトレンド発生を確認してから判断。"};
   if(pct<60)return{phase:"上昇期",phaseEn:"Markup",col:"var(--bull)",
-    desc:"上昇トレンドが本格化。トレンドに乗り、押し目で買いを強化する局面。"};
+    desc:"上昇トレンド継続中。トレンドに沿った順張りが基本。押し目での追随を検討。"};
   if(pct<80)return{phase:"分配期",phaseEn:"Distribution",col:"var(--acc)",
-    desc:"高値圏。徐々に利確しリスクを下げる。強気のピークに警戒が必要。"};
+    desc:"サイクル後半。徐々に利確を意識。新規追随は慎重に、トレンド継続を確認しながら判断。"};
   return{phase:"下落期",phaseEn:"Markdown",col:"var(--bear)",
-    desc:"下降トレンド。保有株を整理し、現金比率を高め次の蓄積期を待つ。"};
+    desc:"サイクル終盤〜延長。転換警戒。トレンドが明確に転換するまで新規エントリーは見送る。"};
 }
 
 function renderCycle(sym){
@@ -1358,7 +1358,7 @@ function renderCycle(sym){
       :`<span style="color:var(--txt-faint);font-size:8px">判定待ち</span>`;
 
     // 行動指針
-    const actTxt=trans?trans.action:(pct<40?"安値から上昇初期。押し目買いを狙いやすい。":pct<70?"トレンド進行中。順張り継続。":pct<100?"終盤。利確を意識。":"平均超過。転換を警戒。");
+    const actTxt=trans?trans.action:(pct<40?"サイクル前半。トレンドの方向を確認しながら順張りで対応。":pct<70?"トレンド継続中。順張りを基本とし、押し目での追随を検討。":pct<100?"サイクル後半。利確を意識しつつ、新規追随は慎重に。":"平均周期を超過。転換サインが出るまで新規エントリーは見送る。");
 
     results.push({tf,lbl,pct,trans,mphase,avgCycle,elapsed,remain});
 
@@ -1397,22 +1397,22 @@ function renderCycle(sym){
     let synthTxt,synthCol;
     if(rightCount>=Math.ceil(n*0.6)&&earlyCount>=Math.ceil(n*0.5)){
       synthCol="var(--bull)";
-      synthTxt="▲ 複数時間軸でライト+前半 — 上昇サイクルの初動。押し目買いが有効な強気局面。";
+      synthTxt="▲ 複数時間軸でライト+前半 — 買い優勢のサイクル初動。トレンド確認後に順張りで対応。";
     } else if(leftCount>=Math.ceil(n*0.5)&&lateCount>=Math.ceil(n*0.5)){
       synthCol="var(--bear)";
-      synthTxt="▼ 複数時間軸でレフト+後半 — 弱気相場の終盤。転換(下落)が近い可能性。守りを優先。";
+      synthTxt="▼ 複数時間軸でレフト+後半 — 売り優勢のサイクル終盤。転換警戒。新規エントリーは見送る。";
     } else if(lateCount>=Math.ceil(n*0.6)){
       synthCol="var(--bear)";
-      synthTxt=`▼ ${n}軸中${lateCount}軸が周期後半〜延長 — 転換(調整・下落)が近い可能性。利確・新規慎重。`;
+      synthTxt=`▼ ${n}軸中${lateCount}軸が周期後半〜延長 — 転換警戒。利確を意識し、新規追随は慎重に。`;
     } else if(earlyCount>=Math.ceil(n*0.6)){
       synthCol="var(--bull)";
-      synthTxt=`▲ ${n}軸中${earlyCount}軸が周期前半 — 上昇サイクル初動の可能性。押し目買いの好機。`;
+      synthTxt=`▲ ${n}軸中${earlyCount}軸が周期前半 — サイクル初動の可能性。トレンド方向を確認してから順張り。`;
     } else if(primaryTrans){
       synthCol=primaryTrans.type==="RIGHT"?"var(--bull)":"var(--bear)";
-      synthTxt=`◆ プライマリー(日足)は${primaryTrans.label} — ${primaryTrans.type==="RIGHT"?"買い手優勢。上位足の方向を軸に判断。":"売り手優勢。レンジ上限での売りを意識。"}`;
+      synthTxt=`◆ プライマリー(日足)は${primaryTrans.label} — ${primaryTrans.type==="RIGHT"?"買い優勢。上位足の方向に沿って順張りで判断。":"売り優勢。明確な転換確認まで新規エントリーは見送る。"}`;
     } else {
       synthCol="var(--acc)";
-      synthTxt="◆ 時間軸でサイクル位置が混在 — 上位足(日足・週足)の位置を最優先に判断。";
+      synthTxt="◆ 時間軸でサイクル位置が混在 — 上位足(日足・週足)の方向を最優先に、トレンドを確認して判断。";
     }
     synthHtml=`<div class="mc-synth jp" style="color:${synthCol};border-color:${synthCol}44;background:linear-gradient(90deg,${synthCol}0f,transparent)">${synthTxt}</div>`;
 
