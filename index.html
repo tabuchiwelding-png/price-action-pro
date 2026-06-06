@@ -675,6 +675,8 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <details class="foldnote jp"><summary>価格分析 · EMA と実体の読み方</summary><div class="fold-body"><b>EMA20(短期線)が上向きで価格がその上</b>なら買い手優勢、下なら売り手優勢。トレンド中は<b>EMAへの押し/戻りが絶好の順張り機会</b>。ローソクの実体が大きく髭が短いほど、その方向の意志が強い。下のメーターと内訳は、この読みを数値化したもの。</div></details>
     <div class="lscols">
       <div><div id="chart"></div>
+        <div class="ph">DETECTED PATTERNS · 検出パターン <span class="ph-right" id="sigCount">0</span></div>
+        <div id="sigFeed"></div>
 
         <!-- チャートクイック注文 -->
         <div class="ph">QUICK ORDER · チャートから発注 <span class="ph-right" style="color:var(--txt-faint)">仮想取引</span></div>
@@ -701,9 +703,6 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
           <div class="cq-msg" id="cqMsg"></div>
           <div class="cq-positions" id="cqPositions"></div>
         </div>
-
-        <div class="ph">DETECTED PATTERNS · 検出パターン <span class="ph-right" id="sigCount">0</span></div>
-        <div id="sigFeed"></div>
       </div>
       <div>
         <div class="ai-meter">
@@ -855,7 +854,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 72; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 73; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
