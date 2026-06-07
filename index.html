@@ -895,7 +895,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 74; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 75; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1496,16 +1496,22 @@ function runBacktest(candles, slMult, tpMult, maxHold){
         else if(i-pos.entryIdx>=maxHold){exitPrice=next.close;exitReason="TIME";}
       }
       if(exitPrice!==null){
-        const pnlPct=pos.side==="long"
-          ?(exitPrice-pos.entry)/pos.entry*100
-          :(pos.entry-exitPrice)/pos.entry*100;
-        const pnl=equity*0.02*pnlPct/atr*pos.entry; // リスク固定2%
+        // SLまでの距離(%)を基準にリスク固定2%でポジションサイズを計算
+        const slDist=Math.abs(pos.entry-pos.sl)/pos.entry; // SLまでの距離(%)
+        const riskAmt=equity*0.02; // 1トレードのリスク額(資金の2%)
+        const posSize=slDist>0?riskAmt/slDist:0; // ポジションサイズ(名目)
+        const rawPnl=pos.side==="long"
+          ?(exitPrice-pos.entry)/pos.entry*posSize
+          :(pos.entry-exitPrice)/pos.entry*posSize;
+        const pnl=Math.max(-riskAmt*3,Math.min(riskAmt*6,rawPnl)); // 上限ガード
+        const pnlPct=slDist>0?(exitPrice-pos.entry)/pos.entry/(pos.side==="long"?1:-1)/slDist*2:0;
         equity+=pnl;
         trades.push({
           idx:pos.entryIdx,exitIdx:i+1,
           side:pos.side,entry:pos.entry,exit:exitPrice,
           sl:pos.sl,tp:pos.tp,
-          pnlPct:+pnlPct.toFixed(2),pnl:+pnl.toFixed(0),
+          pnlPct:+((exitPrice-pos.entry)/pos.entry*(pos.side==="long"?1:-1)*100).toFixed(2),
+          pnl:+pnl.toFixed(0),
           reason:exitReason,bars:i+1-pos.entryIdx
         });
         equityCurve.push({i:i+1,v:+equity.toFixed(0)});
@@ -1543,23 +1549,23 @@ function runBacktest(candles, slMult, tpMult, maxHold){
   const winRate=wins.length/trades.length*100;
   const grossWin=wins.reduce((s,t)=>s+t.pnl,0);
   const grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pnl,0));
-  const pf=grossLoss>0?grossWin/grossLoss:grossWin>0?999:0;
-  const totalPnl=trades.reduce((s,t)=>s+t.pnl,0);
-  // 最大ドローダウン
+  const pf=grossLoss>0?+(grossWin/grossLoss).toFixed(2):grossWin>0?999:0;
+  const totalPnl=+trades.reduce((s,t)=>s+t.pnl,0).toFixed(0);
   let peak=10000,maxDD=0;
   equityCurve.forEach(p=>{if(p.v>peak)peak=p.v;const dd=(peak-p.v)/peak*100;if(dd>maxDD)maxDD=dd;});
-  const avgWin=wins.length?wins.reduce((s,t)=>s+t.pnlPct,0)/wins.length:0;
-  const avgLoss=losses.length?Math.abs(losses.reduce((s,t)=>s+t.pnlPct,0)/losses.length):0;
-  const expectancy=winRate/100*avgWin-(1-winRate/100)*avgLoss;
+  // 平均損益はリスク単位(R)で表示: 1R=リスク額
+  const riskBase=10000*0.02; // 初期リスク額
+  const avgWinR=wins.length?+(wins.reduce((s,t)=>s+t.pnl,0)/wins.length/riskBase).toFixed(2):0;
+  const avgLossR=losses.length?+(Math.abs(losses.reduce((s,t)=>s+t.pnl,0)/losses.length)/riskBase).toFixed(2):0;
+  const expectancy=+(winRate/100*avgWinR-(1-winRate/100)*avgLossR).toFixed(2);
 
   return{
-    trades:trades.slice(-30), // 表示は直近30件
+    trades:trades.slice(-30),
     stats:{
       total:trades.length,wins:wins.length,losses:losses.length,
-      winRate:+winRate.toFixed(1),pf:+pf.toFixed(2),
-      totalPnl:+totalPnl.toFixed(0),maxDD:+maxDD.toFixed(1),
-      avgWin:+avgWin.toFixed(2),avgLoss:+avgLoss.toFixed(2),
-      expectancy:+expectancy.toFixed(2)
+      winRate:+winRate.toFixed(1),pf,
+      totalPnl,maxDD:+maxDD.toFixed(1),
+      avgWinR,avgLossR,expectancy
     },
     equityCurve
   };
@@ -1613,7 +1619,7 @@ function renderBacktest(){
     const kpiHtml=`<div class="bt-summary">
       <div class="bt-kpi"><div class="bt-kpi-k">勝率 WIN RATE</div><div class="bt-kpi-v" style="color:${wrCol}">${s.winRate}%</div><div class="bt-kpi-sub">${s.wins}W / ${s.losses}L / ${s.total}T</div></div>
       <div class="bt-kpi"><div class="bt-kpi-k">PF プロフィット</div><div class="bt-kpi-v" style="color:${pfCol}">${s.pf}</div><div class="bt-kpi-sub">1.5以上が目安</div></div>
-      <div class="bt-kpi"><div class="bt-kpi-k">最大DD</div><div class="bt-kpi-v" style="color:var(--bear)">${s.maxDD}%</div><div class="bt-kpi-sub">期待値 ${s.expectancy>0?"+":""}${s.expectancy}%</div></div>
+      <div class="bt-kpi"><div class="bt-kpi-k">最大DD</div><div class="bt-kpi-v" style="color:var(--bear)">${s.maxDD}%</div><div class="bt-kpi-sub">期待値 ${s.expectancy>=0?"+":""}${s.expectancy}R</div></div>
     </div>`;
 
     // エクイティカーブ
@@ -1622,7 +1628,7 @@ function renderBacktest(){
       <div class="bt-equity"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${svgArea}${svgLine}</svg></div>`;
 
     // 最大DD行
-    const ddHtml=`<div class="bt-dd"><span class="bt-dd-k">平均利益</span><span class="bt-dd-v" style="color:var(--bull)">+${s.avgWin}%</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">平均損失</span><span class="bt-dd-v" style="color:var(--bear)">-${s.avgLoss}%</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">RR比</span><span class="bt-dd-v">${s.avgLoss>0?(s.avgWin/s.avgLoss).toFixed(2):"—"}</span></div>`;
+    const ddHtml=`<div class="bt-dd"><span class="bt-dd-k">平均利益</span><span class="bt-dd-v" style="color:var(--bull)">+${s.avgWinR}R</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">平均損失</span><span class="bt-dd-v" style="color:var(--bear)">-${s.avgLossR}R</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">期待値</span><span class="bt-dd-v" style="color:${s.expectancy>=0?"var(--bull)":"var(--bear)"}">${s.expectancy>=0?"+":""}${s.expectancy}R</span></div>`;
 
     // トレード一覧（直近30件）
     const trHtml=result.trades.slice().reverse().map((t,i)=>{
