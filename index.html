@@ -833,6 +833,11 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
       <div class="bt-ctrl"><div class="bt-ctrl-label">TP ATR倍率</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btTPmult" class="bt-ctrl-input" value="3.0"><span class="bt-ctrl-unit">×</span></div></div>
       <div class="bt-ctrl"><div class="bt-ctrl-label">最大保有(本)</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btMaxHold" class="bt-ctrl-input" value="20"></div></div>
     </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:0 12px 10px;">
+      <div style="font-size:8px;color:var(--txt-dim);letter-spacing:.08em;flex:1">上位足フィルター · HIGHER TF FILTER</div>
+      <div id="btHtfToggle" style="font-size:9px;font-weight:700;padding:5px 14px;border:1px solid var(--border2);color:var(--txt-dim);cursor:pointer;user-select:none;" data-on="0">OFF</div>
+      <div style="font-size:8px;color:var(--txt-faint)" id="btHtfLabel">—</div>
+    </div>
     <div class="bt-run" id="btRun">▶ RUN BACKTEST · 検証を実行</div>
     <div id="btResult"></div>
 
@@ -895,7 +900,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 78; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 79; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1455,7 +1460,7 @@ function projDate(bars,tf){
   return(d.getMonth()+1)+"/"+d.getDate()+"頃";
 }
 // ===== BACKTEST ENGINE =====
-function runBacktest(candles, slMult, tpMult, maxHold){
+function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null){
   const c=candles; const n=c.length;
   if(n<60)return null;
 
@@ -1468,6 +1473,20 @@ function runBacktest(candles, slMult, tpMult, maxHold){
       s+=Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc));
     }
     return s/p;
+  };
+
+  // 上位足フィルター: 指定時刻に対応する上位足のAlways-In方向を返す
+  // higherTfCandlesは時刻昇順の配列
+  const getHtfDir=(time)=>{
+    if(!higherTfCandles||higherTfCandles.length<25)return null;
+    // timeより前の最新の上位足を探す
+    let htfIdx=higherTfCandles.findIndex(c=>c.time>time);
+    if(htfIdx<0)htfIdx=higherTfCandles.length;
+    htfIdx=Math.max(25,htfIdx-1);
+    const slice=higherTfCandles.slice(Math.max(0,htfIdx-99),htfIdx+1);
+    if(slice.length<25)return null;
+    const ai=alwaysIn(slice);
+    return ai.dir; // "LONG" | "SHORT" | "中立"
   };
 
   const trades=[];
@@ -1548,7 +1567,15 @@ function runBacktest(candles, slMult, tpMult, maxHold){
 
       // 次の足のオープンでエントリー
       const entryPrice=c[i+1].open;
-      if(!entryPrice||entryPrice<=0)continue; // 無効なオープン価格をガード
+      if(!entryPrice||entryPrice<=0)continue;
+
+      // ===== 上位足フィルター =====
+      if(higherTfCandles){
+        const htfDir=getHtfDir(c[i].time);
+        if(htfDir==="LONG"&&side==="short")continue; // 上位足買い優勢 → ショートは見送り
+        if(htfDir==="SHORT"&&side==="long")continue;  // 上位足売り優勢 → ロングは見送り
+        if(htfDir==="中立")continue;                  // 上位足中立 → どちらも見送り
+      }
       const sl=side==="long"?entryPrice-atr*slMult:entryPrice+atr*slMult;
       const tp=side==="long"?entryPrice+atr*tpMult:entryPrice-atr*tpMult;
       // SL/TPが同じ方向にならないかガード
@@ -1606,11 +1633,24 @@ function renderBacktest(){
   const tpMult=parseFloat(document.getElementById("btTPmult")?.value)||3.0;
   const maxHold=parseInt(document.getElementById("btMaxHold")?.value)||20;
 
+  // 上位足フィルター設定
+  const htfOn=document.getElementById("btHtfToggle")?.dataset?.on==="1";
+  // 上位足の時間軸マップ
+  const HTF_MAP={"5m":"1h","15m":"4h","1h":"4h","4h":"1d","1d":"1w","1w":"1M"};
+  const htfTf=HTF_MAP[tf]||null;
+  const htfCandles=htfOn&&htfTf?(mtfCandles[sym]&&mtfCandles[sym][htfTf]):null;
+  const htfLabel=document.getElementById("btHtfLabel");
+  if(htfLabel){
+    if(!htfOn)htfLabel.textContent="—";
+    else if(!htfTf)htfLabel.textContent="対応なし";
+    else if(!htfCandles)htfLabel.textContent=`${htfTf}データなし(SWARMで取得)`;
+    else htfLabel.textContent=`${htfTf}足でフィルター中`;
+  }
+
   if(btn)btn.classList.add("running");
 
-  // 非同期で実行（UIブロックを防ぐ）
   setTimeout(()=>{
-    const result=runBacktest(candles,slMult,tpMult,maxHold);
+    const result=runBacktest(candles,slMult,tpMult,maxHold,htfOn&&htfCandles?htfCandles:null);
     if(btn)btn.classList.remove("running");
     if(!result||!result.stats){
       el.innerHTML=`<div class="bt-empty">シグナルが検出されませんでした。時間軸やパラメータを変えてみてください。</div>`;
@@ -1637,7 +1677,7 @@ function renderBacktest(){
     const kpiHtml=`<div class="bt-summary">
       <div class="bt-kpi"><div class="bt-kpi-k">勝率 WIN RATE</div><div class="bt-kpi-v" style="color:${wrCol}">${s.winRate}%</div><div class="bt-kpi-sub">${s.wins}W / ${s.losses}L / ${s.total}T</div></div>
       <div class="bt-kpi"><div class="bt-kpi-k">PF プロフィット</div><div class="bt-kpi-v" style="color:${pfCol}">${s.pf}</div><div class="bt-kpi-sub">1.5以上が目安</div></div>
-      <div class="bt-kpi"><div class="bt-kpi-k">最大DD</div><div class="bt-kpi-v" style="color:var(--bear)">${s.maxDD}%</div><div class="bt-kpi-sub">期待値 ${s.expectancy>=0?"+":""}${s.expectancy}R</div></div>
+      <div class="bt-kpi"><div class="bt-kpi-k">最大DD</div><div class="bt-kpi-v" style="color:var(--bear)">${s.maxDD}%</div><div class="bt-kpi-sub">期待値 ${s.expectancy>=0?"+":""}${s.expectancy}R${htfOn&&htfCandles?" · HTF✓":""}</div></div>
     </div>`;
 
     // エクイティカーブ
@@ -1675,6 +1715,30 @@ function initBacktest(){
   if(btn&&!btn.dataset.built){
     btn.addEventListener("click",renderBacktest);
     btn.dataset.built="1";
+  }
+  // 上位足フィルタートグル
+  const tog=document.getElementById("btHtfToggle");
+  if(tog&&!tog.dataset.built){
+    tog.addEventListener("click",()=>{
+      const on=tog.dataset.on==="1";
+      tog.dataset.on=on?"0":"1";
+      tog.textContent=on?"OFF":"ON";
+      tog.style.color=on?"var(--txt-dim)":"var(--cyan)";
+      tog.style.borderColor=on?"var(--border2)":"var(--cyan)";
+      // HTFデータが必要な場合、SWARMから取得を促す
+      const tf=document.querySelector(".tf-btn.on")?.dataset?.tf||"1h";
+      const HTF_MAP={"5m":"1h","15m":"4h","1h":"4h","4h":"1d","1d":"1w","1w":"1M"};
+      const htfTf=HTF_MAP[tf];
+      const sym=activeSymbol;
+      if(!on&&htfTf&&(!mtfCandles[sym]||!mtfCandles[sym][htfTf])){
+        // 上位足データを自動取得
+        loadMTF(sym).then(()=>{
+          const lbl=document.getElementById("btHtfLabel");
+          if(lbl&&mtfCandles[sym]&&mtfCandles[sym][htfTf])lbl.textContent=`${htfTf}足でフィルター中`;
+        });
+      }
+    });
+    tog.dataset.built="1";
   }
 }
 
