@@ -932,6 +932,10 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
       </div>
     </details>
 
+    <div class="ph">PATTERN MEMORY · パターン記録 <span class="ph-right" id="ptCount">0件</span></div>
+    <details class="foldnote jp"><summary>パターン記録の使い方</summary><div class="fold-body">バックテストを実行するたびに勝ち・負けパターンの特徴量が自動記録されます。<br><br>◆ <b>JSONコピー</b> → Claudeに貼り付けて詳細分析<br>◆ <b>テキストコピー</b> → 読みやすいサマリーをClaudeに貼り付け<br><br>データはこのデバイスのみに保存されます。</div></details>
+    <div id="ptReport"></div>
+
     <div class="ph">PRICE STATISTICS · 24時間統計</div>
     <div class="ind-grid" id="statsGrid" style="border:none;"></div>
 
@@ -991,7 +995,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 89; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 90; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1550,9 +1554,237 @@ function projDate(bars,tf){
   const d=new Date(Date.now()+bars*info[0]);
   return(d.getMonth()+1)+"/"+d.getDate()+"頃";
 }
+// ATR簡易計算（パターン記録用）
+function calcATRSimple(c,i,p=14){
+  if(i<p)return 0;
+  let s=0;
+  for(let k=i-p+1;k<=i;k++){
+    const h=c[k].high,l=c[k].low,pc=c[k-1]?.close??l;
+    s+=Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc));
+  }
+  return s/p;
+}
+
 // ===== バックテスト履歴・推奨設定 =====
 const BT_HISTORY_KEY="pa_bt_history_v1";
 const BT_MAX_RECORDS=100;
+const PT_KEY="pa_patterns_v1";
+const PT_MAX=500;
+
+// ===== パターン特徴量抽出 =====
+function extractPattern(candles,idx,side,score,atr){
+  if(idx<3||idx>=candles.length)return null;
+  const c=candles[idx],p=candles[idx-1],p2=candles[idx-2],p3=candles[idx-3];
+  const body=x=>Math.abs(x.close-x.open);
+  const rng=x=>x.high-x.low||0.001;
+  const isB=x=>x.close>=x.open;
+  const upW=x=>x.high-Math.max(x.open,x.close);
+  const dnW=x=>Math.min(x.open,x.close)-x.low;
+  const aB=(body(c)+body(p)+body(p2))/3||0.001;
+  return{
+    side,score:+score.toFixed(2),
+    // シグナル足
+    bodyRatio:+(body(c)/rng(c)).toFixed(3),
+    upWickRatio:+(upW(c)/rng(c)).toFixed(3),
+    dnWickRatio:+(dnW(c)/rng(c)).toFixed(3),
+    isBull:isB(c)?1:0,
+    bodyVsAvg:+(body(c)/aB).toFixed(2),
+    // 前足比較
+    prevDir:isB(p)?1:-1,
+    prev2Dir:isB(p2)?1:-1,
+    sizeRatio:+(rng(c)/rng(p)||1).toFixed(2),
+    // ATR正規化
+    atrNorm:atr>0?+(rng(c)/atr).toFixed(2):1,
+    ts:Date.now()
+  };
+}
+
+// ===== パターン保存 =====
+function ptSave(pattern,result,pnlR,sym,tf){
+  if(!pattern)return;
+  let pts=ptLoad();
+  pts.push({...pattern,result,pnlR:+pnlR.toFixed(3),sym,tf});
+  if(pts.length>PT_MAX)pts=pts.slice(-PT_MAX);
+  try{localStorage.setItem(PT_KEY,JSON.stringify(pts));}catch(e){}
+}
+function ptLoad(){
+  try{const d=localStorage.getItem(PT_KEY);return d?JSON.parse(d):[]}catch(e){return[];}
+}
+function ptClear(){
+  try{localStorage.removeItem(PT_KEY);}catch(e){}
+}
+
+// ===== 類似度計算(ユークリッド距離) =====
+function ptSimilarity(a,b){
+  const keys=["bodyRatio","upWickRatio","dnWickRatio","isBull","bodyVsAvg","sizeRatio","atrNorm"];
+  let sum=0;
+  keys.forEach(k=>{const d=(a[k]||0)-(b[k]||0);sum+=d*d;});
+  return 1/(1+Math.sqrt(sum)); // 0〜1、1が完全一致
+}
+
+// ===== 現在足のパターン類似度検索 =====
+function ptFindSimilar(pattern,topN=10){
+  if(!pattern)return null;
+  const pts=ptLoad();
+  if(pts.length<3)return null;
+  // 同方向のパターンのみ
+  const same=pts.filter(p=>p.side===pattern.side);
+  if(same.length<2)return null;
+  // スコア降順でtopN件
+  const scored=same.map(p=>({...p,sim:ptSimilarity(pattern,p)}))
+    .sort((a,b)=>b.sim-a.sim).slice(0,topN);
+  const wins=scored.filter(p=>p.result==="TP");
+  const total=scored.length;
+  const avgPnl=scored.reduce((s,p)=>s+p.pnlR,0)/total;
+  return{total,wins:wins.length,winRate:Math.round(wins.length/total*100),avgPnl:+avgPnl.toFixed(2),topSim:+scored[0].sim.toFixed(2)};
+}
+
+// ===== レポート生成 =====
+function ptBuildReport(){
+  const pts=ptLoad();
+  const hist=btHistoryLoad();
+  if(!pts.length&&!hist.length)return null;
+  const wins=pts.filter(p=>p.result==="TP");
+  const losses=pts.filter(p=>p.result==="SL");
+  const times=pts.filter(p=>p.result==="TIME");
+  const totalPnlR=pts.reduce((s,p)=>s+p.pnlR,0);
+
+  // 銘柄・時間軸別集計
+  const byTf={};
+  pts.forEach(p=>{
+    const k=`${p.sym}_${p.tf}`;
+    if(!byTf[k])byTf[k]={sym:p.sym,tf:p.tf,total:0,wins:0,pnlR:0};
+    byTf[k].total++;
+    if(p.result==="TP")byTf[k].wins++;
+    byTf[k].pnlR+=p.pnlR;
+  });
+
+  // サイド別集計
+  const longs=pts.filter(p=>p.side==="long");
+  const shorts=pts.filter(p=>p.side==="short");
+
+  return{
+    generated:new Date().toISOString(),
+    summary:{
+      totalPatterns:pts.length,
+      wins:wins.length,
+      losses:losses.length,
+      timeouts:times.length,
+      winRate:pts.length?Math.round(wins.length/pts.length*100):0,
+      totalPnlR:+totalPnlR.toFixed(2),
+      avgPnlR:pts.length?+(totalPnlR/pts.length).toFixed(3):0
+    },
+    bySide:{
+      long:{total:longs.length,wins:longs.filter(p=>p.result==="TP").length},
+      short:{total:shorts.length,wins:shorts.filter(p=>p.result==="TP").length}
+    },
+    byTf:Object.values(byTf).sort((a,b)=>b.total-a.total),
+    backtestHistory:hist.slice(-10),
+    rawPatterns:pts.slice(-50) // 直近50件
+  };
+}
+
+// ===== レポートUI描画 =====
+function renderPtReport(){
+  const el=document.getElementById("ptReport");if(!el)return;
+  const pts=ptLoad();
+  const hist=btHistoryLoad();
+  if(!pts.length&&!hist.length){
+    el.innerHTML=`<div style="padding:14px;text-align:center;color:var(--txt-faint);font-size:9px">バックテストを実行するとパターンが記録されます</div>`;
+    return;
+  }
+  const wins=pts.filter(p=>p.result==="TP").length;
+  const wr=pts.length?Math.round(wins/pts.length*100):0;
+  const totalR=+pts.reduce((s,p)=>s+p.pnlR,0).toFixed(2);
+  const wrCol=wr>=55?"var(--bull)":wr>=45?"var(--acc)":"var(--bear)";
+  const rCol=totalR>=0?"var(--bull)":"var(--bear)";
+
+  // 銘柄別
+  const byTf={};
+  pts.forEach(p=>{const k=`${p.sym}_${p.tf}`;if(!byTf[k])byTf[k]={sym:p.sym,tf:p.tf,total:0,wins:0,pnlR:0};byTf[k].total++;if(p.result==="TP")byTf[k].wins++;byTf[k].pnlR+=p.pnlR;});
+  const tfRows=Object.values(byTf).sort((a,b)=>b.total-a.total).slice(0,5).map(r=>{
+    const wr2=Math.round(r.wins/r.total*100);
+    const rc2=r.pnlR>=0?"var(--bull)":"var(--bear)";
+    const tfL={"1m":"1分","5m":"5分","15m":"15分","1h":"1H","4h":"4H","1d":"1D"};
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);font-size:9px">
+      <div style="flex:1;font-weight:600">${r.sym} ${tfL[r.tf]||r.tf}</div>
+      <div>${r.total}件</div>
+      <div style="color:${wr2>=50?"var(--bull)":"var(--bear)"}">${wr2}%</div>
+      <div style="color:${rc2}">${r.pnlR>=0?"+":""}${r.pnlR.toFixed(2)}R</div>
+    </div>`;
+  }).join("");
+
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border)">
+      <div style="background:var(--panel2);padding:10px 12px"><div style="font-size:7.5px;color:var(--txt-faint)">記録パターン</div><div style="font-size:18px;font-weight:800;color:var(--txt-br)">${pts.length}</div><div style="font-size:8px;color:var(--txt-dim)">${wins}勝 / ${pts.length-wins}敗</div></div>
+      <div style="background:var(--panel2);padding:10px 12px"><div style="font-size:7.5px;color:var(--txt-faint)">勝率</div><div style="font-size:18px;font-weight:800;color:${wrCol}">${wr}%</div><div style="font-size:8px;color:var(--txt-dim)">累積</div></div>
+      <div style="background:var(--panel2);padding:10px 12px"><div style="font-size:7.5px;color:var(--txt-faint)">累積損益</div><div style="font-size:18px;font-weight:800;color:${rCol}">${totalR>=0?"+":""}${totalR}R</div><div style="font-size:8px;color:var(--txt-dim)">全パターン</div></div>
+    </div>
+    ${tfRows?`<div style="border-top:1px solid var(--border)">${tfRows}</div>`:""}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px;border-top:1px solid var(--border)">
+      <div class="btr-btn" id="ptCopyJson" style="text-align:center;padding:10px;font-size:9px">📋 JSONコピー</div>
+      <div class="btr-btn" id="ptCopyText" style="text-align:center;padding:10px;font-size:9px">📝 テキストコピー</div>
+    </div>
+    <div id="ptCopyMsg" style="text-align:center;font-size:8.5px;color:var(--cyan);padding:0 12px 10px;min-height:14px"></div>
+    <div style="padding:0 12px 10px;text-align:right"><span style="font-size:8px;color:var(--txt-faint);cursor:pointer" id="ptClearBtn">パターンをリセット</span></div>`;
+
+  // JSONコピー
+  document.getElementById("ptCopyJson")?.addEventListener("click",()=>{
+    const report=ptBuildReport();
+    if(!report){document.getElementById("ptCopyMsg").textContent="データなし";return;}
+    navigator.clipboard?.writeText(JSON.stringify(report,null,2)).then(()=>{
+      document.getElementById("ptCopyMsg").textContent="✓ JSONをコピーしました。Claudeに貼り付けてください。";
+      setTimeout(()=>{const m=document.getElementById("ptCopyMsg");if(m)m.textContent="";},4000);
+    }).catch(()=>{
+      // クリップボードAPIが使えない場合はテキストエリアで代替
+      const ta=document.createElement("textarea");
+      ta.value=JSON.stringify(report,null,2);
+      document.body.appendChild(ta);ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      document.getElementById("ptCopyMsg").textContent="✓ JSONをコピーしました。";
+    });
+  });
+
+  // テキストコピー（読みやすいサマリー）
+  document.getElementById("ptCopyText")?.addEventListener("click",()=>{
+    const report=ptBuildReport();
+    if(!report){document.getElementById("ptCopyMsg").textContent="データなし";return;}
+    const s=report.summary;
+    const lines=[
+      "=== PA TERMINAL パターンレポート ===",
+      `生成日時: ${new Date().toLocaleString("ja-JP")}`,
+      "",
+      "【サマリー】",
+      `総パターン数: ${s.totalPatterns}件`,
+      `勝率: ${s.winRate}% (${s.wins}勝 / ${s.losses}敗 / タイムアウト${s.timeouts})`,
+      `累積損益: ${s.totalPnlR>=0?"+":""}${s.totalPnlR}R`,
+      `平均損益: ${s.avgPnlR>=0?"+":""}${s.avgPnlR}R/トレード`,
+      "",
+      "【サイド別】",
+      `LONG: ${report.bySide.long.total}件 / 勝率${report.bySide.long.total?Math.round(report.bySide.long.wins/report.bySide.long.total*100):0}%`,
+      `SHORT: ${report.bySide.short.total}件 / 勝率${report.bySide.short.total?Math.round(report.bySide.short.wins/report.bySide.short.total*100):0}%`,
+      "",
+      "【銘柄・時間軸別】",
+      ...report.byTf.map(r=>`${r.sym} ${r.tf}: ${r.total}件 勝率${Math.round(r.wins/r.total*100)}% ${r.pnlR>=0?"+":""}${r.pnlR.toFixed(2)}R`),
+      "",
+      "【バックテスト履歴(直近10回)】",
+      ...report.backtestHistory.map(h=>`${h.sym} ${h.tf} SL${h.slMult}×TP${h.tpMult}× 感度${h.sens}% ${h.htf?"HTF ON":""} → 勝率${h.winRate}% PF${h.pf} DD${h.maxDD}% 期待値${h.expectancy}R (${h.total}件)`)
+    ].join("\n");
+    navigator.clipboard?.writeText(lines).then(()=>{
+      document.getElementById("ptCopyMsg").textContent="✓ テキストをコピーしました。Claudeに貼り付けてください。";
+      setTimeout(()=>{const m=document.getElementById("ptCopyMsg");if(m)m.textContent="";},4000);
+    }).catch(()=>{
+      const ta=document.createElement("textarea");ta.value=lines;
+      document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);
+      document.getElementById("ptCopyMsg").textContent="✓ テキストをコピーしました。";
+    });
+  });
+
+  document.getElementById("ptClearBtn")?.addEventListener("click",()=>{
+    if(confirm("パターン記録を全てリセットしますか？")){ptClear();renderPtReport();}
+  });
+}
 
 function btHistorySave(record){
   let hist=btHistoryLoad();
@@ -2106,6 +2338,15 @@ function renderBacktest(){
       }).join("");
       el.innerHTML=kpiHtml+eqHtml+ddHtml+`<div class="ph" style="margin-top:8px">TRADE LOG · 直近${result.trades.length}件 / 全${s.total}件</div><div class="bt-trades">${trHtml||'<div class="bt-empty">トレードなし</div>'}</div>`;
 
+      // パターン記録
+      const riskBase=10000*0.02;
+      result.trades.forEach(t=>{
+        const pat=extractPattern(candles,t.idx,t.side,t.score||s.winRate/100*10,calcATRSimple(candles,t.idx));
+        const pnlR=t.pnl/riskBase;
+        ptSave(pat,t.reason,pnlR,sym,tf);
+      });
+      renderPtReport();
+
       // 履歴に保存
       btHistorySave({
         ts:Date.now(),
@@ -2136,6 +2377,9 @@ function initBacktest(){
     btn.dataset.built="1";
   }
   renderBtHistory(); // 既存履歴を表示
+  renderPtReport();  // パターン記録初期表示
+  const ptc=document.getElementById("ptCount");
+  if(ptc)ptc.textContent=ptLoad().length+"件";
   // 感度スライダーのリアルタイム表示
   const sens=document.getElementById("btSens");
   const sensVal=document.getElementById("btSensVal");
