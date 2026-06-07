@@ -830,11 +830,25 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <details class="cyc-explain" open><summary>サイクル波形 · この通貨の実データ CHART</summary><div id="cycDiagram" class="cyc-diagram"></div></details>
 
     <div class="ph">BACKTEST · シグナル検証 <span class="ph-right" id="btSym">—</span></div>
-    <details class="foldnote jp"><summary>バックテストの見方</summary><div class="fold-body">現在表示中の銘柄・時間軸の直近500本に対して、PAシグナルスコアが<b>6.5以上→LONG / 3.5以下→SHORT</b>でエントリーし、ATRベースのSL/TPで決済したと仮定した場合の成績。過去データへの当てはめであり、将来の利益を保証するものではない。</div></details>
+    <details class="foldnote jp"><summary>バックテストの見方</summary><div class="fold-body">現在表示中の銘柄・時間軸の過去90日分に対して、PAシグナルスコアが閾値を超えた次足でエントリーし、ATRベースのSL/TPで決済したと仮定した場合の成績。<br><br>◆ <b>感度</b>が高いほど閾値が厳しくなりシグナルが減る。低いほど多くなる。<br>◆ 過去データへの当てはめであり、将来の利益を保証するものではない。</div></details>
     <div class="bt-controls">
-      <div class="bt-ctrl"><div class="bt-ctrl-label">SL ATR倍率</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btSLmult" class="bt-ctrl-input" value="1.5"><span class="bt-ctrl-unit">×</span></div></div>
+      <div class="bt-ctrl"><div class="bt-ctrl-label">SL ATR倍率</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btSLmult" class="bt-ctrl-input" value="2.0"><span class="bt-ctrl-unit">×</span></div></div>
       <div class="bt-ctrl"><div class="bt-ctrl-label">TP ATR倍率</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btTPmult" class="bt-ctrl-input" value="3.0"><span class="bt-ctrl-unit">×</span></div></div>
       <div class="bt-ctrl"><div class="bt-ctrl-label">最大保有(本)</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btMaxHold" class="bt-ctrl-input" value="20"></div></div>
+    </div>
+    <!-- 感度スライダー -->
+    <div style="padding:4px 12px 10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+        <div style="font-size:8px;color:var(--txt-dim);letter-spacing:.08em;">シグナル感度 · SENSITIVITY</div>
+        <div style="font-size:11px;font-weight:800;color:var(--cyan)" id="btSensVal">80%</div>
+      </div>
+      <input type="range" id="btSens" min="20" max="95" value="80" step="5"
+        style="width:100%;accent-color:var(--cyan);height:4px;cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;margin-top:3px;">
+        <span style="font-size:7.5px;color:var(--txt-faint)">敏感(多)</span>
+        <span style="font-size:7.5px;color:var(--txt-faint)" id="btSensThresh">閾値: LONG≥7.0 SHORT≤3.0</span>
+        <span style="font-size:7.5px;color:var(--txt-faint)">厳選(少)</span>
+      </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:0 12px 10px;">
       <div style="font-size:8px;color:var(--txt-dim);letter-spacing:.08em;flex:1">上位足フィルター · HIGHER TF FILTER</div>
@@ -905,7 +919,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 81; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 82; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1464,6 +1478,18 @@ function projDate(bars,tf){
   const d=new Date(Date.now()+bars*info[0]);
   return(d.getMonth()+1)+"/"+d.getDate()+"頃";
 }
+// 感度(%) → エントリー閾値変換
+// 感度高(95%) = 厳選 = スコア7.5以上でLONG / 2.5以下でSHORT
+// 感度低(20%) = 敏感 = スコア5.8以上でLONG / 4.2以下でSHORT
+function sensToThreshold(sens){
+  // sensは20〜95の整数
+  // LONG閾値: 5.8(低感度) → 7.5(高感度)
+  const longThresh=+(5.8+(sens-20)/(95-20)*(7.5-5.8)).toFixed(1);
+  // SHORT閾値: 4.2(低感度) → 2.5(高感度)
+  const shortThresh=+(4.2-(sens-20)/(95-20)*(4.2-2.5)).toFixed(1);
+  return{longThresh,shortThresh};
+}
+
 // ===== バックテスト用: 過去90日分を複数回APIで取得 =====
 const btHistoryCache={}; // キャッシュ: {sym_tf: {data, fetchedAt}}
 async function loadDeepHistory(symbol,tf,onProgress){
@@ -1519,7 +1545,7 @@ async function loadDeepHistory(symbol,tf,onProgress){
   return allCandles;
 }
 
-function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null){
+function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, longThresh=6.5, shortThresh=3.5){
   const c=candles; const n=c.length;
   if(n<60)return null;
 
@@ -1620,8 +1646,8 @@ function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null){
       if(!pa)continue;
       const score=pa.score;
       let side=null;
-      if(score>=6.5)side="long";
-      else if(score<=3.5)side="short";
+      if(score>=longThresh)side="long";
+      else if(score<=shortThresh)side="short";
       if(!side)continue;
 
       // 次の足のオープンでエントリー
@@ -1720,7 +1746,9 @@ function renderBacktest(){
       } else {if(htfLabel)htfLabel.textContent=htfOn&&!htfTf?"対応なし":"—";}
       onProgress(98,"バックテスト計算中...");
       await new Promise(r=>setTimeout(r,30));
-      const result=runBacktest(candles,slMult,tpMult,maxHold,htfOn&&htfCandles?htfCandles:null);
+      const sens=parseInt(document.getElementById("btSens")?.value)||80;
+      const{longThresh,shortThresh}=sensToThreshold(sens);
+      const result=runBacktest(candles,slMult,tpMult,maxHold,htfOn&&htfCandles?htfCandles:null,longThresh,shortThresh);
       if(prog)prog.style.display="none";
       if(progTxt)progTxt.style.display="none";
       if(btn){btn.classList.remove("running");btn.textContent="▶ RUN BACKTEST · 検証を実行";}
@@ -1734,9 +1762,11 @@ function renderBacktest(){
       const pts=eq.map((p,i)=>`${(i/Math.max(eq.length-1,1)*W).toFixed(1)},${((1-(p.v-eqMin)/eqRng)*(H-4)+2).toFixed(1)}`).join(" ");
       const eqCol=eq[eq.length-1].v>=10000?"var(--bull)":"var(--bear)";
       const daysDiff=candles.length>1?Math.round((candles[candles.length-1].time-candles[0].time)/86400):0;
+      const sens=parseInt(document.getElementById("btSens")?.value)||80;
+      const{longThresh,shortThresh}=sensToThreshold(sens);
       const kpiHtml=`<div class="bt-summary">
         <div class="bt-kpi"><div class="bt-kpi-k">勝率 WIN RATE</div><div class="bt-kpi-v" style="color:${wrCol}">${s.winRate}%</div><div class="bt-kpi-sub">${s.wins}W / ${s.losses}L / ${s.total}T</div></div>
-        <div class="bt-kpi"><div class="bt-kpi-k">PF プロフィット</div><div class="bt-kpi-v" style="color:${pfCol}">${s.pf}</div><div class="bt-kpi-sub">1.5以上が目安</div></div>
+        <div class="bt-kpi"><div class="bt-kpi-k">PF プロフィット</div><div class="bt-kpi-v" style="color:${pfCol}">${s.pf}</div><div class="bt-kpi-sub">感度${sens}% L≥${longThresh}</div></div>
         <div class="bt-kpi"><div class="bt-kpi-k">最大DD</div><div class="bt-kpi-v" style="color:var(--bear)">${s.maxDD}%</div><div class="bt-kpi-sub">期待値 ${s.expectancy>=0?"+":""}${s.expectancy}R${htfOn&&htfCandles?" · HTF✓":""}</div></div>
       </div>`;
       const eqHtml=`<div class="bt-equity-lbl">EQUITY CURVE · ${daysDiff}日間 / ${candles.length}本 / ${s.total}トレード</div>
@@ -1771,6 +1801,21 @@ function initBacktest(){
   if(btn&&!btn.dataset.built){
     btn.addEventListener("click",renderBacktest);
     btn.dataset.built="1";
+  }
+  // 感度スライダーのリアルタイム表示
+  const sens=document.getElementById("btSens");
+  const sensVal=document.getElementById("btSensVal");
+  const sensThresh=document.getElementById("btSensThresh");
+  if(sens&&!sens.dataset.built){
+    const update=()=>{
+      const v=parseInt(sens.value);
+      const{longThresh,shortThresh}=sensToThreshold(v);
+      if(sensVal)sensVal.textContent=v+"%";
+      if(sensThresh)sensThresh.textContent=`閾値: L≥${longThresh} S≤${shortThresh}`;
+    };
+    sens.addEventListener("input",update);
+    update(); // 初期表示
+    sens.dataset.built="1";
   }
   // 上位足フィルタートグル
   const tog=document.getElementById("btHtfToggle");
