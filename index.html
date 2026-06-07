@@ -840,19 +840,19 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <div style="padding:4px 12px 10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
         <div style="font-size:8px;color:var(--txt-dim);letter-spacing:.08em;">シグナル感度 · SENSITIVITY</div>
-        <div style="font-size:11px;font-weight:800;color:var(--cyan)" id="btSensVal">80%</div>
+        <div style="font-size:11px;font-weight:800;color:var(--cyan)" id="btSensVal">25%</div>
       </div>
-      <input type="range" id="btSens" min="20" max="95" value="80" step="5"
+      <input type="range" id="btSens" min="20" max="95" value="25" step="5"
         style="width:100%;accent-color:var(--cyan);height:4px;cursor:pointer;">
       <div style="display:flex;justify-content:space-between;margin-top:3px;">
         <span style="font-size:7.5px;color:var(--txt-faint)">敏感(多)</span>
-        <span style="font-size:7.5px;color:var(--txt-faint)" id="btSensThresh">閾値: LONG≥7.0 SHORT≤3.0</span>
+        <span style="font-size:7.5px;color:var(--txt-faint)" id="btSensThresh">閾値: L≥5.9 S≤4.1</span>
         <span style="font-size:7.5px;color:var(--txt-faint)">厳選(少)</span>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:0 12px 10px;">
       <div style="font-size:8px;color:var(--txt-dim);letter-spacing:.08em;flex:1">上位足フィルター · HIGHER TF FILTER</div>
-      <div id="btHtfToggle" style="font-size:9px;font-weight:700;padding:5px 14px;border:1px solid var(--border2);color:var(--txt-dim);cursor:pointer;user-select:none;" data-on="0">OFF</div>
+      <div id="btHtfToggle" style="font-size:9px;font-weight:700;padding:5px 14px;border:1px solid var(--cyan);color:var(--cyan);cursor:pointer;user-select:none;" data-on="1">ON</div>
       <div style="font-size:8px;color:var(--txt-faint)" id="btHtfLabel">—</div>
     </div>
     <div class="bt-run" id="btRun">▶ RUN BACKTEST · 検証を実行</div>
@@ -919,7 +919,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 83; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 84; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
