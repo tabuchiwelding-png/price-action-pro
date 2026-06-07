@@ -1014,7 +1014,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 91; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 92; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -2247,6 +2247,7 @@ function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, lon
       else{if(entryCndl.high>=sl)immediateExit=true;}
       if(immediateExit)continue;
       pos={side,entry:entryPrice,sl,tp,entryIdx:i+1,score,maxHold:dirP.maxHold};
+      inPos=true;
     }
   }
 
