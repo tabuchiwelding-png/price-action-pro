@@ -895,7 +895,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 76; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 77; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1485,23 +1485,22 @@ function runBacktest(candles, slMult, tpMult, maxHold){
       const next=c[i+1];
       let exitPrice=null,exitReason=null;
 
-      // SL/TPは足の高値・安値で判定（足中で触れた場合も検出）
-      // SLとTPが両方触れた場合はSL優先（不利な方を採用・保守的）
+      // maxHold: エントリー足を1本目として数える
+      const heldBars=(i+1)-pos.entryIdx; // 現在何本目か
       if(pos.side==="long"){
         const slHit=next.low<=pos.sl;
         const tpHit=next.high>=pos.tp;
-        if(slHit&&tpHit){exitPrice=pos.sl;exitReason="SL";} // 両方→SL優先
+        if(slHit&&tpHit){exitPrice=pos.sl;exitReason="SL";}
         else if(slHit){exitPrice=pos.sl;exitReason="SL";}
         else if(tpHit){exitPrice=pos.tp;exitReason="TP";}
-        // maxHold: entryIdxから数えてmaxHold本後（>=で正確に）
-        else if((i+1)-pos.entryIdx>=maxHold){exitPrice=next.close;exitReason="TIME";}
+        else if(heldBars>=maxHold){exitPrice=next.close;exitReason="TIME";}
       } else {
         const slHit=next.high>=pos.sl;
         const tpHit=next.low<=pos.tp;
         if(slHit&&tpHit){exitPrice=pos.sl;exitReason="SL";}
         else if(slHit){exitPrice=pos.sl;exitReason="SL";}
         else if(tpHit){exitPrice=pos.tp;exitReason="TP";}
-        else if((i+1)-pos.entryIdx>=maxHold){exitPrice=next.close;exitReason="TIME";}
+        else if(heldBars>=maxHold){exitPrice=next.close;exitReason="TIME";}
       }
 
       if(exitPrice!==null){
@@ -1528,7 +1527,7 @@ function runBacktest(candles, slMult, tpMult, maxHold){
           pnlPct:+pnlPct.toFixed(2),
           pnl:+pnl.toFixed(0),
           reason:exitReason,
-          bars:(i+1)-pos.entryIdx
+          bars:heldBars
         });
         equityCurve.push({i:i+1,v:+equity.toFixed(0)});
         inPos=false;pos=null;
@@ -1656,11 +1655,13 @@ function renderBacktest(){
       const exitLabel=t.reason==="TP"?"TP✓":t.reason==="SL"?"SL✗":"TIME";
       const pnlSign=t.pnl>=0?"+":"";
       const pctSign=t.pnlPct>=0?"+":"";
+      // 整数表示（小数なし）
+      const pnlStr=pnlSign+"¥"+Math.round(t.pnl).toLocaleString("en");
       return `<div class="bt-trade-row">
         <div class="bt-tr-idx">${result.trades.length-i}</div>
         <div class="bt-tr-side" style="color:${sc}">${t.side==="long"?"▲ L":"▼ S"}</div>
-        <div class="bt-tr-info">¥${fmt(t.entry)} → ¥${fmt(t.exit)}<br>${t.bars}本保有 · SL¥${fmt(Math.round(t.sl))}</div>
-        <div class="bt-tr-pnl" style="color:${pc}">${pnlSign}¥${fmt(t.pnl)}<br><span style="font-size:7.5px">${pctSign}${t.pnlPct}%</span></div>
+        <div class="bt-tr-info">¥${fmt(t.entry)} → ¥${fmt(t.exit)}<br>${t.bars}本保有 · SL¥${Math.round(t.sl).toLocaleString("en")}</div>
+        <div class="bt-tr-pnl" style="color:${pc}">${pnlStr}<br><span style="font-size:7.5px">${pctSign}${t.pnlPct}%</span></div>
         <div class="bt-tr-exit" style="color:${t.reason==="TP"?"var(--bull)":t.reason==="SL"?"var(--bear)":"var(--txt-dim)"}">${exitLabel}</div>
       </div>`;
     }).join("");
