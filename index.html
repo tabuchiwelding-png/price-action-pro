@@ -895,7 +895,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 75; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 76; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1471,57 +1471,72 @@ function runBacktest(candles, slMult, tpMult, maxHold){
   };
 
   const trades=[];
-  let equity=10000; // 初期資金(仮想・固定)
+  let equity=10000;
   let inPos=false,pos=null;
   const equityCurve=[{i:0,v:equity}];
-
-  // 500本に絞る
   const startIdx=Math.max(60,n-500);
 
   for(let i=startIdx;i<n-1;i++){
     const atr=calcATR(c,i);
     if(!atr)continue;
 
-    // ポジション中のSL/TP/期限チェック
+    // ===== ポジション中: SL/TP/期限チェック =====
     if(inPos){
-      const next=c[i+1]; // 次の足で判定
+      const next=c[i+1];
       let exitPrice=null,exitReason=null;
+
+      // SL/TPは足の高値・安値で判定（足中で触れた場合も検出）
+      // SLとTPが両方触れた場合はSL優先（不利な方を採用・保守的）
       if(pos.side==="long"){
-        if(next.low<=pos.sl){exitPrice=pos.sl;exitReason="SL";}
-        else if(next.high>=pos.tp){exitPrice=pos.tp;exitReason="TP";}
-        else if(i-pos.entryIdx>=maxHold){exitPrice=next.close;exitReason="TIME";}
+        const slHit=next.low<=pos.sl;
+        const tpHit=next.high>=pos.tp;
+        if(slHit&&tpHit){exitPrice=pos.sl;exitReason="SL";} // 両方→SL優先
+        else if(slHit){exitPrice=pos.sl;exitReason="SL";}
+        else if(tpHit){exitPrice=pos.tp;exitReason="TP";}
+        // maxHold: entryIdxから数えてmaxHold本後（>=で正確に）
+        else if((i+1)-pos.entryIdx>=maxHold){exitPrice=next.close;exitReason="TIME";}
       } else {
-        if(next.high>=pos.sl){exitPrice=pos.sl;exitReason="SL";}
-        else if(next.low<=pos.tp){exitPrice=pos.tp;exitReason="TP";}
-        else if(i-pos.entryIdx>=maxHold){exitPrice=next.close;exitReason="TIME";}
+        const slHit=next.high>=pos.sl;
+        const tpHit=next.low<=pos.tp;
+        if(slHit&&tpHit){exitPrice=pos.sl;exitReason="SL";}
+        else if(slHit){exitPrice=pos.sl;exitReason="SL";}
+        else if(tpHit){exitPrice=pos.tp;exitReason="TP";}
+        else if((i+1)-pos.entryIdx>=maxHold){exitPrice=next.close;exitReason="TIME";}
       }
+
       if(exitPrice!==null){
-        // SLまでの距離(%)を基準にリスク固定2%でポジションサイズを計算
-        const slDist=Math.abs(pos.entry-pos.sl)/pos.entry; // SLまでの距離(%)
-        const riskAmt=equity*0.02; // 1トレードのリスク額(資金の2%)
-        const posSize=slDist>0?riskAmt/slDist:0; // ポジションサイズ(名目)
+        const slDist=Math.abs(pos.entry-pos.sl)/pos.entry;
+        const riskAmt=equity*0.02;
+        const posSize=slDist>0?riskAmt/slDist:0;
+        // 損益計算: 方向を正確に
         const rawPnl=pos.side==="long"
           ?(exitPrice-pos.entry)/pos.entry*posSize
           :(pos.entry-exitPrice)/pos.entry*posSize;
-        const pnl=Math.max(-riskAmt*3,Math.min(riskAmt*6,rawPnl)); // 上限ガード
-        const pnlPct=slDist>0?(exitPrice-pos.entry)/pos.entry/(pos.side==="long"?1:-1)/slDist*2:0;
+        // ガード: 最大損失=リスク額×2、最大利益=リスク額×(tpMult/slMult+0.5)
+        const maxLoss=riskAmt*2;
+        const maxGain=riskAmt*(tpMult/slMult+0.5);
+        const pnl=Math.max(-maxLoss,Math.min(maxGain,rawPnl));
+        // pnlPct: エントリーに対する価格変化率(方向考慮)
+        const pnlPct=pos.side==="long"
+          ?(exitPrice-pos.entry)/pos.entry*100
+          :(pos.entry-exitPrice)/pos.entry*100;
         equity+=pnl;
         trades.push({
           idx:pos.entryIdx,exitIdx:i+1,
           side:pos.side,entry:pos.entry,exit:exitPrice,
           sl:pos.sl,tp:pos.tp,
-          pnlPct:+((exitPrice-pos.entry)/pos.entry*(pos.side==="long"?1:-1)*100).toFixed(2),
+          pnlPct:+pnlPct.toFixed(2),
           pnl:+pnl.toFixed(0),
-          reason:exitReason,bars:i+1-pos.entryIdx
+          reason:exitReason,
+          bars:(i+1)-pos.entryIdx
         });
         equityCurve.push({i:i+1,v:+equity.toFixed(0)});
         inPos=false;pos=null;
       }
     }
 
-    // エントリーシグナル検出(ポジションなし時のみ)
+    // ===== エントリーシグナル検出(ポジションなし時のみ) =====
     if(!inPos&&i<n-2){
-      // runPAを使ってスコア計算
       const slice=c.slice(Math.max(0,i-99),i+1);
       if(slice.length<25)continue;
       const pa=runPA(slice);
@@ -1534,8 +1549,12 @@ function runBacktest(candles, slMult, tpMult, maxHold){
 
       // 次の足のオープンでエントリー
       const entryPrice=c[i+1].open;
+      if(!entryPrice||entryPrice<=0)continue; // 無効なオープン価格をガード
       const sl=side==="long"?entryPrice-atr*slMult:entryPrice+atr*slMult;
       const tp=side==="long"?entryPrice+atr*tpMult:entryPrice-atr*tpMult;
+      // SL/TPが同じ方向にならないかガード
+      if(side==="long"&&sl>=entryPrice)continue;
+      if(side==="short"&&sl<=entryPrice)continue;
       pos={side,entry:entryPrice,sl,tp,entryIdx:i+1,score};
       inPos=true;
     }
@@ -1635,11 +1654,13 @@ function renderBacktest(){
       const sc=t.side==="long"?"var(--bull)":"var(--bear)";
       const pc=t.pnl>=0?"var(--bull)":"var(--bear)";
       const exitLabel=t.reason==="TP"?"TP✓":t.reason==="SL"?"SL✗":"TIME";
+      const pnlSign=t.pnl>=0?"+":"";
+      const pctSign=t.pnlPct>=0?"+":"";
       return `<div class="bt-trade-row">
-        <div class="bt-tr-idx" style="color:var(--txt-faint)">${result.trades.length-i}</div>
+        <div class="bt-tr-idx">${result.trades.length-i}</div>
         <div class="bt-tr-side" style="color:${sc}">${t.side==="long"?"▲ L":"▼ S"}</div>
-        <div class="bt-tr-info">¥${fmt(t.entry)} → ¥${fmt(t.exit)}<br>${t.bars}本保有</div>
-        <div class="bt-tr-pnl" style="color:${pc}">${t.pnl>=0?"+":""}¥${fmt(t.pnl)}<br><span style="font-size:7.5px">${t.pnlPct>=0?"+":""}${t.pnlPct}%</span></div>
+        <div class="bt-tr-info">¥${fmt(t.entry)} → ¥${fmt(t.exit)}<br>${t.bars}本保有 · SL¥${fmt(Math.round(t.sl))}</div>
+        <div class="bt-tr-pnl" style="color:${pc}">${pnlSign}¥${fmt(t.pnl)}<br><span style="font-size:7.5px">${pctSign}${t.pnlPct}%</span></div>
         <div class="bt-tr-exit" style="color:${t.reason==="TP"?"var(--bull)":t.reason==="SL"?"var(--bear)":"var(--txt-dim)"}">${exitLabel}</div>
       </div>`;
     }).join("");
