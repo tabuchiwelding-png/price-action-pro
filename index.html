@@ -1014,7 +1014,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 92; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 93; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -2225,6 +2225,34 @@ function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, lon
       else if(score<=shortThresh)side="short";
       if(!side)continue;
 
+      // ===== パターン品質フィルター =====
+      const cur=c[i],prv=c[i-1],pr2=c[i-2];
+      const rng=cur.high-cur.low||0.001;
+      const body=Math.abs(cur.close-cur.open);
+      const upW=(cur.high-Math.max(cur.open,cur.close))/rng;
+      const dnW=(Math.min(cur.open,cur.close)-cur.low)/rng;
+      const s3=c.slice(Math.max(0,i-19),i+1);
+      const aB3=s3.reduce((s,x)=>s+Math.abs(x.close-x.open),0)/s3.length||0.001;
+      const bVsAvg=body/aB3;
+      const prevDir=prv?.close>=prv?.open?1:-1;
+      const prev2Dir=pr2?.close>=pr2?.open?1:-1;
+
+      if(side==="long"){
+        // LONG除外: 弱い実体
+        if(bVsAvg<0.5)continue;
+        // LONG除外: 上髭が長い（買い圧力が弱い）
+        if(upW>0.5)continue;
+        // LONG除外: 3連続上昇（過熱）
+        if(prevDir===1&&prev2Dir===1&&(cur.close>=cur.open))continue;
+      } else {
+        // SHORT除外: 弱い実体
+        if(bVsAvg<0.5)continue;
+        // SHORT除外: 下髭が長い（売り圧力が弱い）
+        if(dnW>0.5)continue;
+        // SHORT除外: 3連続下降（過熱・反発リスク）
+        if(prevDir===-1&&prev2Dir===-1&&(cur.close<cur.open))continue;
+      }
+
       // 次の足のオープンでエントリー
       const entryPrice=c[i+1].open;
       if(!entryPrice||entryPrice<=0)continue;
@@ -2232,9 +2260,9 @@ function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, lon
       // ===== 上位足フィルター =====
       if(higherTfCandles){
         const htfDir=getHtfDir(c[i].time);
-        if(htfDir==="LONG"&&side==="short")continue; // 上位足買い優勢 → ショートは見送り
-        if(htfDir==="SHORT"&&side==="long")continue;  // 上位足売り優勢 → ロングは見送り
-        if(htfDir==="中立")continue;                  // 上位足中立 → どちらも見送り
+        if(htfDir==="LONG"&&side==="short")continue;
+        if(htfDir==="SHORT"&&side==="long")continue;
+        if(htfDir==="中立")continue;
       }
       const dirP=side==="long"?lp:sp;
       const sl=side==="long"?entryPrice-calcATR(c,i)*dirP.slMult:entryPrice+calcATR(c,i)*dirP.slMult;
