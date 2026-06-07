@@ -900,7 +900,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 79; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 80; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1578,9 +1578,20 @@ function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null){
       }
       const sl=side==="long"?entryPrice-atr*slMult:entryPrice+atr*slMult;
       const tp=side==="long"?entryPrice+atr*tpMult:entryPrice-atr*tpMult;
-      // SL/TPが同じ方向にならないかガード
+      // SL/TPが逆方向ガード
       if(side==="long"&&sl>=entryPrice)continue;
       if(side==="short"&&sl<=entryPrice)continue;
+
+      // エントリー足(c[i+1])自体でSL/TPに触れていないかチェック
+      const entryCndl=c[i+1];
+      let immediateExit=false;
+      if(side==="long"){
+        if(entryCndl.low<=sl){immediateExit=true;} // エントリー足でSL即触れ
+      } else {
+        if(entryCndl.high>=sl){immediateExit=true;}
+      }
+      if(immediateExit)continue; // 即SLはスキップ(スリッページとして除外)
+
       pos={side,entry:entryPrice,sl,tp,entryIdx:i+1,score};
       inPos=true;
     }
@@ -1700,7 +1711,7 @@ function renderBacktest(){
       return `<div class="bt-trade-row">
         <div class="bt-tr-idx">${result.trades.length-i}</div>
         <div class="bt-tr-side" style="color:${sc}">${t.side==="long"?"▲ L":"▼ S"}</div>
-        <div class="bt-tr-info">¥${fmt(t.entry)} → ¥${fmt(t.exit)}<br>${t.bars}本保有 · SL¥${Math.round(t.sl).toLocaleString("en")}</div>
+        <div class="bt-tr-info">¥${fmt(t.entry)} → ¥${fmt(t.exit)}<br>${t.bars}本保有 · SL¥${Math.round(t.sl).toLocaleString("en")} ${t.side==="long"?"↓":"↑"}</div>
         <div class="bt-tr-pnl" style="color:${pc}">${pnlStr}<br><span style="font-size:7.5px">${pctSign}${t.pnlPct}%</span></div>
         <div class="bt-tr-exit" style="color:${t.reason==="TP"?"var(--bull)":t.reason==="SL"?"var(--bear)":"var(--txt-dim)"}">${exitLabel}</div>
       </div>`;
