@@ -895,7 +895,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 77; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 78; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1344,9 +1344,9 @@ function renderNarrative(pa){
   const dirJP=ai.dir==="LONG"?"ロング(買い)":ai.dir==="SHORT"?"ショート(売り)":"中立";
   let txt=`現在のAlways-In方向は【${dirJP}】、確信度${ai.conf}%。内訳は構造${p.struct>=0?"+":""}${p.struct}・EMA${p.ema>=0?"+":""}${p.ema}・直近ローソク${p.bars>=0?"+":""}${p.bars}・出来高${p.vol>=0?"+":""}${p.vol}。トレンド構造は「${pa.trendLabel}」。`;
   if(pa.signals.length)txt+=`検出パターン: ${pa.signals.slice(0,3).map(s=>s.name).join("、")}。`;
-  if(ai.dir==="LONG")txt+=`買い手が主導権を握る局面。EMA20への押し目(Bull Flag)からの順張りが最も素直。確信度が落ち始めたら買い手の息切れ——利確を意識。逆張りの売りは、明確な反転バー(Bear Reversal Bar)が出るまで待つ。`;
-  else if(ai.dir==="SHORT")txt+=`売り手が主導権を握る局面。EMA20への戻り(Bear Flag)からの順張り売りが基本。確信度の低下は売り手の疲れ——反発に注意。安易な逆張り買いは禁物。`;
-  else txt+=`どちらも主導権を取れていないレンジ。両端での逆張りのみで、中央では手を出さない。強い実体でレンジ端をブレイクした方向に、確定を待ってから乗る。`;
+  if(ai.dir==="LONG")txt+=`買い手が主導権を握る局面。トレンドに沿った順張りが基本。EMA20への押し目(Bull Flag)からの追随が最も素直。確信度が落ち始めたら利確を意識し、新規は見送る。`;
+  else if(ai.dir==="SHORT")txt+=`売り手が主導権を握る局面。トレンドに沿った順張りが基本。EMA20への戻り(Bear Flag)からの追随が基本。確信度の低下は売り手の疲れ——新規追随は慎重に。`;
+  else txt+=`どちらも主導権を取れていないレンジ。明確な方向感が出るまで様子見。強い実体でレンジ端をブレイクし、トレンドが確認できてから順張りで対応する。`;
   document.getElementById("aiNarrative").textContent=txt;
 }
 
@@ -1900,7 +1900,7 @@ function renderTradeJudge(pa){
   let verdict,vcol,advice;
   if(ai.dir==="LONG"){if(pos<40){verdict="押し目買い好機";vcol="var(--bull)";advice="買い手が主導権を握り、価格はレンジ下部。順張りロングの典型。EMA20付近での反発を確認して入る。";}else if(pos>75){verdict="買いだが過熱";vcol="var(--acc)";advice="買い優勢だがレンジ上限。高値掴みのリスク。新規は次の押しを待つ方が安全。";}else{verdict="買い継続";vcol="var(--bull)";advice="買い優勢でレンジ中央。トレンドフォロー継続。POC割れは黄信号。";}}
   else if(ai.dir==="SHORT"){if(pos>60){verdict="戻り売り好機";vcol="var(--bear)";advice="売り手が主導権を握り、価格はレンジ上部。順張りショートの典型。戻りの失速を確認して入る。";}else if(pos<25){verdict="売りだが過熱";vcol="var(--acc)";advice="売り優勢だがレンジ下限。底値売りは危険。踏み上げ(急反発)に注意。";}else{verdict="売り継続";vcol="var(--bear)";advice="売り優勢でレンジ中央。戻り売り継続。POC上抜けは黄信号。";}}
-  else{verdict="様子見(レンジ)";vcol="var(--acc)";advice="どちらも主導権を取れていない。レンジ両端での逆張りのみ。中央では手を出さず、明確なブレイクを待つ。";}
+  else{verdict="様子見(レンジ)";vcol="var(--acc)";advice="どちらも主導権を取れていない。方向感が出るまで新規エントリーは見送る。明確なブレイクとトレンド確認後に順張りで対応する。";}
   let entry,stop,target;
   if(ai.dir==="LONG"){entry=Math.max(pa.poc,pa.e20);stop=pa.rLo;target=pa.rHi;}else if(ai.dir==="SHORT"){entry=Math.min(pa.poc,pa.e20);stop=pa.rHi;target=pa.rLo;}else{entry=pa.poc;stop=null;target=null;}
   box.innerHTML=`<div class="tj-verdict" style="color:${vcol};border-color:${vcol}55;background:${ai.dir==="LONG"?"var(--bull-dim)":ai.dir==="SHORT"?"var(--bear-dim)":"var(--acc-dim)"}">${verdict}</div><div style="font-size:9.5px;line-height:1.7;color:var(--txt);margin-bottom:10px;" class="jp">${advice}</div><div class="tj-row"><span class="tj-k">現在価格</span><span class="tj-v">¥${fmt(price)}</span></div><div class="tj-row"><span class="tj-k">POC (出来高集中価格)</span><span class="tj-v" style="color:var(--acc)">¥${fmt(pa.poc)} ${abovePoc?"↑上":"↓下"}</span></div><div class="tj-row"><span class="tj-k">レンジ位置 (安値0〜高値100)</span><span class="tj-v">${pos}%</span></div><div class="tj-row"><span class="tj-k">参考エントリー目安</span><span class="tj-v">¥${fmt(entry)}</span></div><div class="tj-row"><span class="tj-k">参考損切り目安</span><span class="tj-v" style="color:var(--bear)">${stop?"¥"+fmt(stop):"—"}</span></div><div class="tj-row"><span class="tj-k">参考利確目安</span><span class="tj-v" style="color:var(--bull)">${target?"¥"+fmt(target):"—"}</span></div><div style="font-size:8px;color:var(--txt-dim);margin-top:8px;text-align:center;" class="jp">※ 自動売買指示ではなく参考値。最終判断は自分で。</div>`;
