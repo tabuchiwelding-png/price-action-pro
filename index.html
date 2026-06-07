@@ -522,6 +522,37 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 .tj-k{color:var(--txt-dim);}
 .tj-v{color:var(--txt-br);font-weight:500;}
 
+/* ===== BACKTEST ===== */
+.bt-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:10px 12px;}
+.bt-ctrl{display:flex;flex-direction:column;gap:3px;}
+.bt-ctrl-label{font-size:7.5px;letter-spacing:.1em;color:var(--txt-faint);}
+.bt-ctrl-row{display:flex;align-items:center;gap:3px;background:var(--raised);border:1px solid var(--border2);padding:5px 7px;}
+.bt-ctrl-input{background:transparent;border:none;outline:none;color:var(--txt-br);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;width:100%;text-align:right;}
+.bt-ctrl-unit{font-size:9px;color:var(--txt-faint);}
+.bt-run{margin:0 12px 10px;padding:12px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.08em;cursor:pointer;border:1px solid var(--cyan);color:var(--cyan);background:linear-gradient(135deg,rgba(0,212,255,.08),transparent);user-select:none;}
+.bt-run:active{background:var(--cyan);color:#000;}
+.bt-run.running{opacity:.5;pointer-events:none;}
+.bt-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin:0 0 1px;}
+.bt-kpi{background:var(--panel2);padding:10px 12px;display:flex;flex-direction:column;gap:3px;}
+.bt-kpi-k{font-size:7.5px;letter-spacing:.08em;color:var(--txt-faint);}
+.bt-kpi-v{font-size:18px;font-weight:800;line-height:1;}
+.bt-kpi-sub{font-size:8px;color:var(--txt-dim);}
+.bt-equity{margin:8px 12px 0;height:80px;position:relative;}
+.bt-equity svg{width:100%;height:100%;}
+.bt-equity-lbl{font-size:7.5px;color:var(--txt-faint);letter-spacing:.08em;margin:4px 12px 0;}
+.bt-trades{margin-top:8px;}
+.bt-trade-row{display:grid;grid-template-columns:28px 36px 1fr 60px 50px;gap:4px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--border);font-size:9px;}
+.bt-trade-row:last-child{border-bottom:none;}
+.bt-tr-idx{color:var(--txt-faint);font-size:8px;}
+.bt-tr-side{font-weight:800;font-size:9px;}
+.bt-tr-info{color:var(--txt-dim);font-size:8px;line-height:1.4;}
+.bt-tr-pnl{text-align:right;font-weight:700;}
+.bt-tr-exit{font-size:8px;color:var(--txt-faint);text-align:right;}
+.bt-empty{padding:20px;text-align:center;color:var(--txt-faint);font-size:9px;}
+.bt-dd{display:flex;align-items:center;gap:6px;padding:8px 12px;font-size:8.5px;border-top:1px solid var(--border);}
+.bt-dd-k{color:var(--txt-dim);}
+.bt-dd-v{font-weight:700;}
+
 /* ===== MERRIMAN CYCLE ENHANCED ===== */
 .mc-header{display:flex;align-items:center;gap:8px;padding:10px 12px 6px;border-bottom:1px solid var(--border);}
 .mc-badge{font-size:7.5px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border:1px solid;border-radius:2px;white-space:nowrap;}
@@ -795,6 +826,16 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <div id="cycGrid" class="cyc-grid"></div>
     <details class="cyc-explain" open><summary>サイクル波形 · この通貨の実データ CHART</summary><div id="cycDiagram" class="cyc-diagram"></div></details>
 
+    <div class="ph">BACKTEST · シグナル検証 <span class="ph-right" id="btSym">—</span></div>
+    <details class="foldnote jp"><summary>バックテストの見方</summary><div class="fold-body">現在表示中の銘柄・時間軸の直近500本に対して、PAシグナルスコアが<b>6.5以上→LONG / 3.5以下→SHORT</b>でエントリーし、ATRベースのSL/TPで決済したと仮定した場合の成績。過去データへの当てはめであり、将来の利益を保証するものではない。</div></details>
+    <div class="bt-controls">
+      <div class="bt-ctrl"><div class="bt-ctrl-label">SL ATR倍率</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btSLmult" class="bt-ctrl-input" value="1.5"><span class="bt-ctrl-unit">×</span></div></div>
+      <div class="bt-ctrl"><div class="bt-ctrl-label">TP ATR倍率</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btTPmult" class="bt-ctrl-input" value="3.0"><span class="bt-ctrl-unit">×</span></div></div>
+      <div class="bt-ctrl"><div class="bt-ctrl-label">最大保有(本)</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btMaxHold" class="bt-ctrl-input" value="20"></div></div>
+    </div>
+    <div class="bt-run" id="btRun">▶ RUN BACKTEST · 検証を実行</div>
+    <div id="btResult"></div>
+
     <div class="ph">PRICE STATISTICS · 24時間統計</div>
     <div class="ind-grid" id="statsGrid" style="border:none;"></div>
 
@@ -854,7 +895,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 73; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 74; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1413,6 +1454,202 @@ function projDate(bars,tf){
   const d=new Date(Date.now()+bars*info[0]);
   return(d.getMonth()+1)+"/"+d.getDate()+"頃";
 }
+// ===== BACKTEST ENGINE =====
+function runBacktest(candles, slMult, tpMult, maxHold){
+  const c=candles; const n=c.length;
+  if(n<60)return null;
+
+  // ATR計算ユーティリティ
+  const calcATR=(arr,i,p=14)=>{
+    if(i<p)return null;
+    let s=0;
+    for(let k=i-p+1;k<=i;k++){
+      const h=arr[k].high,l=arr[k].low,pc=arr[k-1]?.close??l;
+      s+=Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc));
+    }
+    return s/p;
+  };
+
+  const trades=[];
+  let equity=10000; // 初期資金(仮想・固定)
+  let inPos=false,pos=null;
+  const equityCurve=[{i:0,v:equity}];
+
+  // 500本に絞る
+  const startIdx=Math.max(60,n-500);
+
+  for(let i=startIdx;i<n-1;i++){
+    const atr=calcATR(c,i);
+    if(!atr)continue;
+
+    // ポジション中のSL/TP/期限チェック
+    if(inPos){
+      const next=c[i+1]; // 次の足で判定
+      let exitPrice=null,exitReason=null;
+      if(pos.side==="long"){
+        if(next.low<=pos.sl){exitPrice=pos.sl;exitReason="SL";}
+        else if(next.high>=pos.tp){exitPrice=pos.tp;exitReason="TP";}
+        else if(i-pos.entryIdx>=maxHold){exitPrice=next.close;exitReason="TIME";}
+      } else {
+        if(next.high>=pos.sl){exitPrice=pos.sl;exitReason="SL";}
+        else if(next.low<=pos.tp){exitPrice=pos.tp;exitReason="TP";}
+        else if(i-pos.entryIdx>=maxHold){exitPrice=next.close;exitReason="TIME";}
+      }
+      if(exitPrice!==null){
+        const pnlPct=pos.side==="long"
+          ?(exitPrice-pos.entry)/pos.entry*100
+          :(pos.entry-exitPrice)/pos.entry*100;
+        const pnl=equity*0.02*pnlPct/atr*pos.entry; // リスク固定2%
+        equity+=pnl;
+        trades.push({
+          idx:pos.entryIdx,exitIdx:i+1,
+          side:pos.side,entry:pos.entry,exit:exitPrice,
+          sl:pos.sl,tp:pos.tp,
+          pnlPct:+pnlPct.toFixed(2),pnl:+pnl.toFixed(0),
+          reason:exitReason,bars:i+1-pos.entryIdx
+        });
+        equityCurve.push({i:i+1,v:+equity.toFixed(0)});
+        inPos=false;pos=null;
+      }
+    }
+
+    // エントリーシグナル検出(ポジションなし時のみ)
+    if(!inPos&&i<n-2){
+      // runPAを使ってスコア計算
+      const slice=c.slice(Math.max(0,i-99),i+1);
+      if(slice.length<25)continue;
+      const pa=runPA(slice);
+      if(!pa)continue;
+      const score=pa.score;
+      let side=null;
+      if(score>=6.5)side="long";
+      else if(score<=3.5)side="short";
+      if(!side)continue;
+
+      // 次の足のオープンでエントリー
+      const entryPrice=c[i+1].open;
+      const sl=side==="long"?entryPrice-atr*slMult:entryPrice+atr*slMult;
+      const tp=side==="long"?entryPrice+atr*tpMult:entryPrice-atr*tpMult;
+      pos={side,entry:entryPrice,sl,tp,entryIdx:i+1,score};
+      inPos=true;
+    }
+  }
+
+  if(!trades.length)return{trades:[],stats:null,equityCurve};
+
+  // 統計計算
+  const wins=trades.filter(t=>t.pnl>0);
+  const losses=trades.filter(t=>t.pnl<=0);
+  const winRate=wins.length/trades.length*100;
+  const grossWin=wins.reduce((s,t)=>s+t.pnl,0);
+  const grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pnl,0));
+  const pf=grossLoss>0?grossWin/grossLoss:grossWin>0?999:0;
+  const totalPnl=trades.reduce((s,t)=>s+t.pnl,0);
+  // 最大ドローダウン
+  let peak=10000,maxDD=0;
+  equityCurve.forEach(p=>{if(p.v>peak)peak=p.v;const dd=(peak-p.v)/peak*100;if(dd>maxDD)maxDD=dd;});
+  const avgWin=wins.length?wins.reduce((s,t)=>s+t.pnlPct,0)/wins.length:0;
+  const avgLoss=losses.length?Math.abs(losses.reduce((s,t)=>s+t.pnlPct,0)/losses.length):0;
+  const expectancy=winRate/100*avgWin-(1-winRate/100)*avgLoss;
+
+  return{
+    trades:trades.slice(-30), // 表示は直近30件
+    stats:{
+      total:trades.length,wins:wins.length,losses:losses.length,
+      winRate:+winRate.toFixed(1),pf:+pf.toFixed(2),
+      totalPnl:+totalPnl.toFixed(0),maxDD:+maxDD.toFixed(1),
+      avgWin:+avgWin.toFixed(2),avgLoss:+avgLoss.toFixed(2),
+      expectancy:+expectancy.toFixed(2)
+    },
+    equityCurve
+  };
+}
+
+function renderBacktest(){
+  const sym=activeSymbol;
+  const bsEl=document.getElementById("btSym");if(bsEl)bsEl.textContent=fmtSym(sym);
+  const el=document.getElementById("btResult");if(!el)return;
+  const btn=document.getElementById("btRun");
+
+  const tf=document.querySelector(".tf-btn.on")?.dataset?.tf||"1h";
+  const candles=mtfCandles[sym]&&mtfCandles[sym][tf];
+  if(!candles||candles.length<60){
+    el.innerHTML=`<div class="bt-empty">データ不足。チャートを開いてデータを取得してください。</div>`;
+    return;
+  }
+
+  const slMult=parseFloat(document.getElementById("btSLmult")?.value)||1.5;
+  const tpMult=parseFloat(document.getElementById("btTPmult")?.value)||3.0;
+  const maxHold=parseInt(document.getElementById("btMaxHold")?.value)||20;
+
+  if(btn)btn.classList.add("running");
+
+  // 非同期で実行（UIブロックを防ぐ）
+  setTimeout(()=>{
+    const result=runBacktest(candles,slMult,tpMult,maxHold);
+    if(btn)btn.classList.remove("running");
+    if(!result||!result.stats){
+      el.innerHTML=`<div class="bt-empty">シグナルが検出されませんでした。時間軸やパラメータを変えてみてください。</div>`;
+      return;
+    }
+    const s=result.stats;
+    const pfCol=s.pf>=1.5?"var(--bull)":s.pf>=1.0?"var(--acc)":"var(--bear)";
+    const wrCol=s.winRate>=55?"var(--bull)":s.winRate>=45?"var(--acc)":"var(--bear)";
+    const pnlCol=s.totalPnl>=0?"var(--bull)":"var(--bear)";
+
+    // エクイティカーブSVG
+    const eq=result.equityCurve;
+    const eqMin=Math.min(...eq.map(p=>p.v));
+    const eqMax=Math.max(...eq.map(p=>p.v));
+    const eqRng=eqMax-eqMin||1;
+    const W=340,H=70;
+    const pts=eq.map((p,i)=>`${(i/(eq.length-1)*W).toFixed(1)},${((1-(p.v-eqMin)/eqRng)*(H-4)+2).toFixed(1)}`).join(" ");
+    const lastEq=eq[eq.length-1].v;
+    const eqCol=lastEq>=10000?"var(--bull)":"var(--bear)";
+    const svgLine=`<polyline points="${pts}" fill="none" stroke="${eqCol}" stroke-width="1.5" opacity=".9"/>`;
+    const svgArea=`<polygon points="0,${H} ${pts} ${W},${H}" fill="${eqCol}" opacity=".08"/>`;
+
+    // KPIサマリー
+    const kpiHtml=`<div class="bt-summary">
+      <div class="bt-kpi"><div class="bt-kpi-k">勝率 WIN RATE</div><div class="bt-kpi-v" style="color:${wrCol}">${s.winRate}%</div><div class="bt-kpi-sub">${s.wins}W / ${s.losses}L / ${s.total}T</div></div>
+      <div class="bt-kpi"><div class="bt-kpi-k">PF プロフィット</div><div class="bt-kpi-v" style="color:${pfCol}">${s.pf}</div><div class="bt-kpi-sub">1.5以上が目安</div></div>
+      <div class="bt-kpi"><div class="bt-kpi-k">最大DD</div><div class="bt-kpi-v" style="color:var(--bear)">${s.maxDD}%</div><div class="bt-kpi-sub">期待値 ${s.expectancy>0?"+":""}${s.expectancy}%</div></div>
+    </div>`;
+
+    // エクイティカーブ
+    const eqHtml=`
+      <div class="bt-equity-lbl">EQUITY CURVE · 資産推移（仮想¥10,000スタート）</div>
+      <div class="bt-equity"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${svgArea}${svgLine}</svg></div>`;
+
+    // 最大DD行
+    const ddHtml=`<div class="bt-dd"><span class="bt-dd-k">平均利益</span><span class="bt-dd-v" style="color:var(--bull)">+${s.avgWin}%</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">平均損失</span><span class="bt-dd-v" style="color:var(--bear)">-${s.avgLoss}%</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">RR比</span><span class="bt-dd-v">${s.avgLoss>0?(s.avgWin/s.avgLoss).toFixed(2):"—"}</span></div>`;
+
+    // トレード一覧（直近30件）
+    const trHtml=result.trades.slice().reverse().map((t,i)=>{
+      const sc=t.side==="long"?"var(--bull)":"var(--bear)";
+      const pc=t.pnl>=0?"var(--bull)":"var(--bear)";
+      const exitLabel=t.reason==="TP"?"TP✓":t.reason==="SL"?"SL✗":"TIME";
+      return `<div class="bt-trade-row">
+        <div class="bt-tr-idx" style="color:var(--txt-faint)">${result.trades.length-i}</div>
+        <div class="bt-tr-side" style="color:${sc}">${t.side==="long"?"▲ L":"▼ S"}</div>
+        <div class="bt-tr-info">¥${fmt(t.entry)} → ¥${fmt(t.exit)}<br>${t.bars}本保有</div>
+        <div class="bt-tr-pnl" style="color:${pc}">${t.pnl>=0?"+":""}¥${fmt(t.pnl)}<br><span style="font-size:7.5px">${t.pnlPct>=0?"+":""}${t.pnlPct}%</span></div>
+        <div class="bt-tr-exit" style="color:${t.reason==="TP"?"var(--bull)":t.reason==="SL"?"var(--bear)":"var(--txt-dim)"}">${exitLabel}</div>
+      </div>`;
+    }).join("");
+
+    el.innerHTML=kpiHtml+eqHtml+ddHtml+`<div class="ph" style="margin-top:8px">TRADE LOG · 直近${result.trades.length}件</div><div class="bt-trades">${trHtml||'<div class="bt-empty">トレードなし</div>'}</div>`;
+  },50);
+}
+
+function initBacktest(){
+  const btn=document.getElementById("btRun");
+  if(btn&&!btn.dataset.built){
+    btn.addEventListener("click",renderBacktest);
+    btn.dataset.built="1";
+  }
+}
+
 // ===== MERRIMAN CYCLE: サイクル階層定義 =====
 // 各時間軸に対してメリマンサイクルの階層名と期間目安を定義
 const MC_HIER={
@@ -2389,7 +2626,7 @@ document.getElementById("tabbarMain").addEventListener("click",e=>{
   if(pg==="Ana"){
     const st=store[activeSymbol];if(st?.candles?.length){renderTradeJudge(st.pa);renderFund(activeSymbol);}
     renderMTS(activeSymbol);renderCycle(activeSymbol);
-    // サイクル/時間軸データが未取得なら自前で取得して再描画(SWARMを開かなくても動く)
+    initBacktest();
     if(!mtfStore[activeSymbol]||!mtfCandles[activeSymbol]){
       const sym=activeSymbol;
       loadMTF(sym).then(()=>{if(activePage==="Ana"&&activeSymbol===sym){renderMTS(sym);renderCycle(sym);}});
