@@ -872,12 +872,31 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
     <details class="cyc-explain" open><summary>サイクル波形 · この通貨の実データ CHART</summary><div id="cycDiagram" class="cyc-diagram"></div></details>
 
     <div class="ph">BACKTEST · シグナル検証 <span class="ph-right" id="btSym">—</span></div>
-    <details class="foldnote jp"><summary>バックテストの見方</summary><div class="fold-body">現在表示中の銘柄・時間軸の過去90日分に対して、PAシグナルスコアが閾値を超えた次足でエントリーし、ATRベースのSL/TPで決済したと仮定した場合の成績。<br><br>◆ <b>感度</b>が高いほど閾値が厳しくなりシグナルが減る。低いほど多くなる。<br>◆ 過去データへの当てはめであり、将来の利益を保証するものではない。</div></details>
-    <div class="bt-controls">
-      <div class="bt-ctrl"><div class="bt-ctrl-label">SL ATR倍率</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btSLmult" class="bt-ctrl-input" value="2.0"><span class="bt-ctrl-unit">×</span></div></div>
-      <div class="bt-ctrl"><div class="bt-ctrl-label">TP ATR倍率</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btTPmult" class="bt-ctrl-input" value="3.0"><span class="bt-ctrl-unit">×</span></div></div>
-      <div class="bt-ctrl"><div class="bt-ctrl-label">最大保有(本)</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btMaxHold" class="bt-ctrl-input" value="20"></div></div>
+    <details class="foldnote jp"><summary>バックテストの見方</summary><div class="fold-body">現在表示中の銘柄・時間軸の過去90日分に対して、PAシグナルスコアが閾値を超えた次足でエントリーし、ATRベースのSL/TPで決済したと仮定した場合の成績。<br><br>◆ <b>感度</b>が高いほど閾値が厳しくなりシグナルが減る。低いほど多くなる。<br>◆ <b>LONG/SHORT別パラメータ</b>で非対称な相場特性に対応できます。<br>◆ 過去データへの当てはめであり、将来の利益を保証するものではない。</div></details>
+
+    <!-- LONG/SHORT 非対称パラメータ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-bottom:1px;">
+      <div style="background:var(--panel2);padding:8px 12px;">
+        <div style="font-size:8px;font-weight:700;color:var(--bull);letter-spacing:.08em;margin-bottom:6px;">▲ LONG パラメータ</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+          <div class="bt-ctrl"><div class="bt-ctrl-label">SL×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLSL" class="bt-ctrl-input" value="1.5"></div></div>
+          <div class="bt-ctrl"><div class="bt-ctrl-label">TP×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLTP" class="bt-ctrl-input" value="2.0"></div></div>
+          <div class="bt-ctrl"><div class="bt-ctrl-label">最大本</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLHold" class="bt-ctrl-input" value="40"></div></div>
+        </div>
+      </div>
+      <div style="background:var(--panel2);padding:8px 12px;">
+        <div style="font-size:8px;font-weight:700;color:var(--bear);letter-spacing:.08em;margin-bottom:6px;">▼ SHORT パラメータ</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+          <div class="bt-ctrl"><div class="bt-ctrl-label">SL×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btSSL" class="bt-ctrl-input" value="2.0"></div></div>
+          <div class="bt-ctrl"><div class="bt-ctrl-label">TP×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btSTP" class="bt-ctrl-input" value="3.0"></div></div>
+          <div class="bt-ctrl"><div class="bt-ctrl-label">最大本</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btSHold" class="bt-ctrl-input" value="20"></div></div>
+        </div>
+      </div>
     </div>
+    <!-- 後方互換用（非表示） -->
+    <input type="hidden" id="btSLmult" value="2.0">
+    <input type="hidden" id="btTPmult" value="3.0">
+    <input type="hidden" id="btMaxHold" value="20">
     <!-- 感度スライダー -->
     <div style="padding:4px 12px 10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
@@ -995,7 +1014,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 90; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 91; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -2097,7 +2116,11 @@ async function loadDeepHistory(symbol,tf,onProgress){
   return allCandles;
 }
 
-function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, longThresh=6.5, shortThresh=3.5){
+function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, longThresh=6.5, shortThresh=3.5, longParams=null, shortParams=null){
+  // longParams/shortParams = {slMult, tpMult, maxHold}
+  // nullの場合はslMult/tpMult/maxHoldを両方向に使う
+  const lp=longParams||{slMult,tpMult,maxHold};
+  const sp=shortParams||{slMult,tpMult,maxHold};
   const c=candles; const n=c.length;
   if(n<60)return null;
 
@@ -2149,14 +2172,14 @@ function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, lon
         if(slHit&&tpHit){exitPrice=pos.sl;exitReason="SL";}
         else if(slHit){exitPrice=pos.sl;exitReason="SL";}
         else if(tpHit){exitPrice=pos.tp;exitReason="TP";}
-        else if(heldBars>=maxHold){exitPrice=next.close;exitReason="TIME";}
+        else if(heldBars>=pos.maxHold){exitPrice=next.close;exitReason="TIME";}
       } else {
         const slHit=next.high>=pos.sl;
         const tpHit=next.low<=pos.tp;
         if(slHit&&tpHit){exitPrice=pos.sl;exitReason="SL";}
         else if(slHit){exitPrice=pos.sl;exitReason="SL";}
         else if(tpHit){exitPrice=pos.tp;exitReason="TP";}
-        else if(heldBars>=maxHold){exitPrice=next.close;exitReason="TIME";}
+        else if(heldBars>=pos.maxHold){exitPrice=next.close;exitReason="TIME";}
       }
 
       if(exitPrice!==null){
@@ -2169,7 +2192,7 @@ function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, lon
           :(pos.entry-exitPrice)/pos.entry*posSize;
         // ガード: 最大損失=リスク額×2、最大利益=リスク額×(tpMult/slMult+0.5)
         const maxLoss=riskAmt*2;
-        const maxGain=riskAmt*(tpMult/slMult+0.5);
+        const dirMult=pos.side==="long"?lp:sp;const maxGain=riskAmt*(dirMult.tpMult/dirMult.slMult+0.5);
         const pnl=Math.max(-maxLoss,Math.min(maxGain,rawPnl));
         // pnlPct: エントリーに対する価格変化率(方向考慮)
         const pnlPct=pos.side==="long"
@@ -2213,24 +2236,17 @@ function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, lon
         if(htfDir==="SHORT"&&side==="long")continue;  // 上位足売り優勢 → ロングは見送り
         if(htfDir==="中立")continue;                  // 上位足中立 → どちらも見送り
       }
-      const sl=side==="long"?entryPrice-atr*slMult:entryPrice+atr*slMult;
-      const tp=side==="long"?entryPrice+atr*tpMult:entryPrice-atr*tpMult;
-      // SL/TPが逆方向ガード
+      const dirP=side==="long"?lp:sp;
+      const sl=side==="long"?entryPrice-calcATR(c,i)*dirP.slMult:entryPrice+calcATR(c,i)*dirP.slMult;
+      const tp=side==="long"?entryPrice+calcATR(c,i)*dirP.tpMult:entryPrice-calcATR(c,i)*dirP.tpMult;
       if(side==="long"&&sl>=entryPrice)continue;
       if(side==="short"&&sl<=entryPrice)continue;
-
-      // エントリー足(c[i+1])自体でSL/TPに触れていないかチェック
       const entryCndl=c[i+1];
       let immediateExit=false;
-      if(side==="long"){
-        if(entryCndl.low<=sl){immediateExit=true;} // エントリー足でSL即触れ
-      } else {
-        if(entryCndl.high>=sl){immediateExit=true;}
-      }
-      if(immediateExit)continue; // 即SLはスキップ(スリッページとして除外)
-
-      pos={side,entry:entryPrice,sl,tp,entryIdx:i+1,score};
-      inPos=true;
+      if(side==="long"){if(entryCndl.low<=sl)immediateExit=true;}
+      else{if(entryCndl.high>=sl)immediateExit=true;}
+      if(immediateExit)continue;
+      pos={side,entry:entryPrice,sl,tp,entryIdx:i+1,score,maxHold:dirP.maxHold};
     }
   }
 
@@ -2298,9 +2314,20 @@ function renderBacktest(){
       } else {if(htfLabel)htfLabel.textContent=htfOn&&!htfTf?"対応なし":"—";}
       onProgress(98,"バックテスト計算中...");
       await new Promise(r=>setTimeout(r,30));
-      const sens=parseInt(document.getElementById("btSens")?.value)||80;
+      const sens=parseInt(document.getElementById("btSens")?.value)||25;
       const{longThresh,shortThresh}=sensToThreshold(sens);
-      const result=runBacktest(candles,slMult,tpMult,maxHold,htfOn&&htfCandles?htfCandles:null,longThresh,shortThresh);
+      // LONG/SHORT別パラメータ
+      const longParams={
+        slMult:parseFloat(document.getElementById("btLSL")?.value)||1.5,
+        tpMult:parseFloat(document.getElementById("btLTP")?.value)||2.0,
+        maxHold:parseInt(document.getElementById("btLHold")?.value)||40
+      };
+      const shortParams={
+        slMult:parseFloat(document.getElementById("btSSL")?.value)||2.0,
+        tpMult:parseFloat(document.getElementById("btSTP")?.value)||3.0,
+        maxHold:parseInt(document.getElementById("btSHold")?.value)||20
+      };
+      const result=runBacktest(candles,longParams.slMult,longParams.tpMult,longParams.maxHold,htfOn&&htfCandles?htfCandles:null,longThresh,shortThresh,longParams,shortParams);
       if(prog)prog.style.display="none";
       if(progTxt)progTxt.style.display="none";
       if(btn){btn.classList.remove("running");btn.textContent="▶ RUN BACKTEST · 検証を実行";}
@@ -2314,10 +2341,28 @@ function renderBacktest(){
       const pts=eq.map((p,i)=>`${(i/Math.max(eq.length-1,1)*W).toFixed(1)},${((1-(p.v-eqMin)/eqRng)*(H-4)+2).toFixed(1)}`).join(" ");
       const eqCol=eq[eq.length-1].v>=10000?"var(--bull)":"var(--bear)";
       const daysDiff=candles.length>1?Math.round((candles[candles.length-1].time-candles[0].time)/86400):0;
+      const longs=result.trades.filter(t=>t.side==="long");
+      const shorts=result.trades.filter(t=>t.side==="short");
+      const lwins=longs.filter(t=>t.reason==="TP").length;
+      const swins=shorts.filter(t=>t.reason==="TP").length;
+      const lwr=longs.length?Math.round(lwins/longs.length*100):0;
+      const swr=shorts.length?Math.round(swins/shorts.length*100):0;
       const kpiHtml=`<div class="bt-summary">
         <div class="bt-kpi"><div class="bt-kpi-k">勝率 WIN RATE</div><div class="bt-kpi-v" style="color:${wrCol}">${s.winRate}%</div><div class="bt-kpi-sub">${s.wins}W / ${s.losses}L / ${s.total}T</div></div>
         <div class="bt-kpi"><div class="bt-kpi-k">PF プロフィット</div><div class="bt-kpi-v" style="color:${pfCol}">${s.pf}</div><div class="bt-kpi-sub">感度${sens}% L≥${longThresh}</div></div>
         <div class="bt-kpi"><div class="bt-kpi-k">最大DD</div><div class="bt-kpi-v" style="color:var(--bear)">${s.maxDD}%</div><div class="bt-kpi-sub">期待値 ${s.expectancy>=0?"+":""}${s.expectancy}R${htfOn&&htfCandles?" · HTF✓":""}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-bottom:1px;">
+        <div style="background:var(--panel2);padding:8px 12px;">
+          <div style="font-size:7.5px;color:var(--bull);font-weight:700;margin-bottom:3px;">▲ LONG ${longs.length}件</div>
+          <div style="font-size:16px;font-weight:800;color:${lwr>=50?"var(--bull)":"var(--bear)"}">${lwr}%</div>
+          <div style="font-size:8px;color:var(--txt-dim)">${lwins}勝/${longs.length-lwins}敗 · SL${longParams.slMult}×TP${longParams.tpMult}×${longParams.maxHold}本</div>
+        </div>
+        <div style="background:var(--panel2);padding:8px 12px;">
+          <div style="font-size:7.5px;color:var(--bear);font-weight:700;margin-bottom:3px;">▼ SHORT ${shorts.length}件</div>
+          <div style="font-size:16px;font-weight:800;color:${swr>=50?"var(--bull)":"var(--bear)"}">${swr}%</div>
+          <div style="font-size:8px;color:var(--txt-dim)">${swins}勝/${shorts.length-swins}敗 · SL${shortParams.slMult}×TP${shortParams.tpMult}×${shortParams.maxHold}本</div>
+        </div>
       </div>`;
       const eqHtml=`<div class="bt-equity-lbl">EQUITY CURVE · ${daysDiff}日間 / ${candles.length}本 / ${s.total}トレード</div>
       <div class="bt-equity"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polygon points="0,${H} ${pts} ${W},${H}" fill="${eqCol}" opacity=".08"/><polyline points="${pts}" fill="none" stroke="${eqCol}" stroke-width="1.5" opacity=".9"/></svg></div>`;
