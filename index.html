@@ -552,6 +552,25 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 .bt-tr-pnl{text-align:right;font-weight:700;}
 .bt-tr-exit{font-size:8px;color:var(--txt-faint);text-align:right;}
 .bt-empty{padding:20px;text-align:center;color:var(--txt-faint);font-size:9px;}
+/* ===== BT HISTORY & RECOMMEND ===== */
+.bth-wrap{margin-top:2px;border-top:2px solid var(--border2);}
+.bth-rec{padding:12px;background:linear-gradient(135deg,rgba(34,211,191,.07),transparent);border-bottom:1px solid var(--border);}
+.bth-rec-label{font-size:7.5px;letter-spacing:.12em;color:var(--cyan);margin-bottom:6px;}
+.bth-rec-main{font-size:13px;font-weight:800;color:var(--txt-br);margin-bottom:4px;}
+.bth-rec-sub{font-size:8.5px;color:var(--txt-mid);line-height:1.6;}
+.bth-rec-score{display:inline-flex;align-items:center;gap:4px;font-size:8px;font-weight:700;padding:2px 8px;border:1px solid var(--cyan);color:var(--cyan);margin-top:5px;}
+.bth-list{max-height:260px;overflow-y:auto;}
+.bth-row{display:grid;grid-template-columns:18px 1fr 52px 44px 44px;gap:4px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);font-size:8.5px;}
+.bth-row:last-child{border-bottom:none;}
+.bth-rank{font-size:8px;color:var(--txt-faint);text-align:center;}
+.bth-info{line-height:1.5;}
+.bth-info-main{font-size:9px;font-weight:600;color:var(--txt-br);}
+.bth-info-sub{font-size:7.5px;color:var(--txt-dim);}
+.bth-pf{font-weight:700;text-align:right;}
+.bth-dd{font-size:8px;color:var(--bear);text-align:right;}
+.bth-ev{font-weight:700;text-align:right;}
+.bth-clear{font-size:8px;color:var(--txt-faint);text-align:center;padding:8px;cursor:pointer;border-top:1px solid var(--border);}
+.bth-clear:active{color:var(--bear);}
 .bt-dd{display:flex;align-items:center;gap:6px;padding:8px 12px;font-size:8.5px;border-top:1px solid var(--border);}
 .bt-dd-k{color:var(--txt-dim);}
 .bt-dd-v{font-weight:700;}
@@ -859,6 +878,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
     <div class="bt-progress" id="btProgress"><div class="bt-progress-fill" id="btProgressFill" style="width:0%"></div></div>
     <div class="bt-progress-txt" id="btProgressTxt"></div>
     <div id="btResult"></div>
+    <div id="btHistory"></div>
 
     <div class="ph">PRICE STATISTICS · 24時間統計</div>
     <div class="ind-grid" id="statsGrid" style="border:none;"></div>
@@ -919,7 +939,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 84; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 85; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1478,7 +1498,88 @@ function projDate(bars,tf){
   const d=new Date(Date.now()+bars*info[0]);
   return(d.getMonth()+1)+"/"+d.getDate()+"頃";
 }
-// 感度(%) → エントリー閾値変換
+// ===== バックテスト履歴・推奨設定 =====
+const BT_HISTORY_KEY="pa_bt_history_v1";
+const BT_MAX_RECORDS=100;
+
+function btHistorySave(record){
+  let hist=btHistoryLoad();
+  hist.push(record);
+  if(hist.length>BT_MAX_RECORDS)hist=hist.slice(-BT_MAX_RECORDS);
+  try{localStorage.setItem(BT_HISTORY_KEY,JSON.stringify(hist));}catch(e){}
+}
+function btHistoryLoad(){
+  try{const d=localStorage.getItem(BT_HISTORY_KEY);return d?JSON.parse(d):[]}catch(e){return[];}
+}
+function btHistoryClear(){
+  try{localStorage.removeItem(BT_HISTORY_KEY);}catch(e){}
+  renderBtHistory();
+}
+
+// 総合スコア: PF × (1-DD/100) × log10(件数+1) × (期待値>0?1:0.3)
+function btScore(r){
+  if(!r||r.pf<=0)return 0;
+  const pfFactor=Math.min(r.pf,5);
+  const ddFactor=Math.max(0,1-r.maxDD/100);
+  const nFactor=Math.log10(Math.max(r.total,1)+1);
+  const evFactor=r.expectancy>0?1:0.3;
+  return+(pfFactor*ddFactor*nFactor*evFactor).toFixed(3);
+}
+
+function renderBtHistory(){
+  const el=document.getElementById("btHistory");
+  if(!el)return;
+  const hist=btHistoryLoad();
+  if(!hist.length){el.innerHTML="";return;}
+
+  // スコアで降順ソート
+  const sorted=[...hist].map(r=>({...r,score:btScore(r)})).sort((a,b)=>b.score-a.score);
+  const best=sorted[0];
+
+  // 推奨設定テキスト生成
+  const tfLabel={"1m":"1分足","3m":"3分足","5m":"5分足","15m":"15分足","1h":"1時間足","4h":"4時間足","1d":"日足"};
+  const bestTf=tfLabel[best.tf]||best.tf;
+  const recHtml=`<div class="bth-rec">
+    <div class="bth-rec-label">★ RECOMMENDED SETTING · ${hist.length}回のテストから推奨</div>
+    <div class="bth-rec-main">${bestTf} · SL${best.slMult}× TP${best.tpMult}× 感度${best.sens}% ${best.htf?"HTF ON":""}</div>
+    <div class="bth-rec-sub">
+      勝率 ${best.winRate}% · PF ${best.pf} · DD ${best.maxDD}% · 期待値 ${best.expectancy>=0?"+":""}${best.expectancy}R · ${best.total}件
+    </div>
+    <div class="bth-rec-score">総合スコア ${best.score}</div>
+  </div>`;
+
+  // 履歴一覧（上位10件）
+  const rowsHtml=sorted.slice(0,10).map((r,i)=>{
+    const isB=i===0;
+    const tf2=tfLabel[r.tf]||r.tf;
+    const pfCol=r.pf>=1.5?"var(--bull)":r.pf>=1.0?"var(--acc)":"var(--bear)";
+    const evCol=r.expectancy>=0?"var(--bull)":"var(--bear)";
+    const rankMark=i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}`;
+    return `<div class="bth-row" style="${isB?"background:rgba(34,211,191,.05)":""}">
+      <div class="bth-rank">${rankMark}</div>
+      <div class="bth-info">
+        <div class="bth-info-main">${tf2} · 感度${r.sens}% ${r.htf?"HTF":"   "}</div>
+        <div class="bth-info-sub">SL${r.slMult}× TP${r.tpMult}× · ${r.total}件 · ${r.sym}</div>
+      </div>
+      <div class="bth-pf" style="color:${pfCol}">PF${r.pf}</div>
+      <div class="bth-dd">DD${r.maxDD}%</div>
+      <div class="bth-ev" style="color:${evCol}">${r.expectancy>=0?"+":""}${r.expectancy}R</div>
+    </div>`;
+  }).join("");
+
+  el.innerHTML=`<div class="bth-wrap">
+    <div class="ph" style="margin-top:0">BEST SETTINGS · 累積推奨 <span class="ph-right">${hist.length}回記録</span></div>
+    ${recHtml}
+    <div class="bth-list">${rowsHtml}</div>
+    <div class="bth-clear" id="btHistClear">履歴をリセット</div>
+  </div>`;
+
+  document.getElementById("btHistClear")?.addEventListener("click",()=>{
+    if(confirm("バックテスト履歴を全てリセットしますか？"))btHistoryClear();
+  });
+}
+
+// ===== 感度(%) → エントリー閾値変換 =====
 // 感度高(95%) = 厳選 = スコア7.5以上でLONG / 2.5以下でSHORT
 // 感度低(20%) = 敏感 = スコア5.8以上でLONG / 4.2以下でSHORT
 function sensToThreshold(sens){
@@ -1785,6 +1886,18 @@ function renderBacktest(){
         </div>`;
       }).join("");
       el.innerHTML=kpiHtml+eqHtml+ddHtml+`<div class="ph" style="margin-top:8px">TRADE LOG · 直近${result.trades.length}件 / 全${s.total}件</div><div class="bt-trades">${trHtml||'<div class="bt-empty">トレードなし</div>'}</div>`;
+
+      // 履歴に保存
+      btHistorySave({
+        ts:Date.now(),
+        sym:sym,tf,
+        slMult,tpMult,maxHold,
+        sens,htf:htfOn&&!!htfCandles,
+        winRate:s.winRate,pf:s.pf,
+        maxDD:s.maxDD,expectancy:s.expectancy,
+        total:s.total,avgWinR:s.avgWinR,avgLossR:s.avgLossR
+      });
+      renderBtHistory();
     }catch(err){
       if(prog)prog.style.display="none";
       if(progTxt)progTxt.style.display="none";
@@ -1800,6 +1913,7 @@ function initBacktest(){
     btn.addEventListener("click",renderBacktest);
     btn.dataset.built="1";
   }
+  renderBtHistory(); // 既存履歴を表示
   // 感度スライダーのリアルタイム表示
   const sens=document.getElementById("btSens");
   const sensVal=document.getElementById("btSensVal");
