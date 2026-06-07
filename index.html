@@ -529,7 +529,10 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 .bt-ctrl-row{display:flex;align-items:center;gap:3px;background:var(--raised);border:1px solid var(--border2);padding:5px 7px;}
 .bt-ctrl-input{background:transparent;border:none;outline:none;color:var(--txt-br);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;width:100%;text-align:right;}
 .bt-ctrl-unit{font-size:9px;color:var(--txt-faint);}
-.bt-run{margin:0 12px 10px;padding:12px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.08em;cursor:pointer;border:1px solid var(--cyan);color:var(--cyan);background:linear-gradient(135deg,rgba(0,212,255,.08),transparent);user-select:none;}
+.bt-progress{margin:0 12px 10px;background:var(--raised);border:1px solid var(--border);height:6px;border-radius:1px;overflow:hidden;display:none;}
+.bt-progress-fill{height:100%;background:var(--cyan);transition:width .3s ease;}
+.bt-progress-txt{font-size:8px;color:var(--txt-dim);text-align:center;padding:3px 12px 8px;display:none;}
+.bt-run{margin:0 12px 6px;padding:12px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.08em;cursor:pointer;border:1px solid var(--cyan);color:var(--cyan);background:linear-gradient(135deg,rgba(0,212,255,.08),transparent);user-select:none;}
 .bt-run:active{background:var(--cyan);color:#000;}
 .bt-run.running{opacity:.5;pointer-events:none;}
 .bt-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin:0 0 1px;}
@@ -839,6 +842,8 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
       <div style="font-size:8px;color:var(--txt-faint)" id="btHtfLabel">—</div>
     </div>
     <div class="bt-run" id="btRun">▶ RUN BACKTEST · 検証を実行</div>
+    <div class="bt-progress" id="btProgress"><div class="bt-progress-fill" id="btProgressFill" style="width:0%"></div></div>
+    <div class="bt-progress-txt" id="btProgressTxt"></div>
     <div id="btResult"></div>
 
     <div class="ph">PRICE STATISTICS · 24時間統計</div>
@@ -900,7 +905,7 @@ body.fs-xlarge .settings-overlay{zoom:0.8065;}
 
 
 <script>
-const APP_VERSION = 80; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 81; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1459,7 +1464,61 @@ function projDate(bars,tf){
   const d=new Date(Date.now()+bars*info[0]);
   return(d.getMonth()+1)+"/"+d.getDate()+"頃";
 }
-// ===== BACKTEST ENGINE =====
+// ===== バックテスト用: 過去90日分を複数回APIで取得 =====
+const btHistoryCache={}; // キャッシュ: {sym_tf: {data, fetchedAt}}
+async function loadDeepHistory(symbol,tf,onProgress){
+  const cacheKey=`${symbol}_${tf}`;
+  const cached=btHistoryCache[cacheKey];
+  // 1時間以内のキャッシュは再利用
+  if(cached&&Date.now()-cached.fetchedAt<3600000){
+    if(onProgress)onProgress(100,"キャッシュ使用中");
+    return cached.data;
+  }
+  // 取得設定
+  const TF_MS={"1m":60000,"3m":180000,"5m":300000,"15m":900000,"30m":1800000,"1h":3600000,"4h":14400000,"1d":86400000,"1w":604800000};
+  const tfMs=TF_MS[tf]||300000;
+  const LIMIT=1000; // 1回の最大取得数
+  const DAYS=90;    // 過去90日
+  const totalMs=DAYS*24*3600*1000;
+  const totalBars=Math.ceil(totalMs/tfMs);
+  const totalReqs=Math.ceil(totalBars/LIMIT);
+
+  let allCandles=[];
+  let endTime=Date.now();
+
+  for(let req=0;req<totalReqs;req++){
+    const startTime=endTime-LIMIT*tfMs;
+    let fetched=false;
+    for(const h of REST_HOSTS){
+      try{
+        const url=`${h}/klines?symbol=${symbol}&interval=${tf}&limit=${LIMIT}&startTime=${startTime}&endTime=${endTime}`;
+        const r=await fetch(url,{signal:AbortSignal.timeout(10000)});
+        if(!r.ok)throw new Error(r.status);
+        const raw=await r.json();
+        const candles=raw.map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5]}));
+        allCandles=candles.concat(allCandles);
+        endTime=startTime;
+        fetched=true;
+        break;
+      }catch(e){continue;}
+    }
+    if(!fetched)break;
+    const pct=Math.round((req+1)/totalReqs*100);
+    if(onProgress)onProgress(pct,`取得中 ${req+1}/${totalReqs}回 (${allCandles.length}本)`);
+    // レート制限対策: 少し待つ
+    await new Promise(r=>setTimeout(r,120));
+  }
+
+  // 重複除去・時刻昇順ソート
+  const seen=new Set();
+  allCandles=allCandles.filter(c=>{if(seen.has(c.time))return false;seen.add(c.time);return true;});
+  allCandles.sort((a,b)=>a.time-b.time);
+
+  btHistoryCache[cacheKey]={data:allCandles,fetchedAt:Date.now()};
+  if(onProgress)onProgress(100,`完了 ${allCandles.length}本取得`);
+  return allCandles;
+}
+
 function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null){
   const c=candles; const n=c.length;
   if(n<60)return null;
@@ -1632,93 +1691,79 @@ function renderBacktest(){
   const bsEl=document.getElementById("btSym");if(bsEl)bsEl.textContent=fmtSym(sym);
   const el=document.getElementById("btResult");if(!el)return;
   const btn=document.getElementById("btRun");
-
+  const prog=document.getElementById("btProgress");
+  const progFill=document.getElementById("btProgressFill");
+  const progTxt=document.getElementById("btProgressTxt");
   const tf=document.querySelector(".tf-btn.on")?.dataset?.tf||"1h";
-  const candles=mtfCandles[sym]&&mtfCandles[sym][tf];
-  if(!candles||candles.length<60){
-    el.innerHTML=`<div class="bt-empty">データ不足。チャートを開いてデータを取得してください。</div>`;
-    return;
-  }
-
   const slMult=parseFloat(document.getElementById("btSLmult")?.value)||1.5;
   const tpMult=parseFloat(document.getElementById("btTPmult")?.value)||3.0;
   const maxHold=parseInt(document.getElementById("btMaxHold")?.value)||20;
-
-  // 上位足フィルター設定
   const htfOn=document.getElementById("btHtfToggle")?.dataset?.on==="1";
-  // 上位足の時間軸マップ
   const HTF_MAP={"5m":"1h","15m":"4h","1h":"4h","4h":"1d","1d":"1w","1w":"1M"};
   const htfTf=HTF_MAP[tf]||null;
-  const htfCandles=htfOn&&htfTf?(mtfCandles[sym]&&mtfCandles[sym][htfTf]):null;
   const htfLabel=document.getElementById("btHtfLabel");
-  if(htfLabel){
-    if(!htfOn)htfLabel.textContent="—";
-    else if(!htfTf)htfLabel.textContent="対応なし";
-    else if(!htfCandles)htfLabel.textContent=`${htfTf}データなし(SWARMで取得)`;
-    else htfLabel.textContent=`${htfTf}足でフィルター中`;
-  }
-
-  if(btn)btn.classList.add("running");
-
-  setTimeout(()=>{
-    const result=runBacktest(candles,slMult,tpMult,maxHold,htfOn&&htfCandles?htfCandles:null);
-    if(btn)btn.classList.remove("running");
-    if(!result||!result.stats){
-      el.innerHTML=`<div class="bt-empty">シグナルが検出されませんでした。時間軸やパラメータを変えてみてください。</div>`;
-      return;
-    }
-    const s=result.stats;
-    const pfCol=s.pf>=1.5?"var(--bull)":s.pf>=1.0?"var(--acc)":"var(--bear)";
-    const wrCol=s.winRate>=55?"var(--bull)":s.winRate>=45?"var(--acc)":"var(--bear)";
-    const pnlCol=s.totalPnl>=0?"var(--bull)":"var(--bear)";
-
-    // エクイティカーブSVG
-    const eq=result.equityCurve;
-    const eqMin=Math.min(...eq.map(p=>p.v));
-    const eqMax=Math.max(...eq.map(p=>p.v));
-    const eqRng=eqMax-eqMin||1;
-    const W=340,H=70;
-    const pts=eq.map((p,i)=>`${(i/(eq.length-1)*W).toFixed(1)},${((1-(p.v-eqMin)/eqRng)*(H-4)+2).toFixed(1)}`).join(" ");
-    const lastEq=eq[eq.length-1].v;
-    const eqCol=lastEq>=10000?"var(--bull)":"var(--bear)";
-    const svgLine=`<polyline points="${pts}" fill="none" stroke="${eqCol}" stroke-width="1.5" opacity=".9"/>`;
-    const svgArea=`<polygon points="0,${H} ${pts} ${W},${H}" fill="${eqCol}" opacity=".08"/>`;
-
-    // KPIサマリー
-    const kpiHtml=`<div class="bt-summary">
-      <div class="bt-kpi"><div class="bt-kpi-k">勝率 WIN RATE</div><div class="bt-kpi-v" style="color:${wrCol}">${s.winRate}%</div><div class="bt-kpi-sub">${s.wins}W / ${s.losses}L / ${s.total}T</div></div>
-      <div class="bt-kpi"><div class="bt-kpi-k">PF プロフィット</div><div class="bt-kpi-v" style="color:${pfCol}">${s.pf}</div><div class="bt-kpi-sub">1.5以上が目安</div></div>
-      <div class="bt-kpi"><div class="bt-kpi-k">最大DD</div><div class="bt-kpi-v" style="color:var(--bear)">${s.maxDD}%</div><div class="bt-kpi-sub">期待値 ${s.expectancy>=0?"+":""}${s.expectancy}R${htfOn&&htfCandles?" · HTF✓":""}</div></div>
-    </div>`;
-
-    // エクイティカーブ
-    const eqHtml=`
-      <div class="bt-equity-lbl">EQUITY CURVE · 資産推移（仮想¥10,000スタート）</div>
-      <div class="bt-equity"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${svgArea}${svgLine}</svg></div>`;
-
-    // 最大DD行
-    const ddHtml=`<div class="bt-dd"><span class="bt-dd-k">平均利益</span><span class="bt-dd-v" style="color:var(--bull)">+${s.avgWinR}R</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">平均損失</span><span class="bt-dd-v" style="color:var(--bear)">-${s.avgLossR}R</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">期待値</span><span class="bt-dd-v" style="color:${s.expectancy>=0?"var(--bull)":"var(--bear)"}">${s.expectancy>=0?"+":""}${s.expectancy}R</span></div>`;
-
-    // トレード一覧（直近30件）
-    const trHtml=result.trades.slice().reverse().map((t,i)=>{
-      const sc=t.side==="long"?"var(--bull)":"var(--bear)";
-      const pc=t.pnl>=0?"var(--bull)":"var(--bear)";
-      const exitLabel=t.reason==="TP"?"TP✓":t.reason==="SL"?"SL✗":"TIME";
-      const pnlSign=t.pnl>=0?"+":"";
-      const pctSign=t.pnlPct>=0?"+":"";
-      // 整数表示（小数なし）
-      const pnlStr=pnlSign+"¥"+Math.round(t.pnl).toLocaleString("en");
-      return `<div class="bt-trade-row">
-        <div class="bt-tr-idx">${result.trades.length-i}</div>
-        <div class="bt-tr-side" style="color:${sc}">${t.side==="long"?"▲ L":"▼ S"}</div>
-        <div class="bt-tr-info">¥${fmt(t.entry)} → ¥${fmt(t.exit)}<br>${t.bars}本保有 · SL¥${Math.round(t.sl).toLocaleString("en")} ${t.side==="long"?"↓":"↑"}</div>
-        <div class="bt-tr-pnl" style="color:${pc}">${pnlStr}<br><span style="font-size:7.5px">${pctSign}${t.pnlPct}%</span></div>
-        <div class="bt-tr-exit" style="color:${t.reason==="TP"?"var(--bull)":t.reason==="SL"?"var(--bear)":"var(--txt-dim)"}">${exitLabel}</div>
+  if(btn){btn.classList.add("running");btn.textContent="取得中...";}
+  if(prog)prog.style.display="block";
+  if(progTxt)progTxt.style.display="block";
+  el.innerHTML="";
+  const onProgress=(pct,msg)=>{if(progFill)progFill.style.width=pct+"%";if(progTxt)progTxt.textContent=msg;};
+  (async()=>{
+    try{
+      onProgress(0,"過去90日分のデータを取得中...");
+      const candles=await loadDeepHistory(sym,tf,onProgress);
+      if(!candles||candles.length<60){el.innerHTML=`<div class="bt-empty">データ取得失敗。ネットワークを確認してください。</div>`;return;}
+      let htfCandles=null;
+      if(htfOn&&htfTf){
+        onProgress(95,`上位足(${htfTf})データ取得中...`);
+        if(htfLabel)htfLabel.textContent=`${htfTf}足でフィルター中`;
+        try{htfCandles=await loadDeepHistory(sym,htfTf,()=>{});}catch(e){htfCandles=null;}
+      } else {if(htfLabel)htfLabel.textContent=htfOn&&!htfTf?"対応なし":"—";}
+      onProgress(98,"バックテスト計算中...");
+      await new Promise(r=>setTimeout(r,30));
+      const result=runBacktest(candles,slMult,tpMult,maxHold,htfOn&&htfCandles?htfCandles:null);
+      if(prog)prog.style.display="none";
+      if(progTxt)progTxt.style.display="none";
+      if(btn){btn.classList.remove("running");btn.textContent="▶ RUN BACKTEST · 検証を実行";}
+      if(!result||!result.stats){el.innerHTML=`<div class="bt-empty">シグナルが検出されませんでした。パラメータを変えてみてください。</div>`;return;}
+      const s=result.stats;
+      const pfCol=s.pf>=1.5?"var(--bull)":s.pf>=1.0?"var(--acc)":"var(--bear)";
+      const wrCol=s.winRate>=55?"var(--bull)":s.winRate>=45?"var(--acc)":"var(--bear)";
+      const eq=result.equityCurve;
+      const eqMin=Math.min(...eq.map(p=>p.v)),eqMax=Math.max(...eq.map(p=>p.v)),eqRng=eqMax-eqMin||1;
+      const W=340,H=80;
+      const pts=eq.map((p,i)=>`${(i/Math.max(eq.length-1,1)*W).toFixed(1)},${((1-(p.v-eqMin)/eqRng)*(H-4)+2).toFixed(1)}`).join(" ");
+      const eqCol=eq[eq.length-1].v>=10000?"var(--bull)":"var(--bear)";
+      const daysDiff=candles.length>1?Math.round((candles[candles.length-1].time-candles[0].time)/86400):0;
+      const kpiHtml=`<div class="bt-summary">
+        <div class="bt-kpi"><div class="bt-kpi-k">勝率 WIN RATE</div><div class="bt-kpi-v" style="color:${wrCol}">${s.winRate}%</div><div class="bt-kpi-sub">${s.wins}W / ${s.losses}L / ${s.total}T</div></div>
+        <div class="bt-kpi"><div class="bt-kpi-k">PF プロフィット</div><div class="bt-kpi-v" style="color:${pfCol}">${s.pf}</div><div class="bt-kpi-sub">1.5以上が目安</div></div>
+        <div class="bt-kpi"><div class="bt-kpi-k">最大DD</div><div class="bt-kpi-v" style="color:var(--bear)">${s.maxDD}%</div><div class="bt-kpi-sub">期待値 ${s.expectancy>=0?"+":""}${s.expectancy}R${htfOn&&htfCandles?" · HTF✓":""}</div></div>
       </div>`;
-    }).join("");
-
-    el.innerHTML=kpiHtml+eqHtml+ddHtml+`<div class="ph" style="margin-top:8px">TRADE LOG · 直近${result.trades.length}件</div><div class="bt-trades">${trHtml||'<div class="bt-empty">トレードなし</div>'}</div>`;
-  },50);
+      const eqHtml=`<div class="bt-equity-lbl">EQUITY CURVE · ${daysDiff}日間 / ${candles.length}本 / ${s.total}トレード</div>
+      <div class="bt-equity"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polygon points="0,${H} ${pts} ${W},${H}" fill="${eqCol}" opacity=".08"/><polyline points="${pts}" fill="none" stroke="${eqCol}" stroke-width="1.5" opacity=".9"/></svg></div>`;
+      const ddHtml=`<div class="bt-dd"><span class="bt-dd-k">平均利益</span><span class="bt-dd-v" style="color:var(--bull)">+${s.avgWinR}R</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">平均損失</span><span class="bt-dd-v" style="color:var(--bear)">-${s.avgLossR}R</span><span style="margin:0 8px;color:var(--border2)">|</span><span class="bt-dd-k">期待値</span><span class="bt-dd-v" style="color:${s.expectancy>=0?"var(--bull)":"var(--bear)"}">${s.expectancy>=0?"+":""}${s.expectancy}R</span></div>`;
+      const trHtml=result.trades.slice().reverse().map((t,i)=>{
+        const sc=t.side==="long"?"var(--bull)":"var(--bear)";
+        const pc=t.pnl>=0?"var(--bull)":"var(--bear)";
+        const exitLabel=t.reason==="TP"?"TP✓":t.reason==="SL"?"SL✗":"TIME";
+        const pnlStr=(t.pnl>=0?"+":"")+"¥"+Math.round(t.pnl).toLocaleString("en");
+        const pctStr=(t.pnlPct>=0?"+":"")+t.pnlPct+"%";
+        return `<div class="bt-trade-row">
+          <div class="bt-tr-idx">${result.trades.length-i}</div>
+          <div class="bt-tr-side" style="color:${sc}">${t.side==="long"?"▲ L":"▼ S"}</div>
+          <div class="bt-tr-info">¥${fmt(t.entry)} → ¥${fmt(t.exit)}<br>${t.bars}本 · SL¥${Math.round(t.sl).toLocaleString("en")} ${t.side==="long"?"↓":"↑"}</div>
+          <div class="bt-tr-pnl" style="color:${pc}">${pnlStr}<br><span style="font-size:7.5px">${pctStr}</span></div>
+          <div class="bt-tr-exit" style="color:${t.reason==="TP"?"var(--bull)":t.reason==="SL"?"var(--bear)":"var(--txt-dim)"}">${exitLabel}</div>
+        </div>`;
+      }).join("");
+      el.innerHTML=kpiHtml+eqHtml+ddHtml+`<div class="ph" style="margin-top:8px">TRADE LOG · 直近${result.trades.length}件 / 全${s.total}件</div><div class="bt-trades">${trHtml||'<div class="bt-empty">トレードなし</div>'}</div>`;
+    }catch(err){
+      if(prog)prog.style.display="none";
+      if(progTxt)progTxt.style.display="none";
+      if(btn){btn.classList.remove("running");btn.textContent="▶ RUN BACKTEST · 検証を実行";}
+      el.innerHTML=`<div class="bt-empty">エラー: ${err.message||"データ取得失敗"}</div>`;
+    }
+  })();
 }
 
 function initBacktest(){
