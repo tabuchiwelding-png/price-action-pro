@@ -991,7 +991,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 86; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 87; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1638,11 +1638,47 @@ let btrState={
   chart:null,cs:null,sl20:null,tp20:null,markers:[]
 };
 
-function btrInit(){
+function btrInitButtons(){
+  // ボタン配線（一度だけ）
+  const el=document.getElementById("btrFirst");
+  if(!el||el.dataset.built)return;
+  el.dataset.built="1";
+  el.addEventListener("click",()=>btrGo(0));
+  document.getElementById("btrPrev")?.addEventListener("click",()=>btrGo(btrState.tradeIdx-1));
+  document.getElementById("btrPlay")?.addEventListener("click",btrTogglePlay);
+  document.getElementById("btrNext")?.addEventListener("click",()=>btrGo(btrState.tradeIdx+1));
+  document.getElementById("btrLast")?.addEventListener("click",()=>btrGo(btrState.trades.length-1));
+  document.querySelectorAll(".btr-spd").forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll(".btr-spd").forEach(x=>x.classList.remove("on"));
+      b.classList.add("on");
+      btrState.speed=parseInt(b.dataset.spd);
+      if(btrState.playing)btrStartAuto();
+    });
+  });
+  // detailsが開かれたときにチャートを初期化
+  document.getElementById("btReplayDetails")?.addEventListener("toggle",function(){
+    if(this.open){
+      setTimeout(()=>{
+        btrInitChart();
+        // 既にデータがあれば再描画
+        if(btrState.trades.length>0)btrGo(btrState.tradeIdx);
+      },50);
+    }
+  });
+}
+
+function btrInitChart(){
   const wrap=document.getElementById("btrChart");
-  if(!wrap||btrState.chart)return;
+  if(!wrap)return;
+  if(btrState.chart){
+    // リサイズだけ
+    btrState.chart.applyOptions({width:wrap.clientWidth,height:220});
+    return;
+  }
   if(typeof LightweightCharts==="undefined")return;
   btrState.chart=LightweightCharts.createChart(wrap,{
+    width:wrap.clientWidth,height:220,
     layout:{background:{color:"#06090e"},textColor:"#aebfce"},
     grid:{vertLines:{color:"#1a2533"},horzLines:{color:"#1a2533"}},
     rightPriceScale:{borderColor:"#1a2533"},
@@ -1656,35 +1692,27 @@ function btrInit(){
   });
   btrState.sl20=btrState.chart.addLineSeries({color:"#ff4d6d",lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false});
   btrState.tp20=btrState.chart.addLineSeries({color:"#2ee6a6",lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false});
+}
 
-  // ボタン配線
-  document.getElementById("btrFirst")?.addEventListener("click",()=>btrGo(0));
-  document.getElementById("btrPrev")?.addEventListener("click",()=>btrGo(btrState.tradeIdx-1));
-  document.getElementById("btrPlay")?.addEventListener("click",btrTogglePlay);
-  document.getElementById("btrNext")?.addEventListener("click",()=>btrGo(btrState.tradeIdx+1));
-  document.getElementById("btrLast")?.addEventListener("click",()=>btrGo(btrState.trades.length-1));
-
-  document.querySelectorAll(".btr-spd").forEach(b=>{
-    b.addEventListener("click",()=>{
-      document.querySelectorAll(".btr-spd").forEach(x=>x.classList.remove("on"));
-      b.classList.add("on");
-      btrState.speed=parseInt(b.dataset.spd);
-      if(btrState.playing)btrStartAuto();
-    });
-  });
+function btrInit(){
+  btrInitButtons();
 }
 
 function btrLoad(candles,trades,sym,tf){
-  btrInit();
+  btrInitButtons();
   btrStop();
   btrState.candles=candles;
   btrState.trades=trades;
   btrState.tradeIdx=0;
-  btrState.candleIdx=0;
   const badge=document.getElementById("btrBadge");
   const tfL={"1m":"1分","5m":"5分","15m":"15分","1h":"1時間","4h":"4時間","1d":"日足"};
   if(badge)badge.textContent=`${sym} ${tfL[tf]||tf} · ${trades.length}件`;
-  if(trades.length>0)btrGo(0);
+  // detailsが開いていればチャート初期化してすぐ描画、閉じていればデータだけ保持
+  const details=document.getElementById("btReplayDetails");
+  if(details&&details.open){
+    btrInitChart();
+    if(trades.length>0)btrGo(0);
+  }
 }
 
 function btrGo(idx){
