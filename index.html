@@ -991,7 +991,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 87; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 88; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1743,7 +1743,8 @@ function btrGo(idx){
   markers.push({time:btrState.candles[entryI].time,position:trade.side==="long"?"belowBar":"aboveBar",color:trade.side==="long"?"#2ee6a6":"#ff4d6d",shape:trade.side==="long"?"arrowUp":"arrowDown",text:`IN`});
   markers.push({time:btrState.candles[exitI].time,position:trade.side==="long"?"aboveBar":"belowBar",color:trade.reason==="TP"?"#2ee6a6":trade.reason==="SL"?"#ff4d6d":"#8c7dff",shape:"circle",text:trade.reason});
   btrState.cs?.setMarkers(markers);
-  btrState.chart?.timeScale().fitContent();
+  // データセット後に少し待ってからfitContent（iOS描画タイミング対策）
+  setTimeout(()=>{btrState.chart?.timeScale().fitContent();},80);
 
   // 情報表示
   const sc=trade.side==="long"?"var(--bull)":"var(--bear)";
