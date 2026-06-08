@@ -877,7 +877,10 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
     <!-- LONG/SHORT 非対称パラメータ -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-bottom:1px;">
       <div style="background:var(--panel2);padding:8px 12px;">
-        <div style="font-size:8px;font-weight:700;color:var(--bull);letter-spacing:.08em;margin-bottom:6px;">▲ LONG パラメータ</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:8px;font-weight:700;color:var(--bull);letter-spacing:.08em;">▲ LONG パラメータ</div>
+          <div id="btLongToggle" data-on="1" style="font-size:8px;font-weight:700;padding:2px 8px;border:1px solid var(--bull);color:var(--bull);cursor:pointer;user-select:none;">ON</div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
           <div class="bt-ctrl"><div class="bt-ctrl-label">SL×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLSL" class="bt-ctrl-input" value="1.5"></div></div>
           <div class="bt-ctrl"><div class="bt-ctrl-label">TP×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLTP" class="bt-ctrl-input" value="2.0"></div></div>
@@ -885,7 +888,10 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
         </div>
       </div>
       <div style="background:var(--panel2);padding:8px 12px;">
-        <div style="font-size:8px;font-weight:700;color:var(--bear);letter-spacing:.08em;margin-bottom:6px;">▼ SHORT パラメータ</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:8px;font-weight:700;color:var(--bear);letter-spacing:.08em;">▼ SHORT パラメータ</div>
+          <div id="btShortToggle" data-on="1" style="font-size:8px;font-weight:700;padding:2px 8px;border:1px solid var(--bear);color:var(--bear);cursor:pointer;user-select:none;">ON</div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
           <div class="bt-ctrl"><div class="bt-ctrl-label">SL×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btSSL" class="bt-ctrl-input" value="2.0"></div></div>
           <div class="bt-ctrl"><div class="bt-ctrl-label">TP×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btSTP" class="bt-ctrl-input" value="3.0"></div></div>
@@ -1014,7 +1020,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 93; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 94; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -2221,8 +2227,8 @@ function runBacktest(candles, slMult, tpMult, maxHold, higherTfCandles=null, lon
       if(!pa)continue;
       const score=pa.score;
       let side=null;
-      if(score>=longThresh)side="long";
-      else if(score<=shortThresh)side="short";
+      if(score>=longThresh&&lp.enabled!==false)side="long";
+      else if(score<=shortThresh&&sp.enabled!==false)side="short";
       if(!side)continue;
 
       // ===== パターン品質フィルター =====
@@ -2345,16 +2351,20 @@ function renderBacktest(){
       await new Promise(r=>setTimeout(r,30));
       const sens=parseInt(document.getElementById("btSens")?.value)||25;
       const{longThresh,shortThresh}=sensToThreshold(sens);
-      // LONG/SHORT別パラメータ
+      // LONG/SHORT 有効・無効
+      const longEnabled=document.getElementById("btLongToggle")?.dataset?.on==="1";
+      const shortEnabled=document.getElementById("btShortToggle")?.dataset?.on==="1";
       const longParams={
         slMult:parseFloat(document.getElementById("btLSL")?.value)||1.5,
         tpMult:parseFloat(document.getElementById("btLTP")?.value)||2.0,
-        maxHold:parseInt(document.getElementById("btLHold")?.value)||40
+        maxHold:parseInt(document.getElementById("btLHold")?.value)||40,
+        enabled:longEnabled
       };
       const shortParams={
         slMult:parseFloat(document.getElementById("btSSL")?.value)||2.0,
         tpMult:parseFloat(document.getElementById("btSTP")?.value)||3.0,
-        maxHold:parseInt(document.getElementById("btSHold")?.value)||20
+        maxHold:parseInt(document.getElementById("btSHold")?.value)||20,
+        enabled:shortEnabled
       };
       const result=runBacktest(candles,longParams.slMult,longParams.tpMult,longParams.maxHold,htfOn&&htfCandles?htfCandles:null,longThresh,shortThresh,longParams,shortParams);
       if(prog)prog.style.display="none";
@@ -2454,7 +2464,21 @@ function initBacktest(){
   renderPtReport();  // パターン記録初期表示
   const ptc=document.getElementById("ptCount");
   if(ptc)ptc.textContent=ptLoad().length+"件";
-  // 感度スライダーのリアルタイム表示
+  // LONG/SHORTトグル
+  ["btLongToggle","btShortToggle"].forEach(id=>{
+    const t=document.getElementById(id);
+    if(t&&!t.dataset.built){
+      const isLong=id==="btLongToggle";
+      const col=isLong?"var(--bull)":"var(--bear)";
+      t.addEventListener("click",()=>{
+        const on=t.dataset.on==="1";
+        t.dataset.on=on?"0":"1";
+        t.textContent=on?"OFF":"ON";
+        t.style.opacity=on?"0.4":"1";
+      });
+      t.dataset.built="1";
+    }
+  });
   const sens=document.getElementById("btSens");
   const sensVal=document.getElementById("btSensVal");
   const sensThresh=document.getElementById("btSensThresh");
