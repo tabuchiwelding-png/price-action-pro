@@ -1020,7 +1020,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 94; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 95; // ★デプロイごとに +1 する(自動更新の基準)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -2366,7 +2366,7 @@ function renderBacktest(){
         maxHold:parseInt(document.getElementById("btSHold")?.value)||20,
         enabled:shortEnabled
       };
-      const result=runBacktest(candles,longParams.slMult,longParams.tpMult,longParams.maxHold,htfOn&&htfCandles?htfCandles:null,longThresh,shortThresh,longParams,shortParams);
+      const result=runBacktest(candles,2,3,20,htfOn&&htfCandles?htfCandles:null,longThresh,shortThresh,longParams,shortParams);
       if(prog)prog.style.display="none";
       if(progTxt)progTxt.style.display="none";
       if(btn){btn.classList.remove("running");btn.textContent="▶ RUN BACKTEST · 検証を実行";}
@@ -2468,13 +2468,12 @@ function initBacktest(){
   ["btLongToggle","btShortToggle"].forEach(id=>{
     const t=document.getElementById(id);
     if(t&&!t.dataset.built){
-      const isLong=id==="btLongToggle";
-      const col=isLong?"var(--bull)":"var(--bear)";
       t.addEventListener("click",()=>{
         const on=t.dataset.on==="1";
         t.dataset.on=on?"0":"1";
         t.textContent=on?"OFF":"ON";
         t.style.opacity=on?"0.4":"1";
+        t.style.borderStyle=on?"dashed":"solid";
       });
       t.dataset.built="1";
     }
