@@ -871,6 +871,21 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
     <div id="cycGrid" class="cyc-grid"></div>
     <details class="cyc-explain" open><summary>サイクル波形 · この通貨の実データ CHART</summary><div id="cycDiagram" class="cyc-diagram"></div></details>
 
+    <!-- ===== RULE ENGINE · ルールベース抽出 (Al Brooks) ===== -->
+    <div class="ph">RULE ENGINE · ルールベース抽出 <span class="ph-right" id="reSym">—</span></div>
+    <details class="foldnote jp"><summary>ルールベース抽出とは（主観ゼロ・90点未満は全除外）</summary><div class="fold-body">
+      アルブルックスのプライスアクションに基づき、過去90日のチャートから<b>条件を満たしたエントリーだけ</b>を機械的に抽出する。<br><br>
+      ◆ <b>回数は制限しない</b>: 0件でも正常。条件を満たせば何件でも採用。<br>
+      ◆ <b>スコア90点以上のみ</b>: 配点はダマシ+15 / 2回目の試し+10 / 小さく強い足+10 / クライマックス・終焉+15 / EMAコンテクスト+10 / 時間帯+10 / 構造明確+20 / 有効シグナル足(基礎)+10 ＝ 100点満点。<br>
+      ◆ <b>RR 2.3未満は除外</b>: SLは直近スイングの外、TPはレンジ端または次の構造。TPを引き伸ばしてRRを作ることはしない。<br>
+      ◆ <b>ブレイクより失敗(ダマシ)を優先</b>。<br><br>
+      本質: 「チャンスを探すな。条件を満たしたものだけ残せ」
+    </div></details>
+    <div class="bt-run" id="reRun">▶ RUN RULE SCAN · 条件抽出を実行</div>
+    <div class="bt-progress" id="reProgress" style="display:none"><div class="bt-progress-fill" id="reProgressFill" style="width:0%"></div></div>
+    <div class="bt-progress-txt" id="reProgressTxt" style="display:none"></div>
+    <div id="reResult"></div>
+
     <div class="ph">BACKTEST · シグナル検証 <span class="ph-right" id="btSym">—</span></div>
     <details class="foldnote jp"><summary>バックテストの見方</summary><div class="fold-body">現在表示中の銘柄・時間軸の過去90日分に対して、PAシグナルスコアが閾値を超えた次足でエントリーし、ATRベースのSL/TPで決済したと仮定した場合の成績。<br><br>◆ <b>感度</b>が高いほど閾値が厳しくなりシグナルが減る。低いほど多くなる。<br>◆ <b>LONG/SHORT別パラメータ</b>で非対称な相場特性に対応できます。<br>◆ 過去データへの当てはめであり、将来の利益を保証するものではない。</div></details>
 
@@ -2454,12 +2469,326 @@ function renderBacktest(){
   })();
 }
 
+// =====================================================================
+// RULE ENGINE · Al Brooks ルールベース抽出
+// 原則: 回数を制限しない(0件は正常) / 主観禁止 / 90点未満は全除外 / RR2.3未満は全除外
+// 配点: ダマシ+15 2回目+10 小強足+10 クライマックス・終焉+15 EMA+10 時間帯+10 構造+20 有効シグナル足(基礎)+10 = 100
+// =====================================================================
+const RE_MIN_SCORE=90;
+const RE_MIN_RR=2.3;
+
+function reAvg(arr){return arr.length?arr.reduce((s,v)=>s+v,0)/arr.length:0;}
+function reATRat(c,i,p){p=p||14;if(i<p)return null;let s=0;for(let k=i-p+1;k<=i;k++){const h=c[k].high,l=c[k].low,pc=c[k-1]?c[k-1].close:l;s+=Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc));}return s/p;}
+function reEMAat(c,i,p){const k=2/(p+1);const st=Math.max(0,i-p*4);let v=c[st].close;for(let j=st+1;j<=i;j++)v=c[j].close*k+v*(1-k);return v;}
+
+// --- 個別バーの判定ユーティリティ ---
+function reBar(x){
+  const rng=x.high-x.low;
+  const body=Math.abs(x.close-x.open);
+  return{
+    rng:rng,body:body,
+    bull:x.close>=x.open,
+    bodyR:rng>0?body/rng:0,
+    upW:rng>0?(x.high-Math.max(x.open,x.close))/rng:0,
+    dnW:rng>0?(Math.min(x.open,x.close)-x.low)/rng:0
+  };
+}
+
+// --- シグナル足の厳格定義 (仕様⑤) ---
+// 有効: 実体が明確 / エントリー方向のヒゲが短い / 前の足を否定
+// 無効: 同時線 / エントリー方向に長いヒゲ / 迷いの足
+function reValidSignalBar(c,i,side){
+  const b=reBar(c[i]);const prev=c[i-1];if(!prev)return{ok:false,why:"前足なし"};
+  if(b.rng<=0)return{ok:false,why:"値幅ゼロ"};
+  if(b.bodyR<0.50)return{ok:false,why:"実体不明確(実体比"+Math.round(b.bodyR*100)+"%)"};
+  if(side==="long"){
+    if(!b.bull)return{ok:false,why:"方向不一致(陰線)"};
+    if(b.upW>0.25)return{ok:false,why:"エントリー方向の上ヒゲ長"};
+    if(c[i].close<=Math.max(prev.open,prev.close))return{ok:false,why:"前足を否定していない"};
+  }else{
+    if(b.bull)return{ok:false,why:"方向不一致(陽線)"};
+    if(b.dnW>0.25)return{ok:false,why:"エントリー方向の下ヒゲ長"};
+    if(c[i].close>=Math.min(prev.open,prev.close))return{ok:false,why:"前足を否定していない"};
+  }
+  return{ok:true,why:""};
+}
+
+// --- 環境認識 (仕様①) ---
+function reEnv(c,i){
+  const lb=Math.min(80,i+1);
+  const slice=c.slice(i-lb+1,i+1);
+  const dow=detectDowStructure(slice,3);
+  const rngs=[];for(let j=i-19;j<=i;j++)rngs.push(c[j].high-c[j].low);
+  const aR20=reAvg(rngs);
+  const aR5=reAvg(rngs.slice(-5));
+  const shrink=aR20>0&&aR5<aR20*0.72;            // シュリンク(収縮)
+  let climaxBull=false,climaxBear=false;           // 直近6本(シグナル足を除く)のクライマックス
+  for(let j=i-6;j<=i-1;j++){
+    if(j<0)continue;
+    const b=reBar(c[j]);
+    if(aR20>0&&b.rng>aR20*2.2){if(b.bull)climaxBull=true;else climaxBear=true;}
+  }
+  const e20=reEMAat(c,i,20);
+  const e20p=reEMAat(c,i-5,20);
+  const slope=e20p>0?(e20-e20p)/e20p:0;
+  const atr=reATRat(c,i)||aR20;
+  // バーブワイヤー: 直近5本のうち同時線(実体比<35%)が2本以上 → エントリー禁止環境
+  let dojiN=0;for(let j=i-4;j<=i;j++){if(reBar(c[j]).bodyR<0.35)dojiN++;}
+  const barbwire=dojiN>=2;
+  const flatEMA=Math.abs(slope)<0.0004;            // フラットなEMA20 → 禁止
+  return{dow:dow,aR20:aR20,shrink:shrink,climaxBull:climaxBull,climaxBear:climaxBear,e20:e20,slope:slope,atr:atr,barbwire:barbwire,flatEMA:flatEMA};
+}
+
+// --- 構造分類 (仕様②) と方向候補 ---
+function reStructure(c,i,env){
+  const hi20=Math.max.apply(null,c.slice(i-20,i).map(x=>x.high));
+  const lo20=Math.min.apply(null,c.slice(i-20,i).map(x=>x.low));
+  // ダマシ判定用: 前足自身を含めない直近20本の極値
+  const hi20x=Math.max.apply(null,c.slice(i-21,i-1).map(x=>x.high));
+  const lo20x=Math.min.apply(null,c.slice(i-21,i-1).map(x=>x.low));
+  const cur=c[i],prv=c[i-1];
+  // ダマシ(Failed Breakout)を最優先
+  if(prv.high>hi20x&&!reBar(cur).bull&&cur.close<prv.open&&cur.close<hi20x)
+    return{type:"ブレイク失敗(ダマシ)",term:"Failed Breakout (Bull Trap)",side:"short",failedBO:true};
+  if(prv.low<lo20x&&reBar(cur).bull&&cur.close>prv.open&&cur.close>lo20x)
+    return{type:"ブレイク失敗(ダマシ)",term:"Failed Breakout (Bear Trap)",side:"long",failedBO:true};
+  // トレンド継続(確認済みダウ構造 + EMA20付近への押し/戻し)
+  if(env.dow.dir==="bull"&&env.dow.confirmed){
+    const touched=c.slice(i-3,i+1).some(x=>x.low<=env.e20+env.atr*0.5);
+    if(touched&&reBar(cur).bull)return{type:"トレンド継続(押し目)",term:"Trend Pullback",side:"long",failedBO:false};
+  }
+  if(env.dow.dir==="bear"&&env.dow.confirmed){
+    const touched=c.slice(i-3,i+1).some(x=>x.high>=env.e20-env.atr*0.5);
+    if(touched&&!reBar(cur).bull)return{type:"トレンド継続(戻り)",term:"Trend Pullback",side:"short",failedBO:false};
+  }
+  // トレーディングレンジ端の反転
+  if(env.dow.dir==="neutral"){
+    const recent=c.slice(Math.max(0,i-99),i+1);
+    const rHi=Math.max.apply(null,recent.map(x=>x.high));
+    const rLo=Math.min.apply(null,recent.map(x=>x.low));
+    const pos=rHi>rLo?(cur.close-rLo)/(rHi-rLo):0.5;
+    if(pos>0.85&&!reBar(cur).bull)return{type:"トレーディングレンジ(上限反転)",term:"Trading Range Fade",side:"short",failedBO:false};
+    if(pos<0.15&&reBar(cur).bull)return{type:"トレーディングレンジ(下限反転)",term:"Trading Range Fade",side:"long",failedBO:false};
+  }
+  // ブレイクアウト(優先度最低)
+  if(cur.close>hi20&&reBar(cur).bull)return{type:"ブレイクアウト",term:"Breakout",side:"long",failedBO:false};
+  if(cur.close<lo20&&!reBar(cur).bull)return{type:"ブレイクアウト",term:"Breakdown",side:"short",failedBO:false};
+  return null;
+}
+
+// --- 2回目の試し(High2/Low2) ---
+function reSecondEntry(c,i,side){
+  let legs=0;
+  for(let j=i-15;j<=i;j++){
+    if(j<2)continue;
+    if(side==="long"){ if(c[j].low<c[j-1].low&&c[j-1].low>=c[j-2].low)legs++; }
+    else{ if(c[j].high>c[j-1].high&&c[j-1].high<=c[j-2].high)legs++; }
+  }
+  return legs>=2;
+}
+
+// --- トレンド終焉(3プッシュ=ウェッジ近似) ---
+function reTrendEnding(c,i,side){
+  const sw=detectSwingPoints(c.slice(Math.max(0,i-59),i+1),2);
+  if(side==="short"){const h=sw.highs.slice(-3);return h.length===3&&h[2].v>h[1].v&&h[1].v>h[0].v&&(h[2].v-h[1].v)<(h[1].v-h[0].v);}
+  const l=sw.lows.slice(-3);return l.length===3&&l[2].v<l[1].v&&l[1].v<l[0].v&&(l[1].v-l[2].v)<(l[0].v-l[1].v);
+}
+
+// --- スコアリング (仕様⑥: 100点満点・90点以上のみ) ---
+function reScore(c,i,side,env,st){
+  const b=reBar(c[i]);
+  const items=[];
+  let total=10; items.push({k:"有効シグナル足(基礎)",v:10});
+  if(st.failedBO){total+=15;items.push({k:"ダマシ(Failed Breakout)",v:15});}
+  if(reSecondEntry(c,i,side)){total+=10;items.push({k:"2回目の試し(High2/Low2)",v:10});}
+  if(env.aR20>0&&b.rng<env.aR20*1.1&&b.bodyR>=0.60){total+=10;items.push({k:"小さく強い足",v:10});}
+  const exhaust=(side==="long"&&env.climaxBear)||(side==="short"&&env.climaxBull);
+  if(exhaust||reTrendEnding(c,i,side)){total+=15;items.push({k:exhaust?"クライマックス(消尽)":"トレンド終焉(3プッシュ)",v:15});}
+  const nearEMA=side==="long"?(c[i].low<=env.e20+env.atr*0.5&&env.slope>0):(c[i].high>=env.e20-env.atr*0.5&&env.slope<0);
+  if(nearEMA){total+=10;items.push({k:"EMAコンテクスト",v:10});}
+  const h=new Date(c[i].time*1000).getUTCHours();
+  if(h>=7&&h<=21){total+=10;items.push({k:"時間帯(London/NY)",v:10});}
+  const clear=(env.dow.confirmed||st.failedBO)&&!env.barbwire&&!env.flatEMA;
+  if(clear){total+=20;items.push({k:"構造の明確さ",v:20});}
+  return{total:total,items:items};
+}
+
+// --- RR計算 (仕様⑦: SL=直近スイング外 / TP=レンジ端or次構造 / 2.3未満除外) ---
+function reRiskReward(c,i,side,env){
+  const buf=env.atr*0.1;
+  const entry=side==="long"?c[i].high:c[i].low;        // シグナル足の外側ストップ注文
+  let sl,tp,tpSrc="";
+  if(side==="long"){
+    sl=Math.min.apply(null,c.slice(i-4,i+1).map(x=>x.low))-buf;
+    const sw=detectSwingPoints(c.slice(Math.max(0,i-119),i+1),3);
+    const above=sw.highs.map(s=>s.v).filter(v=>v>entry+env.atr*0.5);
+    if(above.length){tp=Math.min.apply(null,above);tpSrc="次のスイング高値(Magnet Effect)";}
+    else{const rHi=Math.max.apply(null,c.slice(Math.max(0,i-99),i+1).map(x=>x.high));
+      if(rHi>entry+env.atr*0.5){tp=rHi;tpSrc="レンジ上端";}else return null;}
+  }else{
+    sl=Math.max.apply(null,c.slice(i-4,i+1).map(x=>x.high))+buf;
+    const sw=detectSwingPoints(c.slice(Math.max(0,i-119),i+1),3);
+    const below=sw.lows.map(s=>s.v).filter(v=>v<entry-env.atr*0.5);
+    if(below.length){tp=Math.max.apply(null,below);tpSrc="次のスイング安値(Magnet Effect)";}
+    else{const rLo=Math.min.apply(null,c.slice(Math.max(0,i-99),i+1).map(x=>x.low));
+      if(rLo<entry-env.atr*0.5){tp=rLo;tpSrc="レンジ下端";}else return null;}
+  }
+  const risk=side==="long"?entry-sl:sl-entry;
+  const reward=side==="long"?tp-entry:entry-tp;
+  if(risk<=0||reward<=0)return null;
+  return{entry:entry,sl:sl,tp:tp,rr:reward/risk,tpSrc:tpSrc};
+}
+
+// --- 前進シミュレーション(検証用・トリガー含む) ---
+function reSimulate(c,i,side,plan){
+  // トリガー: シグナル足の外側を2本以内に抜けたらエントリー成立。抜けなければキャンセル。
+  let entIdx=-1;
+  for(let j=i+1;j<=Math.min(i+2,c.length-1);j++){
+    if(side==="long"&&c[j].high>plan.entry){entIdx=j;break;}
+    if(side==="short"&&c[j].low<plan.entry){entIdx=j;break;}
+  }
+  if(entIdx<0)return{status:"未約定",pnlR:0,exitIdx:null};
+  for(let j=entIdx;j<c.length;j++){
+    if(side==="long"){
+      if(c[j].low<=plan.sl)return{status:"SL",pnlR:-1,exitIdx:j};
+      if(c[j].high>=plan.tp)return{status:"TP",pnlR:plan.rr,exitIdx:j};
+    }else{
+      if(c[j].high>=plan.sl)return{status:"SL",pnlR:-1,exitIdx:j};
+      if(c[j].low<=plan.tp)return{status:"TP",pnlR:plan.rr,exitIdx:j};
+    }
+  }
+  return{status:"進行中",pnlR:0,exitIdx:null};
+}
+
+// --- メインスキャン ---
+function runRuleEngine(c){
+  const n=c.length;
+  const funnel={scanned:0,structHit:0,sigBarFail:0,banEnv:0,scoreFail:0,rrFail:0,accepted:0};
+  const entries=[];
+  let lastExitIdx=-1; // 同時1ポジション(重複エントリーの排除)
+  for(let i=60;i<n-1;i++){
+    funnel.scanned++;
+    if(i<=lastExitIdx)continue;
+    const env=reEnv(c,i);
+    if(!env.atr)continue;
+    const st=reStructure(c,i,env);
+    if(!st)continue;
+    funnel.structHit++;
+    // 禁止環境: フラットEMA・バーブワイヤー(仕様: エントリー禁止)
+    if(env.barbwire||env.flatEMA){funnel.banEnv++;continue;}
+    const sig=reValidSignalBar(c,i,st.side);
+    if(!sig.ok){funnel.sigBarFail++;continue;}
+    const sc=reScore(c,i,st.side,env,st);
+    if(sc.total<RE_MIN_SCORE){funnel.scoreFail++;continue;}
+    const plan=reRiskReward(c,i,st.side,env);
+    if(!plan||plan.rr<RE_MIN_RR){funnel.rrFail++;continue;}
+    const sim=reSimulate(c,i,st.side,plan);
+    // Al Brooks用語の組み立て (仕様④)
+    const terms=[];
+    if(st.failedBO)terms.push(st.term);
+    if(st.term==="Trading Range Fade")terms.push("Trading Range");
+    if(st.term==="Breakout"||st.term==="Breakdown")terms.push("Breakout");
+    if(sc.items.some(x=>x.k.indexOf("High2")>=0))terms.push(st.side==="long"?"Second Entry (High2)":"Second Entry (Low2)");
+    if(sc.items.some(x=>x.k.indexOf("クライマックス")>=0))terms.push(st.side==="long"?"Climax Sell (消尽)":"Climax Buy (消尽)");
+    if(sc.items.some(x=>x.k.indexOf("終焉")>=0))terms.push("Trend Ending Signal");
+    if(plan.tpSrc.indexOf("Magnet")>=0)terms.push("Magnet Effect");
+    if(st.term==="Trend Pullback")terms.push(st.side==="long"?"Bull Flag / H2 context":"Bear Flag / L2 context");
+    entries.push({
+      idx:i,time:c[i].time,side:st.side,score:sc.total,items:sc.items,
+      structure:st.type,terms:terms,
+      entry:plan.entry,sl:plan.sl,tp:plan.tp,rr:plan.rr,tpSrc:plan.tpSrc,
+      result:sim.status,pnlR:sim.pnlR,
+      env:{trend:env.dow.label,shrink:env.shrink,climax:env.climaxBull||env.climaxBear}
+    });
+    funnel.accepted++;
+    if(sim.exitIdx!=null)lastExitIdx=sim.exitIdx;
+  }
+  return{entries:entries,funnel:funnel};
+}
+
+// --- レンダリング ---
+function reFmtTime(t){const d=new Date(t*1000);const z=v=>String(v).padStart(2,"0");return d.getFullYear()+"/"+z(d.getMonth()+1)+"/"+z(d.getDate())+" "+z(d.getHours())+":"+z(d.getMinutes());}
+function renderRuleEngine(){
+  const sym=activeSymbol;
+  const tf=document.querySelector(".tf-btn.on")?.dataset?.tf||TF||"5m";
+  const el=document.getElementById("reResult");
+  const btn=document.getElementById("reRun");
+  const prog=document.getElementById("reProgress"),fill=document.getElementById("reProgressFill"),txt=document.getElementById("reProgressTxt");
+  const symEl=document.getElementById("reSym");if(symEl)symEl.textContent=fmtSym(sym)+" · "+tf;
+  if(btn.classList.contains("running"))return;
+  btn.classList.add("running");btn.textContent="SCANNING...";
+  prog.style.display="block";txt.style.display="block";
+  const onP=(p,m)=>{fill.style.width=p+"%";txt.textContent=m;};
+  (async()=>{
+    try{
+      const candles=await loadDeepHistory(sym,tf,onP);
+      onP(98,"ルール判定中...");
+      await new Promise(r=>setTimeout(r,30));
+      const res=runRuleEngine(candles);
+      prog.style.display="none";txt.style.display="none";
+      btn.classList.remove("running");btn.textContent="▶ RUN RULE SCAN · 条件抽出を実行";
+      const f=res.funnel,es=res.entries;
+      const wins=es.filter(e=>e.result==="TP").length;
+      const losses=es.filter(e=>e.result==="SL").length;
+      const totR=es.reduce((s,e)=>s+e.pnlR,0);
+      let h="";
+      h+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin-bottom:1px;">`;
+      const cell=(k,v,col)=>`<div style="background:var(--panel2);padding:8px;text-align:center;"><div style="font-size:7.5px;color:var(--txt-dim);letter-spacing:.06em;">${k}</div><div style="font-size:14px;font-weight:800;color:${col||"var(--txt-br)"};margin-top:2px;">${v}</div></div>`;
+      h+=cell("走査本数",f.scanned);
+      h+=cell("採用",es.length+"件",es.length?"var(--cyan)":"var(--txt-dim)");
+      h+=cell("TP / SL",`<span style="color:var(--bull)">${wins}</span> / <span style="color:var(--bear)">${losses}</span>`);
+      h+=cell("合計R",(totR>=0?"+":"")+totR.toFixed(2)+"R",totR>=0?"var(--bull)":"var(--bear)");
+      h+=`</div>`;
+      h+=`<div style="padding:7px 12px;font-size:8.5px;color:var(--txt-dim);" class="jp">除外内訳: 構造候補 ${f.structHit} → 禁止環境(バーブワイヤー/フラットEMA) -${f.banEnv} / シグナル足無効 -${f.sigBarFail} / スコア90未満 -${f.scoreFail} / RR2.3未満 -${f.rrFail} → <b style="color:var(--txt-br)">採用 ${f.accepted}</b>${es.length===0?"<br><b style='color:var(--cyan)'>0件は正常。</b>条件を満たすものが存在しなかっただけで、チャンスを探しに行く必要はない。":""}</div>`;
+      es.slice().reverse().forEach((e,ix)=>{
+        const c=e.side==="long"?"var(--bull)":"var(--bear)";
+        const rc=e.result==="TP"?"var(--bull)":e.result==="SL"?"var(--bear)":"var(--txt-dim)";
+        h+=`<div style="border-top:1px solid var(--border);padding:9px 12px;" class="jp">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:800;color:${c};font-size:11px;">■ エントリー${es.length-ix}（スコア：${e.score}点） ${e.side==="long"?"▲ LONG":"▼ SHORT"}</span>
+            <span style="font-size:9px;font-weight:700;color:${rc};border:1px solid ${rc};padding:1px 7px;">${e.result}${e.result==="TP"?" +"+e.pnlR.toFixed(2)+"R":e.result==="SL"?" -1R":""}</span>
+          </div>
+          <div style="font-size:9px;color:var(--txt-mid);margin-top:5px;line-height:1.7;">
+            ・位置：${reFmtTime(e.time)}（${fmtSym(sym)} ${tf}）<br>
+            ・方向：${e.side==="long"?"買い":"売り"}（${e.structure}）<br>
+            ・根拠：${e.env.trend}${e.env.shrink?" / シュリンク(収縮)あり":""}${e.env.climax?" / 直近にクライマックス":""} / ${e.items.map(x=>x.k+"+"+x.v).join(" / ")}<br>
+            ・用語：${e.terms.join(" · ")||"—"}<br>
+            ・SL：¥${fmt(e.sl)}（直近スイングの外）<br>
+            ・TP：¥${fmt(e.tp)}（${e.tpSrc}）<br>
+            ・RR：<b style="color:var(--txt-br)">${e.rr.toFixed(2)}</b>
+          </div>
+        </div>`;
+      });
+      if(es.length){
+        h+=`<div class="bt-run" id="reCopy" style="margin-top:1px;">⧉ テキストコピー · 仕様フォーマット</div>`;
+      }
+      el.innerHTML=h;
+      const cp=document.getElementById("reCopy");
+      if(cp)cp.addEventListener("click",()=>{
+        const lines=[`【ルールベース抽出】${fmtSym(sym)} ${tf} · ${new Date().toLocaleString("ja-JP")}`,`採用 ${es.length}件 / TP ${wins} SL ${losses} / 合計 ${(totR>=0?"+":"")+totR.toFixed(2)}R`,""];
+        es.forEach((e,i2)=>{lines.push(`■ エントリー${i2+1}（スコア：${e.score}点）`,`- 位置：${reFmtTime(e.time)}`,`- 方向：${e.side==="long"?"買い":"売り"}（${e.structure}）`,`- 根拠：${e.items.map(x=>x.k+"+"+x.v).join(" / ")}`,`- 用語：${e.terms.join(" · ")}`,`- SL：${fmt(e.sl)}`,`- TP：${fmt(e.tp)}（${e.tpSrc}）`,`- RR：${e.rr.toFixed(2)}`,`- 結果：${e.result}${e.result!=="未約定"&&e.result!=="進行中"?" ("+(e.pnlR>=0?"+":"")+e.pnlR.toFixed(2)+"R)":""}`,"");});
+        navigator.clipboard.writeText(lines.join("\n")).then(()=>{cp.textContent="✓ コピー完了";setTimeout(()=>{cp.textContent="⧉ テキストコピー · 仕様フォーマット";},1500);});
+      });
+    }catch(err){
+      prog.style.display="none";txt.style.display="none";
+      btn.classList.remove("running");btn.textContent="▶ RUN RULE SCAN · 条件抽出を実行";
+      el.innerHTML=`<div class="bt-empty">エラー: ${err.message||"データ取得失敗"}</div>`;
+    }
+  })();
+}
+function initRuleEngine(){
+  const btn=document.getElementById("reRun");
+  if(btn&&!btn.dataset.built){btn.addEventListener("click",renderRuleEngine);btn.dataset.built="1";}
+  const symEl=document.getElementById("reSym");if(symEl)symEl.textContent=fmtSym(activeSymbol);
+}
+
 function initBacktest(){
   const btn=document.getElementById("btRun");
   if(btn&&!btn.dataset.built){
     btn.addEventListener("click",renderBacktest);
     btn.dataset.built="1";
   }
+  initRuleEngine(); // ルールベース抽出エンジン初期化
   renderBtHistory(); // 既存履歴を表示
   renderPtReport();  // パターン記録初期表示
   const ptc=document.getElementById("ptCount");
