@@ -882,9 +882,9 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
           <div id="btLongToggle" data-on="1" style="font-size:8px;font-weight:700;padding:2px 8px;border:1px solid var(--bull);color:var(--bull);cursor:pointer;user-select:none;">ON</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
-          <div class="bt-ctrl"><div class="bt-ctrl-label">SL×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLSL" class="bt-ctrl-input" value="1.5"></div></div>
-          <div class="bt-ctrl"><div class="bt-ctrl-label">TP×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLTP" class="bt-ctrl-input" value="2.0"></div></div>
-          <div class="bt-ctrl"><div class="bt-ctrl-label">最大本</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLHold" class="bt-ctrl-input" value="40"></div></div>
+          <div class="bt-ctrl"><div class="bt-ctrl-label">SL×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLSL" class="bt-ctrl-input" value="2.0"></div></div>
+          <div class="bt-ctrl"><div class="bt-ctrl-label">TP×</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLTP" class="bt-ctrl-input" value="3.0"></div></div>
+          <div class="bt-ctrl"><div class="bt-ctrl-label">最大本</div><div class="bt-ctrl-row"><input type="text" inputmode="decimal" id="btLHold" class="bt-ctrl-input" value="20"></div></div>
         </div>
       </div>
       <div style="background:var(--panel2);padding:8px 12px;">
@@ -926,12 +926,12 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
     <div style="padding:0 12px 8px;">
       <div style="font-size:8px;color:var(--txt-dim);letter-spacing:.08em;margin-bottom:5px;">TRIGGERS · 後付けフィルター構成（コアには含まれない追加分）</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <div class="trg-chip" id="trgQuality" data-on="1" style="font-size:8.5px;font-weight:700;padding:4px 10px;border:1px solid var(--cyan);color:var(--cyan);cursor:pointer;user-select:none;">品質F(実体/ヒゲ) ON</div>
-        <div class="trg-chip" id="trgOverheat" data-on="1" style="font-size:8.5px;font-weight:700;padding:4px 10px;border:1px solid var(--cyan);color:var(--cyan);cursor:pointer;user-select:none;">過熱F(3連続) ON</div>
-        <div class="trg-chip" id="trgHtfNeutral" data-on="1" style="font-size:8.5px;font-weight:700;padding:4px 10px;border:1px solid var(--cyan);color:var(--cyan);cursor:pointer;user-select:none;">HTF中立スキップ ON</div>
+        <div class="trg-chip" id="trgQuality" data-on="0" style="font-size:8.5px;font-weight:700;padding:4px 10px;border:1px dashed var(--cyan);color:var(--cyan);cursor:pointer;user-select:none;opacity:.4;">品質F(実体/ヒゲ) OFF</div>
+        <div class="trg-chip" id="trgOverheat" data-on="0" style="font-size:8.5px;font-weight:700;padding:4px 10px;border:1px dashed var(--cyan);color:var(--cyan);cursor:pointer;user-select:none;opacity:.4;">過熱F(3連続) OFF</div>
+        <div class="trg-chip" id="trgHtfNeutral" data-on="0" style="font-size:8.5px;font-weight:700;padding:4px 10px;border:1px dashed var(--cyan);color:var(--cyan);cursor:pointer;user-select:none;opacity:.4;">HTF中立スキップ OFF</div>
         <div id="trgRestore" style="font-size:8.5px;font-weight:700;padding:4px 10px;border:1px solid var(--violet);color:var(--violet);cursor:pointer;user-select:none;">★ ランキング表記構成を復元(対称SL2×TP3×20)</div>
       </div>
-      <div style="font-size:7.5px;color:var(--txt-faint);margin-top:4px;" class="jp">※ 先読みキャンセルと損益キャップは「バグ」として恒久排除済み（下の診断で旧挙動との差を確認できます）</div>
+      <div style="font-size:7.5px;color:var(--txt-faint);margin-top:4px;" class="jp">※ 既定=コアロジック（ボルマン/ブルックス蒸留版そのまま）。過熱Fは「3連続陽線のロング除外」で最良のロングを殺していた主因。先読みキャンセルと損益キャップはバグとして恒久排除済み。</div>
     </div>
     <div class="bt-run" id="btRun">▶ RUN BACKTEST · 検証を実行</div>
     <div class="bt-run" id="diagRun" style="border-color:var(--violet);color:var(--violet);">◎ RUN DIAGNOSIS · ロジック診断（トリガー寄与の実測）</div>
@@ -1033,7 +1033,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 95; // ★デプロイごとに +1 する(自動更新の基準)
+const APP_VERSION = 96; // ★デプロイごとに +1 する(自動更新の基準) v96: コアロジック復元(後付けF既定OFF・対称SL2×TP3×20・先読みバイアス除去)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
