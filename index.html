@@ -1033,7 +1033,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 96; // ★デプロイごとに +1 する(自動更新の基準) v96: コアロジック復元(後付けF既定OFF・対称SL2×TP3×20・先読みバイアス除去)
+const APP_VERSION = 97; // v97: runPAのSMA(ma20/ma50)を完全除去しEMA20/EMA50に統一(田渕ロジック準拠)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -1193,7 +1193,7 @@ function runPA(c){
   const upW=x=>x.high-Math.max(x.open,x.close),dnW=x=>Math.min(x.open,x.close)-x.low,bR=x=>rng(x)>0?body(x)/rng(x):0;
   const last=c[n-1],prev=c[n-2],p2=c[n-3];
   const s20=c.slice(-20),aB=s20.reduce((s,x)=>s+body(x),0)/20,aR=s20.reduce((s,x)=>s+rng(x),0)/20;
-  const cl=c.map(x=>x.close),ma20=s20.reduce((s,x)=>s+x.close,0)/20,ma50=n>=50?c.slice(-50).reduce((s,x)=>s+x.close,0)/50:null;
+  const cl=c.map(x=>x.close);
   const ema=(a,p)=>{const k=2/(p+1);let v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-k);return v;};
   const e20=ema(cl.slice(-20),20),e50=cl.length>=50?ema(cl.slice(-50),50):null;
   let rsi=null;
@@ -1212,8 +1212,9 @@ function runPA(c){
   if(trendDir==="bull")adj.push(trendWeight);
   else if(trendDir==="bear")adj.push(-trendWeight);
 
-  if(last.close>ma20)adj.push(.5);else adj.push(-.5);
-  if(ma50&&last.close>ma50)adj.push(.5);else if(ma50)adj.push(-.5);
+  // EMA20/EMA50位置で加点(田渕ロジック: SMAは使わずEMAのみ)
+  if(last.close>e20)adj.push(.5);else adj.push(-.5);
+  if(e50&&last.close>e50)adj.push(.5);else if(e50)adj.push(-.5);
 
   const A=(name,dir,str,desc,action,bolman)=>sig.push({name,dir,str,desc,action,bolman});
 
@@ -1261,7 +1262,7 @@ function runPA(c){
   const BINS=24,step=(rHi-rLo)/BINS||1,vbin=new Array(BINS).fill(0);
   recent.forEach(x=>{const mid=(x.high+x.low)/2;let bi=Math.floor((mid-rLo)/step);if(bi<0)bi=0;if(bi>=BINS)bi=BINS-1;vbin[bi]+=x.volume;});
   const pocIdx=vbin.indexOf(Math.max(...vbin)),poc=rLo+step*(pocIdx+.5);
-  return{score,signalDir:sd,trendDir,trendLabel,trendConfirmed,dow,signals:sig.sort((a,b)=>b.str-a.str),ma20:+ma20.toFixed(2),ma50:ma50?+ma50.toFixed(2):null,e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,rsi,volRatio:vR,highVol:vR>1.8,aboveMA20:last.close>ma20,aboveMA50:ma50?last.close>ma50:null,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai:alwaysIn(c),atr14,atrPct,atrHot,rangePos,rHi,rLo,poc:+poc.toFixed(2),nearestRound:+nearestRound.toFixed(2),nearRound,bolmanNote,doublePressure,setupClarity,messyBar};
+  return{score,signalDir:sd,trendDir,trendLabel,trendConfirmed,dow,signals:sig.sort((a,b)=>b.str-a.str),e20:+e20.toFixed(2),e50:e50?+e50.toFixed(2):null,aboveEMA20:last.close>e20,aboveEMA50:e50?last.close>e50:null,rsi,volRatio:vR,highVol:vR>1.8,last,prev,chgPct:+((last.close-prev.close)/prev.close*100).toFixed(2),ai:alwaysIn(c),atr14,atrPct,atrHot,rangePos,rHi,rLo,poc:+poc.toFixed(2),nearestRound:+nearestRound.toFixed(2),nearRound,bolmanNote,doublePressure,setupClarity,messyBar};
 }
 
 // ===== DATA =====
@@ -2961,7 +2962,7 @@ function indicatorNodes(pa,baseId){
   if(!pa)return[];
   const out=[];
   // EMA20の上下
-  out.push({id:baseId+"-ema",dir:pa.aboveMA20?"LONG":"SHORT",w:pa.aboveMA20?1:-1});
+  out.push({id:baseId+"-ema",dir:pa.aboveEMA20?"LONG":"SHORT",w:pa.aboveEMA20?1:-1});
   // トレンド方向
   out.push({id:baseId+"-trend",dir:pa.trendDir==="bull"?"LONG":pa.trendDir==="bear"?"SHORT":"中立"});
   // 出来高
