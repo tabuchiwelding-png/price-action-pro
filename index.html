@@ -1033,7 +1033,7 @@ details.btr-details[open] .btr-summary::before{transform:rotate(90deg);}
 
 
 <script>
-const APP_VERSION = 97; // v97: runPAのSMA(ma20/ma50)を完全除去しEMA20/EMA50に統一(田渕ロジック準拠)
+const APP_VERSION = 98; // v98: HTF_MAPに1m/3m/30mを追加(1mで上位足フィルター不発の構造バグ修正)
 const SYMBOLS=[
   {s:"BTCJPY",name:"Bitcoin"},{s:"ETHJPY",name:"Ethereum"},{s:"XRPJPY",name:"Ripple"},
   {s:"SOLJPY",name:"Solana"},{s:"BNBJPY",name:"BNB"},{s:"ADAJPY",name:"Cardano"},
@@ -2358,7 +2358,7 @@ function renderBacktest(){
   const tpMult=parseFloat(document.getElementById("btTPmult")?.value)||3.0;
   const maxHold=parseInt(document.getElementById("btMaxHold")?.value)||20;
   const htfOn=document.getElementById("btHtfToggle")?.dataset?.on==="1";
-  const HTF_MAP={"5m":"1h","15m":"4h","1h":"4h","4h":"1d","1d":"1w","1w":"1M"};
+  const HTF_MAP={"1m":"15m","3m":"30m","5m":"1h","15m":"4h","30m":"4h","1h":"4h","4h":"1d","1d":"1w","1w":"1M"};
   const htfTf=HTF_MAP[tf]||null;
   const htfLabel=document.getElementById("btHtfLabel");
   if(btn){btn.classList.add("running");btn.textContent="取得中...";}
@@ -2521,7 +2521,7 @@ function runDiagnosis(){
       const candles=await loadDeepHistory(sym,tf,()=>{});
       if(!candles||candles.length<60)throw new Error("データ不足");
       const htfOn=document.getElementById("btHtfToggle")?.dataset?.on==="1";
-      const HTF_MAP={"5m":"1h","15m":"4h","1h":"4h","4h":"1d","1d":"1w","1w":"1M"};
+      const HTF_MAP={"1m":"15m","3m":"30m","5m":"1h","15m":"4h","30m":"4h","1h":"4h","4h":"1d","1d":"1w","1w":"1M"};
       const htfTf=HTF_MAP[tf]||null;
       let htfCandles=null;
       if(htfOn&&htfTf){try{htfCandles=await loadDeepHistory(sym,htfTf,()=>{});}catch(e){htfCandles=null;}}
@@ -2658,7 +2658,7 @@ function initBacktest(){
       tog.style.borderColor=on?"var(--border2)":"var(--cyan)";
       // HTFデータが必要な場合、SWARMから取得を促す
       const tf=document.querySelector(".tf-btn.on")?.dataset?.tf||"1h";
-      const HTF_MAP={"5m":"1h","15m":"4h","1h":"4h","4h":"1d","1d":"1w","1w":"1M"};
+      const HTF_MAP={"1m":"15m","3m":"30m","5m":"1h","15m":"4h","30m":"4h","1h":"4h","4h":"1d","1d":"1w","1w":"1M"};
       const htfTf=HTF_MAP[tf];
       const sym=activeSymbol;
       if(!on&&htfTf&&(!mtfCandles[sym]||!mtfCandles[sym][htfTf])){
